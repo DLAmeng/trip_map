@@ -108,34 +108,48 @@
         </div>
 
         <div class="legend" id="legend">
-          <p class="legend-title">路线类型</p>
-          <div class="legend-row">
-            <div class="legend-line legend-line-walk"></div>
-            <span>步行</span>
+          <div class="legend-header">
+            <p class="legend-title">路线类型</p>
+            <button
+              id="legend-toggle"
+              class="legend-toggle"
+              type="button"
+              aria-expanded="true"
+              aria-label="隐藏路线类型图例"
+              title="隐藏路线类型图例"
+            >
+              <span class="legend-toggle-mark" aria-hidden="true">－</span>
+            </button>
           </div>
-          <div class="legend-row">
-            <div class="legend-line legend-line-metro"></div>
-            <span>地铁 / 电车</span>
+          <div class="legend-body" id="legend-body">
+            <div class="legend-row">
+              <div class="legend-line legend-line-walk"></div>
+              <span>步行</span>
+            </div>
+            <div class="legend-row">
+              <div class="legend-line legend-line-metro"></div>
+              <span>地铁 / 电车</span>
+            </div>
+            <div class="legend-row">
+              <div class="legend-line legend-line-bus"></div>
+              <span>巴士</span>
+            </div>
+            <div class="legend-row">
+              <div class="legend-line legend-line-shinkansen"></div>
+              <span>Hikari 新干线</span>
+            </div>
+            <div class="legend-row">
+              <div class="legend-line legend-line-jr"></div>
+              <span>JR 新快速</span>
+            </div>
+            <div class="legend-row">
+              <div class="legend-line legend-line-nankai"></div>
+              <span>南海线 / Rapi:t</span>
+            </div>
+            <p class="legend-note" id="route-warning-note" hidden></p>
+            <p class="legend-title legend-title-spaced">每日配色</p>
+            <div id="legend-dots" class="legend-dots"></div>
           </div>
-          <div class="legend-row">
-            <div class="legend-line legend-line-bus"></div>
-            <span>巴士</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-line legend-line-shinkansen"></div>
-            <span>Hikari 新干线</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-line legend-line-jr"></div>
-            <span>JR 新快速</span>
-          </div>
-          <div class="legend-row">
-            <div class="legend-line legend-line-nankai"></div>
-            <span>南海线 / Rapi:t</span>
-          </div>
-          <p class="legend-note" id="route-warning-note" hidden></p>
-          <p class="legend-title legend-title-spaced">每日配色</p>
-          <div id="legend-dots" class="legend-dots"></div>
         </div>
       </section>
 

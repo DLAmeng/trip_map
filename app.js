@@ -25,6 +25,7 @@ const state = {
   zoomLevel: 7,
   markersVisible: new Set(),
   isListVisible: true,
+  isLegendCollapsed: false,
   mapProvider: MAP_PROVIDER.LEAFLET,
 };
 
@@ -323,6 +324,9 @@ function cacheDom() {
   refs.summaryCities = document.getElementById('summary-cities');
   refs.summaryActive = document.getElementById('summary-active');
   refs.filters = document.getElementById('filters');
+  refs.legend = document.getElementById('legend');
+  refs.legendBody = document.getElementById('legend-body');
+  refs.legendToggleBtn = document.getElementById('legend-toggle');
   refs.legendDots = document.getElementById('legend-dots');
   refs.dayListPanel = document.getElementById('day-list-panel');
   refs.mobileDrawer = document.getElementById('mobile-drawer');
@@ -392,6 +396,21 @@ function updateRouteWarningVisibility() {
   if (shouldShow) {
     refs.routeWarningNote.textContent = WALKING_WARNING_COPY;
   }
+}
+
+function updateLegendState() {
+  if (!refs.legend || !refs.legendToggleBtn) {
+    return;
+  }
+
+  refs.legend.classList.toggle('collapsed', state.isLegendCollapsed);
+  refs.legendToggleBtn.setAttribute('aria-expanded', String(!state.isLegendCollapsed));
+  refs.legendToggleBtn.setAttribute(
+    'aria-label',
+    state.isLegendCollapsed ? '显示路线类型图例' : '隐藏路线类型图例'
+  );
+  refs.legendToggleBtn.title = state.isLegendCollapsed ? '显示路线类型图例' : '隐藏路线类型图例';
+  refs.legendToggleBtn.querySelector('.legend-toggle-mark').textContent = state.isLegendCollapsed ? '＋' : '－';
 }
 
 async function fetchItineraryData() {
@@ -2210,6 +2229,7 @@ function updateControlState() {
 
   refs.mobileMustToggle.classList.toggle('active', state.showMustOnly);
   refs.mobileNextToggle.classList.toggle('active', state.showNextOnly);
+  updateLegendState();
 }
 
 function updateRouteVisibility() {
@@ -2673,6 +2693,10 @@ function setupEventListeners() {
     refs.dayListPanel.style.display = state.isListVisible ? '' : 'none';
     updateControlState();
     requestAnimationFrame(refreshMapSize);
+  });
+  refs.legendToggleBtn?.addEventListener('click', () => {
+    state.isLegendCollapsed = !state.isLegendCollapsed;
+    updateLegendState();
   });
 
   refs.drawerHandle.addEventListener('pointerdown', onDrawerPointerDown);

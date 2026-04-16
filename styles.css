@@ -511,49 +511,95 @@ button {
   left: 18px;
   bottom: 18px;
   z-index: 1000;
-  width: min(196px, calc(100% - 36px));
-  padding: 12px 13px;
+  width: min(168px, calc(100% - 36px));
+  padding: 9px 10px;
   border: 1px solid var(--border);
-  border-radius: 18px;
-  background: rgba(255, 252, 248, 0.84);
+  border-radius: 16px;
+  background: rgba(255, 252, 248, 0.8);
   box-shadow: var(--shadow-md);
 }
 
+.legend.collapsed {
+  width: auto;
+  min-width: 0;
+  padding: 8px 9px;
+}
+
+.legend-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .legend-title {
-  margin: 0 0 7px;
-  font-size: 0.68rem;
+  margin: 0;
+  font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 800;
   color: var(--text-soft);
 }
 
+.legend-body {
+  margin-top: 7px;
+}
+
+.legend.collapsed .legend-body {
+  display: none;
+}
+
+.legend-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(76, 60, 43, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--text-soft);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.legend-toggle:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.legend-toggle-mark {
+  font-size: 0.84rem;
+  line-height: 1;
+  transform: translateY(-0.5px);
+}
+
 .legend-title-spaced {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .legend-note {
-  margin: 8px 0 0;
-  padding-top: 8px;
+  margin: 7px 0 0;
+  padding-top: 7px;
   border-top: 1px solid rgba(76, 60, 43, 0.08);
   color: var(--text-muted);
-  font-size: 0.68rem;
-  line-height: 1.36;
+  font-size: 0.62rem;
+  line-height: 1.32;
 }
 
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-  font-size: 0.76rem;
+  gap: 7px;
+  margin-bottom: 5px;
+  font-size: 0.7rem;
   color: var(--text-muted);
 }
 
 .legend-line {
-  width: 28px;
+  width: 22px;
   height: 0;
-  border-top-width: 2.5px;
+  border-top-width: 2.25px;
   border-top-style: solid;
   border-radius: 999px;
   flex-shrink: 0;
@@ -590,20 +636,20 @@ button {
 .legend-dots {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 8px;
+  gap: 5px 7px;
 }
 
 .legend-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.66rem;
+  gap: 4px;
+  font-size: 0.62rem;
   color: var(--text-muted);
 }
 
 .legend-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
 }
 
