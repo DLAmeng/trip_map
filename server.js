@@ -290,5 +290,5 @@ function createServer() {
 }
 
 createServer().listen(PORT, () => {
-  console.log(`Japan trip server is running at http://127.0.0.1:${PORT}`);
+  console.log(`trip_map server is running at http://127.0.0.1:${PORT}`);
 });

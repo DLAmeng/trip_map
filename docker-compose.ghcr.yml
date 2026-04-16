@@ -1,7 +1,7 @@
 services:
-  japan-trip:
-    image: ${JAPAN_TRIP_IMAGE:-ghcr.io/your-github-name/japan-trip:latest}
-    container_name: japan-trip
+  trip_map:
+    image: ${TRIP_MAP_IMAGE:-ghcr.io/your-github-name/trip_map:latest}
+    container_name: trip_map
     restart: unless-stopped
     environment:
       PORT: 8080

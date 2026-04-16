@@ -1,5 +1,5 @@
 {
-  "name": "japan-trip",
+  "name": "trip_map",
   "version": "1.0.0",
   "private": true,
   "description": "日本旅行行程地图页，包含 Express + SQLite 后端。",

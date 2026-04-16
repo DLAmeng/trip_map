@@ -1,9 +1,9 @@
 services:
-  japan-trip:
+  trip_map:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: japan-trip
+    container_name: trip_map
     restart: unless-stopped
     environment:
       PORT: 8080

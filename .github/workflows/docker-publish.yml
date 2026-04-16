@@ -33,7 +33,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/japan-trip
+          images: ghcr.io/${{ github.repository_owner }}/trip_map
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
