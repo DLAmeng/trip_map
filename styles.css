@@ -520,9 +520,17 @@ button {
 }
 
 .legend.collapsed {
-  width: auto;
-  min-width: 0;
-  padding: 8px 9px;
+  width: 38px;
+  min-width: 38px;
+  padding: 6px;
+}
+
+.legend.collapsed .legend-header {
+  justify-content: center;
+}
+
+.legend.collapsed .legend-title {
+  display: none;
 }
 
 .legend-header {
@@ -1314,6 +1322,105 @@ button {
   .header-stats,
   .header-actions {
     justify-content: flex-start;
+  }
+}
+
+@media (min-width: 841px) {
+  .app-shell {
+    gap: 12px;
+    padding: 14px 16px 16px;
+  }
+
+  .site-header {
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 24px;
+  }
+
+  .header-copy h1 {
+    margin: 4px 0;
+    font-size: clamp(1.75rem, 2.2vw, 2.45rem);
+  }
+
+  .header-copy p {
+    font-size: 0.92rem;
+    line-height: 1.45;
+  }
+
+  .header-stats {
+    gap: 8px;
+  }
+
+  .stat-pill {
+    min-width: 78px;
+    padding: 10px 12px;
+    border-radius: 16px;
+  }
+
+  .stat-pill span {
+    font-size: 1.08rem;
+  }
+
+  .stat-pill-wide {
+    min-width: 92px;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .pill-btn,
+  .pill-select {
+    min-height: 42px;
+    font-size: 0.86rem;
+  }
+
+  .toolbar {
+    gap: 12px;
+  }
+
+  .filters-card {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .summary-bar {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .summary-active {
+    font-size: 0.84rem;
+  }
+
+  .main-content {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+    gap: 12px;
+  }
+
+  .map-stage {
+    border-radius: 28px;
+  }
+
+  .map-controls {
+    top: 16px;
+    right: 16px;
+  }
+
+  .map-notice {
+    top: 16px;
+    left: 16px;
+  }
+
+  .legend {
+    left: 16px;
+    bottom: 16px;
+    width: min(190px, calc(100% - 32px));
+  }
+
+  .day-list-panel {
+    padding: 10px;
+    border-radius: 24px;
   }
 }
 

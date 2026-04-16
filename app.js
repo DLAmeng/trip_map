@@ -404,13 +404,19 @@ function updateLegendState() {
   }
 
   refs.legend.classList.toggle('collapsed', state.isLegendCollapsed);
+  if (refs.legendBody) {
+    refs.legendBody.hidden = state.isLegendCollapsed;
+  }
   refs.legendToggleBtn.setAttribute('aria-expanded', String(!state.isLegendCollapsed));
   refs.legendToggleBtn.setAttribute(
     'aria-label',
     state.isLegendCollapsed ? '显示路线类型图例' : '隐藏路线类型图例'
   );
   refs.legendToggleBtn.title = state.isLegendCollapsed ? '显示路线类型图例' : '隐藏路线类型图例';
-  refs.legendToggleBtn.querySelector('.legend-toggle-mark').textContent = state.isLegendCollapsed ? '＋' : '－';
+  const toggleMark = refs.legendToggleBtn.querySelector('.legend-toggle-mark');
+  if (toggleMark) {
+    toggleMark.textContent = state.isLegendCollapsed ? '＋' : '－';
+  }
 }
 
 async function fetchItineraryData() {
@@ -2694,7 +2700,9 @@ function setupEventListeners() {
     updateControlState();
     requestAnimationFrame(refreshMapSize);
   });
-  refs.legendToggleBtn?.addEventListener('click', () => {
+  refs.legendToggleBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     state.isLegendCollapsed = !state.isLegendCollapsed;
     updateLegendState();
   });
