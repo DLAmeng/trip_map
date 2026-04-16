@@ -1,0 +1,13 @@
+{
+  "name": "japan-trip",
+  "version": "1.0.0",
+  "private": true,
+  "description": "日本旅行行程地图页，包含 Express + SQLite 后端。",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

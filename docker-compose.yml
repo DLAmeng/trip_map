@@ -1,0 +1,16 @@
+services:
+  japan-trip:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: japan-trip
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      NODE_ENV: production
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./itinerary.json:/app/itinerary.json
