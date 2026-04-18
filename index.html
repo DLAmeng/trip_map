@@ -49,44 +49,89 @@
       </div>
     </header>
 
-    <section class="toolbar" aria-label="行程控制">
-      <div class="filters filters-card" id="filters">
-        <div class="filter-group">
-          <span class="filter-label">天数</span>
-          <button class="filter-btn active" data-filter="day" data-value="all" type="button">全部</button>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">城市</span>
-          <button class="filter-btn active" data-filter="city" data-value="all" type="button">全部</button>
-        </div>
-        <div class="filter-group">
-          <span class="filter-label">偏好</span>
-          <button class="filter-btn" data-filter="must" data-value="must" type="button">只看必去</button>
-          <button class="filter-btn" data-filter="next" data-value="next" type="button">只看下一段</button>
-        </div>
-      </div>
-
-      <div class="summary-bar" id="summary-bar">
-        <div class="summary-pill">
-          <span id="summary-count">0</span>
-          <small>显示</small>
-        </div>
-        <div class="summary-pill">
-          <span id="summary-days">0</span>
-          <small>天数</small>
-        </div>
-        <div class="summary-pill">
-          <span id="summary-cities">0</span>
-          <small>城市</small>
-        </div>
-        <p class="summary-active" id="summary-active">当前显示完整路线。</p>
-      </div>
-    </section>
-
     <main class="main-content">
       <section class="map-stage">
         <div id="map" class="map-canvas" aria-label="行程地图"></div>
         <div class="map-notice" id="map-notice" hidden></div>
+
+        <div class="map-toolbar" id="map-toolbar" role="toolbar" aria-label="地图工具">
+          <button class="tool-btn" data-tool="search" type="button" aria-label="搜索地点" aria-pressed="false">
+            <span class="tool-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.8"/>
+                <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </button>
+          <button class="tool-btn" data-tool="filter" type="button" aria-label="筛选行程" aria-pressed="false">
+            <span class="tool-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <path d="M3 5h14M5 10h10M8 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </button>
+          <button class="tool-btn" data-tool="summary" type="button" aria-label="行程概览" aria-pressed="false">
+            <span class="tool-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none">
+                <rect x="3" y="4" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.6"/>
+                <rect x="11" y="4" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.6"/>
+                <rect x="3" y="12" width="14" height="4" rx="1.2" stroke="currentColor" stroke-width="1.6"/>
+              </svg>
+            </span>
+          </button>
+        </div>
+
+        <div class="map-search tool-panel" data-tool-panel="search" id="map-search" role="search" aria-label="搜索地点">
+          <div class="map-search-inner">
+            <svg class="map-search-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M13 13l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <input
+              class="map-search-input"
+              id="map-search-input"
+              type="search"
+              placeholder="搜索地点..."
+              autocomplete="off"
+              aria-label="搜索地点"
+              aria-autocomplete="list"
+            >
+            <button class="map-search-clear" id="map-search-clear" type="button" aria-label="清除搜索" hidden>✕</button>
+          </div>
+          <ul class="map-search-results" id="map-search-results" role="listbox" hidden></ul>
+        </div>
+
+        <div class="filters filters-card tool-panel" data-tool-panel="filter" id="filters">
+          <div class="filter-group">
+            <span class="filter-label">天数</span>
+            <button class="filter-btn active" data-filter="day" data-value="all" type="button">全部</button>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">城市</span>
+            <button class="filter-btn active" data-filter="city" data-value="all" type="button">全部</button>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">偏好</span>
+            <button class="filter-btn" data-filter="must" data-value="must" type="button">只看必去</button>
+            <button class="filter-btn" data-filter="next" data-value="next" type="button">只看下一段</button>
+          </div>
+        </div>
+
+        <div class="summary-bar tool-panel" data-tool-panel="summary" id="summary-bar">
+          <div class="summary-pill">
+            <span id="summary-count">0</span>
+            <small>显示</small>
+          </div>
+          <div class="summary-pill">
+            <span id="summary-days">0</span>
+            <small>天数</small>
+          </div>
+          <div class="summary-pill">
+            <span id="summary-cities">0</span>
+            <small>城市</small>
+          </div>
+          <p class="summary-active" id="summary-active">当前显示完整路线。</p>
+        </div>
 
         <button id="mobile-filter-trigger" class="floating-filter" type="button">
           筛选面板

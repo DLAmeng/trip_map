@@ -2,6 +2,9 @@ const API = {
   currentTrip: '/api/trips/current/full',
   importLocal: '/api/trips/current/import-local',
   exportLocal: '/api/trips/current/export-local',
+  placesSearch: '/api/places/search',
+  placesDetails: '/api/places/details',
+  photoUpload: '/api/photos/upload',
 }
 
 const state = {
@@ -39,6 +42,12 @@ const refs = {
   segmentResultsText: document.querySelector('#segment-results-text'),
   spotList: document.querySelector('#spot-list'),
   segmentList: document.querySelector('#segment-list'),
+  batchFileInput: document.querySelector('#batch-file-input'),
+  batchUrlInput: document.querySelector('#batch-url-input'),
+  batchDaySelect: document.querySelector('#import-day-select'),
+  parseImportBtn: document.querySelector('#parse-import-btn'),
+  confirmImportBtn: document.querySelector('#confirm-import-btn'),
+  importPreview: document.querySelector('#import-preview'),
 }
 
 const SPOT_NUMBER_FIELDS = new Set(['day', 'order', 'lat', 'lng', 'stayMinutes'])
@@ -258,6 +267,10 @@ function renderDayFilters() {
   refs.routeDayFilter.innerHTML = markup
   refs.dayFilter.value = options.includes(Number(state.spotFilterDay)) ? state.spotFilterDay : 'all'
   refs.routeDayFilter.value = options.includes(Number(state.routeFilterDay)) ? state.routeFilterDay : 'all'
+
+  if (refs.batchDaySelect) {
+    refs.batchDaySelect.innerHTML = options.map((day) => `<option value="${day}">第 ${day} 天</option>`).join('')
+  }
 }
 
 function matchesQuery(text, query) {
@@ -383,7 +396,16 @@ function renderSpots() {
     return
   }
 
-  refs.spotList.innerHTML = items.map(({ spot, index }) => `
+  refs.spotList.innerHTML = items.map(({ spot, index }) => {
+    const photos = spot.photos || []
+    const photoHtml = photos.map((url, pi) => `
+      <div class="photo-thumb">
+        <img src="${escapeHtml(url)}" alt="照片 ${pi + 1}">
+        <button class="photo-remove" type="button" data-action="delete-photo" data-index="${index}" data-photo-index="${pi}" title="删除照片">×</button>
+      </div>
+    `).join('')
+
+    return `
     <article class="editor-card" data-kind="spot-card" data-index="${index}">
       <div class="card-head">
         <div class="card-title-wrap">
@@ -397,8 +419,23 @@ function renderSpots() {
           <div class="card-subtitle">ID: ${escapeHtml(spot.id)} · 顺序 ${escapeHtml(spot.order)} · 下一站 ${escapeHtml(spot.nextStopId || '无')}</div>
         </div>
         <div class="card-tools">
+          <button type="button" data-action="insert-after-spot" data-index="${index}">在此后插入</button>
           <button type="button" data-action="delete-spot" data-index="${index}">删除景点</button>
         </div>
+      </div>
+
+      <div class="place-search-row">
+        <div class="place-search-wrap">
+          <input
+            type="text"
+            class="place-search-input"
+            placeholder="搜索 Google 地点自动填充坐标 / 名称..."
+            data-spot-index="${index}"
+            autocomplete="off"
+          >
+          <ul class="place-results" data-spot-index="${index}" hidden></ul>
+        </div>
+        ${spot.googleMapsUri ? `<a class="place-maps-link" href="${escapeHtml(spot.googleMapsUri)}" target="_blank" rel="noreferrer">地图</a>` : ''}
       </div>
 
       <div class="field-grid">
@@ -420,6 +457,14 @@ function renderSpots() {
         ${buildCheckboxField('spots', index, 'nearNextTransport', '临近下一段交通', spot.nearNextTransport)}
       </div>
 
+      <div class="photo-section">
+        <div class="photo-grid">${photoHtml}</div>
+        <label class="photo-add-btn">
+          <input type="file" class="photo-file-input" accept="image/*" multiple data-spot-index="${index}" style="display:none">
+          + 添加照片
+        </label>
+      </div>
+
       <details class="card-advanced">
         <summary>展开说明字段</summary>
         <div class="card-advanced-body field-grid">
@@ -429,7 +474,7 @@ function renderSpots() {
         </div>
       </details>
     </article>
-  `).join('')
+  `}).join('')
 }
 
 function renderSegments() {
@@ -549,6 +594,329 @@ function updateFieldValue(element) {
   }
 }
 
+function makeBlankSpot({ day = 1, order = 1, nextStopId = null } = {}) {
+  return {
+    id: `spot-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    day,
+    city: '',
+    area: '',
+    name: '新景点',
+    nameEn: '',
+    timeSlot: '',
+    order,
+    lat: 0,
+    lng: 0,
+    mustVisit: false,
+    type: 'spot',
+    description: '',
+    whyGo: '',
+    stayMinutes: 60,
+    nextStopId,
+    nearNextTransport: false,
+    tags: [],
+    transportNote: '',
+    photos: [],
+    googleMapsUri: '',
+    googlePlaceId: '',
+    rating: null,
+    website: '',
+    phone: '',
+    openingHours: [],
+  }
+}
+
+function insertAfterSpot(index) {
+  const spots = state.trip.spots
+  const current = spots[index]
+  if (!current) return
+
+  const oldNextId = current.nextStopId
+  const nextSpot = oldNextId ? spots.find((s) => s.id === oldNextId) : null
+  const currentOrder = Number(current.order) || index + 1
+  const nextOrder = nextSpot ? (Number(nextSpot.order) || currentOrder + 1) : currentOrder + 1
+  const midOrder = (currentOrder + nextOrder) / 2
+
+  const newSpot = makeBlankSpot({ day: current.day, order: midOrder, nextStopId: oldNextId })
+  current.nextStopId = newSpot.id
+
+  // Fix route segment that was current→oldNext, now becomes current→new
+  const existingSeg = state.trip.routeSegments.find(
+    (seg) => seg.fromSpotId === current.id && seg.toSpotId === oldNextId
+  )
+  if (existingSeg && oldNextId) {
+    const newSeg = {
+      id: `seg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      day: current.day,
+      scope: existingSeg.scope || 'city',
+      fromSpotId: newSpot.id,
+      toSpotId: oldNextId,
+      transportType: existingSeg.transportType || 'walk',
+      label: '',
+      duration: '',
+      note: '',
+      path: [],
+    }
+    existingSeg.toSpotId = newSpot.id
+    state.trip.routeSegments.push(newSeg)
+  } else if (oldNextId) {
+    state.trip.routeSegments.push({
+      id: `seg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      day: current.day,
+      scope: 'city',
+      fromSpotId: newSpot.id,
+      toSpotId: oldNextId,
+      transportType: 'walk',
+      label: '',
+      duration: '',
+      note: '',
+      path: [],
+    })
+  }
+
+  spots.push(newSpot)
+  updateDirtyState(true)
+  renderDayFilters()
+  renderSummary()
+  renderSpots()
+  renderSegments()
+
+  // Scroll to new card
+  setTimeout(() => {
+    const newCard = refs.spotList.querySelector(`[data-index="${spots.length - 1}"]`)
+    newCard?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, 80)
+}
+
+// --- Google Places 搜索 ---
+let placeSearchTimer = null
+
+function handlePlaceSearchInput(input) {
+  const query = input.value.trim()
+  const spotIndex = Number(input.dataset.spotIndex)
+  const resultsList = input.closest('.place-search-wrap')?.querySelector('.place-results')
+  if (!resultsList) return
+
+  clearTimeout(placeSearchTimer)
+  if (query.length < 2) {
+    resultsList.hidden = true
+    resultsList.innerHTML = ''
+    return
+  }
+
+  placeSearchTimer = setTimeout(async () => {
+    const spot = state.trip?.spots[spotIndex]
+    const body = { query }
+    if (spot?.lat && spot?.lng) {
+      body.lat = spot.lat
+      body.lng = spot.lng
+    }
+    try {
+      const data = await fetchJson(API.placesSearch, { method: 'POST', body: JSON.stringify(body) })
+      const places = data.places || []
+      resultsList.innerHTML = places.length
+        ? places.map((p) => `
+          <li class="place-result-item" data-place-id="${escapeHtml(p.id)}" data-spot-index="${spotIndex}" tabindex="0">
+            <span class="place-result-name">${escapeHtml(p.displayName?.text || '')}</span>
+            <span class="place-result-addr">${escapeHtml(p.formattedAddress || '')}</span>
+          </li>`).join('')
+        : '<li class="place-result-empty">没有找到相关地点</li>'
+      resultsList.hidden = false
+    } catch {
+      resultsList.hidden = true
+    }
+  }, 400)
+}
+
+async function applyPlaceToSpot(spotIndex, placeId) {
+  try {
+    const data = await fetchJson(`${API.placesDetails}/${placeId}`)
+    const p = data.place
+    const spot = state.trip?.spots[spotIndex]
+    if (!spot || !p) return
+
+    if (p.displayName?.text) spot.name = p.displayName.text
+    if (p.location?.latitude) spot.lat = p.location.latitude
+    if (p.location?.longitude) spot.lng = p.location.longitude
+    if (p.rating != null) spot.rating = p.rating
+    if (p.websiteUri) spot.website = p.websiteUri
+    if (p.nationalPhoneNumber) spot.phone = p.nationalPhoneNumber
+    if (p.regularOpeningHours?.weekdayDescriptions) spot.openingHours = p.regularOpeningHours.weekdayDescriptions
+    if (p.editorialSummary?.text) spot.description = p.editorialSummary.text
+    if (p.googleMapsUri) spot.googleMapsUri = p.googleMapsUri
+    if (p.id) spot.googlePlaceId = p.id
+
+    updateDirtyState(true)
+    renderSpots()
+    setStatus('已自动填充地点信息', spot.name)
+  } catch (error) {
+    setStatus('填充地点信息失败', error.message, 'error')
+  }
+}
+
+// --- 照片上传 ---
+async function handlePhotoUpload(fileInput) {
+  const spotIndex = Number(fileInput.dataset.spotIndex)
+  const spot = state.trip?.spots[spotIndex]
+  if (!spot || !fileInput.files?.length) return
+
+  if (!spot.photos) spot.photos = []
+  const files = Array.from(fileInput.files)
+
+  for (const file of files) {
+    try {
+      const res = await fetch(API.photoUpload, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      const data = await res.json()
+      if (data.ok && data.url) {
+        spot.photos.push(data.url)
+      }
+    } catch {
+      // fallback: base64
+      await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          spot.photos.push(e.target.result)
+          resolve()
+        }
+        reader.readAsDataURL(file)
+      })
+    }
+  }
+
+  updateDirtyState(true)
+  renderSpots()
+}
+
+// --- 批量导入 GPX / KML ---
+function parseGpx(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  return Array.from(doc.querySelectorAll('wpt')).map((wpt) => ({
+    name: wpt.querySelector('name')?.textContent?.trim() || '未命名',
+    description: wpt.querySelector('desc')?.textContent?.trim() || '',
+    lat: parseFloat(wpt.getAttribute('lat') || '0'),
+    lng: parseFloat(wpt.getAttribute('lon') || '0'),
+  })).filter((p) => p.lat && p.lng)
+}
+
+function parseKml(text) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml')
+  return Array.from(doc.querySelectorAll('Placemark')).map((pm) => {
+    const name = pm.querySelector('name')?.textContent?.trim() || '未命名'
+    const desc = pm.querySelector('description')?.textContent?.trim() || ''
+    const coordsText = pm.querySelector('Point > coordinates')?.textContent?.trim() || ''
+    const [lngStr, latStr] = coordsText.split(',')
+    const lat = parseFloat(latStr || '0')
+    const lng = parseFloat(lngStr || '0')
+    return { name, description: desc, lat, lng }
+  }).filter((p) => p.lat && p.lng)
+}
+
+async function resolveGoogleMapsUrl(url) {
+  try {
+    // Extract coordinates from Google Maps URL patterns
+    const patterns = [
+      /@([-\d.]+),([-\d.]+)/,
+      /ll=([-\d.]+),([-\d.]+)/,
+      /q=([-\d.]+),([-\d.]+)/,
+    ]
+    for (const pat of patterns) {
+      const m = url.match(pat)
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]), name: '地点' }
+    }
+    // Try place name from URL
+    const placeMatch = url.match(/place\/([^/@]+)/)
+    if (placeMatch) {
+      const name = decodeURIComponent(placeMatch[1].replaceAll('+', ' '))
+      return { lat: 0, lng: 0, name }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+async function parseBatchInput() {
+  const results = []
+
+  // Handle files
+  const files = Array.from(refs.batchFileInput?.files || [])
+  for (const file of files) {
+    const text = await file.text()
+    const lower = file.name.toLowerCase()
+    if (lower.endsWith('.gpx')) {
+      results.push(...parseGpx(text))
+    } else if (lower.endsWith('.kml') || lower.endsWith('.kmz')) {
+      results.push(...parseKml(text))
+    }
+  }
+
+  // Handle URL list
+  const urls = (refs.batchUrlInput?.value || '').split('\n').map((s) => s.trim()).filter(Boolean)
+  for (const url of urls) {
+    const parsed = await resolveGoogleMapsUrl(url)
+    if (parsed) results.push(parsed)
+  }
+
+  return results
+}
+
+function renderImportPreview(parsedSpots) {
+  if (!refs.importPreview) return
+  if (!parsedSpots.length) {
+    refs.importPreview.innerHTML = '<p class="import-empty">未解析到任何地点。</p>'
+    refs.importPreview.hidden = false
+    refs.confirmImportBtn && (refs.confirmImportBtn.hidden = true)
+    return
+  }
+  refs.importPreview.innerHTML = `
+    <p class="import-count">解析到 <strong>${parsedSpots.length}</strong> 个地点：</p>
+    <ul class="import-list">
+      ${parsedSpots.map((s) => `
+        <li class="import-item">
+          <strong>${escapeHtml(s.name)}</strong>
+          ${s.lat ? `<span class="import-coords">${s.lat.toFixed(4)}, ${s.lng.toFixed(4)}</span>` : ''}
+          ${s.description ? `<span class="import-desc">${escapeHtml(s.description.slice(0, 60))}${s.description.length > 60 ? '...' : ''}</span>` : ''}
+        </li>
+      `).join('')}
+    </ul>`
+  refs.importPreview.hidden = false
+  if (refs.confirmImportBtn) refs.confirmImportBtn.hidden = false
+  refs.importPreview._pending = parsedSpots
+}
+
+function confirmImport() {
+  const parsedSpots = refs.importPreview?._pending
+  if (!parsedSpots?.length || !state.trip) return
+  const day = Number(refs.batchDaySelect?.value) || 1
+  const sameDay = state.trip.spots.filter((s) => Number(s.day) === day)
+  let nextOrder = sameDay.length ? Math.max(...sameDay.map((s) => Number(s.order) || 0)) + 1 : 1
+
+  parsedSpots.forEach((p) => {
+    state.trip.spots.push({
+      ...makeBlankSpot({ day, order: nextOrder }),
+      name: p.name,
+      description: p.description || '',
+      lat: p.lat || 0,
+      lng: p.lng || 0,
+    })
+    nextOrder++
+  })
+
+  updateDirtyState(true)
+  renderDayFilters()
+  renderSummary()
+  renderSpots()
+  refs.importPreview.hidden = true
+  refs.importPreview._pending = null
+  if (refs.confirmImportBtn) refs.confirmImportBtn.hidden = true
+  if (refs.batchFileInput) refs.batchFileInput.value = ''
+  if (refs.batchUrlInput) refs.batchUrlInput.value = ''
+  setStatus(`已导入 ${parsedSpots.length} 个景点到第 ${day} 天`, '记得保存到数据库')
+}
+
 function moveArrayItem(list, fromIndex, toIndex) {
   if (toIndex < 0 || toIndex >= list.length) {
     return
@@ -590,27 +958,7 @@ function createNewSpot() {
   const sameDay = state.trip.spots.filter((spot) => Number(spot.day) === day)
   const nextOrder = sameDay.length ? Math.max(...sameDay.map((spot) => Number(spot.order) || 0)) + 1 : 1
 
-  state.trip.spots.push({
-    id: `spot-${Date.now()}`,
-    day,
-    city: '',
-    area: '',
-    name: '新景点',
-    nameEn: '',
-    timeSlot: '',
-    order: nextOrder,
-    lat: 0,
-    lng: 0,
-    mustVisit: false,
-    type: 'spot',
-    description: '',
-    whyGo: '',
-    stayMinutes: 60,
-    nextStopId: null,
-    nearNextTransport: false,
-    tags: [],
-    transportNote: '',
-  })
+  state.trip.spots.push(makeBlankSpot({ day, order: nextOrder }))
 
   updateDirtyState(true)
   renderDayFilters()
@@ -748,41 +1096,69 @@ function bindActionButtons() {
   refs.addSpotBtn.addEventListener('click', () => createNewSpot())
   refs.sortSegmentsBtn.addEventListener('click', () => sortSegmentsByDay())
   refs.addSegmentBtn.addEventListener('click', () => createNewSegment())
+
+  refs.parseImportBtn?.addEventListener('click', async () => {
+    refs.parseImportBtn.textContent = '解析中...'
+    refs.parseImportBtn.disabled = true
+    try {
+      const parsed = await parseBatchInput()
+      renderImportPreview(parsed)
+    } finally {
+      refs.parseImportBtn.textContent = '解析文件/链接'
+      refs.parseImportBtn.disabled = false
+    }
+  })
+
+  refs.confirmImportBtn?.addEventListener('click', () => confirmImport())
 }
 
 function bindListEditors() {
   const handleEvent = (event) => {
     const target = event.target
-    if (!(target instanceof HTMLElement)) {
-      return
-    }
-    if (!target.dataset.collection) {
-      return
-    }
-    if (event.type === 'input' && target.dataset.field === 'path') {
-      return
-    }
+    if (!(target instanceof HTMLElement)) return
+    // Place search input — handled separately
+    if (target.classList.contains('place-search-input')) return
+    // Photo file input — handled separately
+    if (target.classList.contains('photo-file-input')) return
+    if (!target.dataset.collection) return
+    if (event.type === 'input' && target.dataset.field === 'path') return
     updateFieldValue(target)
   }
 
-  refs.spotList.addEventListener('input', handleEvent)
+  refs.spotList.addEventListener('input', (event) => {
+    handleEvent(event)
+    // Handle place search
+    const placeInput = event.target.closest('.place-search-input')
+    if (placeInput) handlePlaceSearchInput(placeInput)
+  })
   refs.segmentList.addEventListener('input', handleEvent)
-  refs.spotList.addEventListener('change', handleEvent)
+  refs.spotList.addEventListener('change', (event) => {
+    handleEvent(event)
+    // Handle photo file input
+    const fileInput = event.target.closest('.photo-file-input')
+    if (fileInput) handlePhotoUpload(fileInput)
+  })
   refs.segmentList.addEventListener('change', handleEvent)
 
   document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-action]')
-    if (!button || !state.trip) {
-      return
+    // Hide place search results when clicking outside
+    if (!event.target.closest('.place-search-wrap')) {
+      document.querySelectorAll('.place-results').forEach((el) => { el.hidden = true })
     }
+
+    const button = event.target.closest('[data-action]')
+    if (!button || !state.trip) return
 
     const action = button.dataset.action
     const index = Number(button.dataset.index)
 
+    if (action === 'insert-after-spot' && Number.isInteger(index)) {
+      insertAfterSpot(index)
+      return
+    }
+
     if (action === 'delete-spot' && Number.isInteger(index)) {
-      if (!window.confirm('确定删除这个景点吗？')) {
-        return
-      }
+      if (!window.confirm('确定删除这个景点吗？')) return
       state.trip.spots.splice(index, 1)
       updateDirtyState(true)
       renderDayFilters()
@@ -791,10 +1167,19 @@ function bindListEditors() {
       return
     }
 
-    if (action === 'delete-segment' && Number.isInteger(index)) {
-      if (!window.confirm('确定删除这段路线吗？')) {
-        return
+    if (action === 'delete-photo' && Number.isInteger(index)) {
+      const pi = Number(button.dataset.photoIndex)
+      const spot = state.trip.spots[index]
+      if (spot?.photos) {
+        spot.photos.splice(pi, 1)
+        updateDirtyState(true)
+        renderSpots()
       }
+      return
+    }
+
+    if (action === 'delete-segment' && Number.isInteger(index)) {
+      if (!window.confirm('确定删除这段路线吗？')) return
       state.trip.routeSegments.splice(index, 1)
       updateDirtyState(true)
       renderSummary()
@@ -813,6 +1198,17 @@ function bindListEditors() {
       moveArrayItem(state.trip.routeSegments, index, index + 1)
       updateDirtyState(true)
       renderSegments()
+      return
+    }
+
+    // Place result item click
+    const placeItem = event.target.closest('.place-result-item')
+    if (placeItem) {
+      const placeId = placeItem.dataset.placeId
+      const spotIndex = Number(placeItem.dataset.spotIndex)
+      placeItem.closest('.place-results').hidden = true
+      placeItem.closest('.place-search-wrap').querySelector('.place-search-input').value = ''
+      if (placeId) applyPlaceToSpot(spotIndex, placeId)
     }
   })
 }

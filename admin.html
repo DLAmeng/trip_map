@@ -126,6 +126,43 @@
         <div class="section-note" id="segment-results-text">正在整理路线列表...</div>
         <div id="segment-list" class="card-list"></div>
       </section>
+      <section class="panel panel-import">
+        <div class="panel-head">
+          <div>
+            <p class="panel-kicker">批量导入</p>
+            <h2>GPX / Google 列表导入</h2>
+          </div>
+          <div class="panel-actions">
+            <button id="parse-import-btn" type="button">解析文件 / 链接</button>
+            <button id="confirm-import-btn" type="button" class="primary" hidden>确认导入景点</button>
+          </div>
+        </div>
+
+        <div class="import-grid">
+          <div class="import-col">
+            <p class="import-col-title">上传 GPX / KML 文件</p>
+            <label class="import-file-label">
+              <input id="batch-file-input" type="file" accept=".gpx,.kml,.kmz" multiple>
+              <span class="import-file-text">点击选择文件（.gpx / .kml）</span>
+            </label>
+          </div>
+          <div class="import-col">
+            <p class="import-col-title">或粘贴 Google Maps 链接（每行一个）</p>
+            <textarea id="batch-url-input" rows="4" placeholder="https://maps.google.com/maps?q=...&#10;https://maps.google.com/..."></textarea>
+          </div>
+        </div>
+
+        <div class="import-day-row">
+          <label class="field">
+            <span>导入到第几天</span>
+            <select id="import-day-select">
+              <option value="1">第 1 天</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="import-preview" class="import-preview" hidden></div>
+      </section>
     </main>
   </div>
 </body>

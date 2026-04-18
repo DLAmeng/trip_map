@@ -353,6 +353,10 @@ function cacheDom() {
   refs.mapCanvas = document.getElementById('map');
   refs.mapNotice = document.getElementById('map-notice');
   refs.routeWarningNote = document.getElementById('route-warning-note');
+  refs.mapSearch = document.getElementById('map-search');
+  refs.mapSearchInput = document.getElementById('map-search-input');
+  refs.mapSearchClear = document.getElementById('map-search-clear');
+  refs.mapSearchResults = document.getElementById('map-search-results');
 }
 
 function setLoading(message) {
@@ -1823,7 +1827,7 @@ function createLeafletMarker(spot) {
   });
 
   raw.bindPopup(buildPopupContentNode(spot), {
-    maxWidth: 280,
+    maxWidth: 240,
     closeButton: false,
     offset: [0, -6],
   });
@@ -1872,7 +1876,7 @@ function createGoogleMarker(spot) {
 
   const infoWindow = new googleLibs.InfoWindow({
     content: buildPopupContentNode(spot),
-    maxWidth: 300,
+    maxWidth: 260,
     ariaLabel: spot.name,
   });
 
@@ -2697,6 +2701,7 @@ function setupEventListeners() {
   refs.toggleListBtn.addEventListener('click', () => {
     state.isListVisible = !state.isListVisible;
     refs.dayListPanel.style.display = state.isListVisible ? '' : 'none';
+    document.querySelector('.main-content')?.classList.toggle('list-hidden', !state.isListVisible);
     updateControlState();
     requestAnimationFrame(refreshMapSize);
   });
@@ -2706,6 +2711,10 @@ function setupEventListeners() {
     state.isLegendCollapsed = !state.isLegendCollapsed;
     updateLegendState();
   });
+
+  initMapToolbar();
+
+  initMapSearch();
 
   refs.drawerHandle.addEventListener('pointerdown', onDrawerPointerDown);
   refs.drawerHeader.addEventListener('click', () => {
@@ -2837,6 +2846,206 @@ function onDrawerPointerDown(event) {
   refs.drawerHandle.addEventListener('pointermove', onPointerMove);
   refs.drawerHandle.addEventListener('pointerup', onPointerEnd);
   refs.drawerHandle.addEventListener('pointercancel', onPointerEnd);
+}
+
+function initMapToolbar() {
+  const toolbar = document.getElementById('map-toolbar');
+  if (!toolbar) return;
+  const buttons = Array.from(toolbar.querySelectorAll('.tool-btn'));
+  const panels = Array.from(document.querySelectorAll('.tool-panel[data-tool-panel]'));
+  if (!buttons.length || !panels.length) return;
+
+  const activate = (tool) => {
+    buttons.forEach((btn) => {
+      const isActive = tool !== null && btn.dataset.tool === tool;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+    panels.forEach((panel) => {
+      const isActive = tool !== null && panel.dataset.toolPanel === tool;
+      panel.classList.toggle('tool-active', isActive);
+    });
+    if (tool === 'search') {
+      const input = document.getElementById('map-search-input');
+      if (input) setTimeout(() => input.focus(), 20);
+    }
+    requestAnimationFrame(refreshMapSize);
+  };
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      const tool = btn.dataset.tool;
+      const isActive = btn.classList.contains('active');
+      activate(isActive ? null : tool);
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (toolbar.contains(target)) return;
+    if (panels.some((panel) => panel.contains(target))) return;
+    activate(null);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') activate(null);
+  });
+}
+
+function initMapSearch() {
+  const input = refs.mapSearchInput;
+  const clearBtn = refs.mapSearchClear;
+  const resultsList = refs.mapSearchResults;
+  if (!input || !resultsList) {
+    return;
+  }
+
+  let debounceTimer = null;
+  let abortController = null;
+
+  function hideResults() {
+    resultsList.hidden = true;
+    resultsList.innerHTML = '';
+  }
+
+  function clearSearch() {
+    input.value = '';
+    clearBtn.hidden = true;
+    hideResults();
+    input.focus();
+  }
+
+  function selectResult(item) {
+    input.value = item.name || item.display_name.split(',')[0];
+    clearBtn.hidden = false;
+    hideResults();
+
+    if (!map) {
+      return;
+    }
+    const lat = Number(item.lat);
+    const lon = Number(item.lon);
+    const bb = item.boundingbox?.map(Number);
+    const hasBB = Array.isArray(bb) && bb.length === 4 && bb.every(Number.isFinite);
+    const [south, north, west, east] = hasBB ? bb : [lat, lat, lon, lon];
+    const span = hasBB ? Math.max(north - south, east - west) : 0;
+
+    if (isGoogleMap()) {
+      if (hasBB && span <= 0.8) {
+        const bounds = new google.maps.LatLngBounds(
+          { lat: south, lng: west },
+          { lat: north, lng: east }
+        );
+        map.fitBounds(bounds);
+        google.maps.event.addListenerOnce(map, 'idle', () => {
+          if (map.getZoom() > 16) map.setZoom(16);
+        });
+      } else {
+        map.panTo({ lat, lng: lon });
+        map.setZoom(hasBB ? 12 : 14);
+      }
+      return;
+    }
+
+    if (hasBB) {
+      if (span > 0.8) {
+        map.setView([lat, lon], 12, { animate: true });
+      } else {
+        map.fitBounds([[south, west], [north, east]], { maxZoom: 16, animate: true });
+      }
+    } else {
+      map.setView([lat, lon], 14, { animate: true });
+    }
+  }
+
+  function renderResults(items) {
+    resultsList.innerHTML = '';
+    if (items.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'map-search-empty';
+      li.textContent = '没有找到相关地点';
+      resultsList.appendChild(li);
+    } else {
+      items.forEach((item) => {
+        const name = item.name || item.display_name.split(',')[0].trim();
+        const addr = item.display_name;
+        const li = document.createElement('li');
+        li.className = 'map-search-result';
+        li.setAttribute('role', 'option');
+        li.tabIndex = -1;
+        li.innerHTML = `<span class="map-search-result-name"></span><span class="map-search-result-addr"></span>`;
+        li.querySelector('.map-search-result-name').textContent = name;
+        li.querySelector('.map-search-result-addr').textContent = addr;
+        li.addEventListener('click', () => selectResult(item));
+        li.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            selectResult(item);
+          }
+        });
+        resultsList.appendChild(li);
+      });
+    }
+    resultsList.hidden = false;
+  }
+
+  async function doSearch(query) {
+    if (abortController) {
+      abortController.abort();
+    }
+    abortController = new AbortController();
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/search');
+      url.searchParams.set('q', query);
+      url.searchParams.set('format', 'json');
+      url.searchParams.set('limit', '5');
+      url.searchParams.set('addressdetails', '0');
+      url.searchParams.set('accept-language', 'zh-CN,zh,en');
+      const response = await fetch(url.toString(), {
+        signal: abortController.signal,
+        headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+      });
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      renderResults(data);
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('地点搜索失败:', err);
+      }
+    } finally {
+      abortController = null;
+    }
+  }
+
+  input.addEventListener('input', () => {
+    const query = input.value.trim();
+    clearBtn.hidden = query.length === 0;
+    clearTimeout(debounceTimer);
+    if (query.length < 2) {
+      hideResults();
+      return;
+    }
+    debounceTimer = setTimeout(() => doSearch(query), 400);
+  });
+
+  clearBtn.addEventListener('click', clearSearch);
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      hideResults();
+      input.blur();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (refs.mapSearch && !refs.mapSearch.contains(e.target)) {
+      hideResults();
+    }
+  });
 }
 
 window.addEventListener('DOMContentLoaded', init);
