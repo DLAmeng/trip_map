@@ -376,22 +376,27 @@ function showError(message, title = '行程数据加载失败') {
   refs.loadingMessage.textContent = message;
 }
 
-function showMapNotice(message, tone = 'warning') {
+function showMapNotice(message, tone = 'warning', source = 'runtime') {
   if (!refs.mapNotice) {
     return;
   }
   refs.mapNotice.textContent = message;
   refs.mapNotice.dataset.tone = tone;
+  refs.mapNotice.dataset.source = source;
   refs.mapNotice.hidden = false;
 }
 
-function hideMapNotice() {
+function hideMapNotice(source) {
   if (!refs.mapNotice) {
+    return;
+  }
+  if (source && refs.mapNotice.dataset.source !== source) {
     return;
   }
   refs.mapNotice.hidden = true;
   refs.mapNotice.textContent = '';
   refs.mapNotice.dataset.tone = '';
+  refs.mapNotice.dataset.source = '';
 }
 
 function updateRouteWarningVisibility() {
@@ -1763,6 +1768,12 @@ function getPopupHtml(spot) {
   );
   const subLabel = spot.nameEn ? `<div class="popup-name-en">${spot.nameEn}</div>` : '';
   const nextLabel = nextSpot ? nextSpot.name : '';
+  const nextNavUrl = nextSpot
+    ? `https://www.google.com/maps/dir/?api=1&origin=${spot.lat},${spot.lng}&destination=${nextSpot.lat},${nextSpot.lng}`
+    : '';
+  const nextNavBtn = nextSpot
+    ? `<a class="popup-nav-btn" href="${nextNavUrl}" target="_blank" rel="noopener noreferrer" aria-label="用 Google Maps 导航到${nextSpot.name}">导航</a>`
+    : '';
 
   return `
     <div class="popup-day" style="color:${color}">第 ${spot.day} 天 · ${formatTimeSlot(spot.timeSlot)}</div>
@@ -1775,7 +1786,7 @@ function getPopupHtml(spot) {
     <div class="popup-desc">${spot.description}</div>
     <div class="popup-why">推荐理由：${spot.whyGo}</div>
     ${hasTransportCallout ? `<div class="popup-transport">${spot.transportNote}</div>` : ''}
-    ${nextLabel ? `<div class="popup-next">下一站：${nextLabel}</div>` : ''}
+    ${nextLabel ? `<div class="popup-next">下一站：${nextLabel}${nextNavBtn}</div>` : ''}
     <div class="popup-mobile-only">${spot.description}</div>
     ${state.isMobile ? `<button class="popup-detail-btn" data-id="${spot.id}" type="button">在下方抽屉展开</button>` : ''}
   `;
@@ -3045,6 +3056,26 @@ function initMapSearch() {
     if (refs.mapSearch && !refs.mapSearch.contains(e.target)) {
       hideResults();
     }
+  });
+}
+
+function updateOnlineState() {
+  if (navigator.onLine) {
+    hideMapNotice('offline');
+  } else {
+    showMapNotice('当前离线 —— 显示缓存数据,部分功能受限', 'warning', 'offline');
+  }
+}
+
+window.addEventListener('online', updateOnlineState);
+window.addEventListener('offline', updateOnlineState);
+document.addEventListener('DOMContentLoaded', updateOnlineState);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('[sw] register failed', err);
+    });
   });
 }
 

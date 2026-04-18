@@ -1243,8 +1243,32 @@ button {
 }
 
 .popup-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 0.7rem;
   color: var(--ocean);
+}
+
+.popup-nav-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--ocean), #163b51);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.popup-nav-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .popup-detail-btn {
