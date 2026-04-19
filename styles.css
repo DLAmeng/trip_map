@@ -113,6 +113,31 @@ button {
   min-width: 0;
 }
 
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.header-breadcrumb .back-link,
+.header-breadcrumb .edit-link {
+  color: var(--text-muted, #6b6157);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.header-breadcrumb .back-link:hover,
+.header-breadcrumb .edit-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--accent-strong, #0f3d5c);
+}
+
 .eyebrow,
 .drawer-kicker,
 .sheet-kicker {

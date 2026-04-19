@@ -1,7 +1,21 @@
+const DEFAULT_TRIP_ID = (window.TripApi && window.TripApi.DEFAULT_TRIP_ID) || 'current'
+
+function getActiveTripId() {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const id = (params.get('id') || params.get('tripId') || '').trim()
+    return id || DEFAULT_TRIP_ID
+  } catch (_err) {
+    return DEFAULT_TRIP_ID
+  }
+}
+
+const activeTripId = getActiveTripId()
+const isDefaultTrip = activeTripId === DEFAULT_TRIP_ID
+
+// trip 相关 CRUD 统一走 window.TripApi(见 trip-api.js)。
+// 这里的 API 只保留 TripApi 未覆盖的接口:Google Places 搜索/详情、照片上传。
 const API = {
-  currentTrip: '/api/trips/current/full',
-  importLocal: '/api/trips/current/import-local',
-  exportLocal: '/api/trips/current/export-local',
   placesSearch: '/api/places/search',
   placesDetails: '/api/places/details',
   photoUpload: '/api/photos/upload',
@@ -26,6 +40,11 @@ const refs = {
   tripCountSegments: document.querySelector('#trip-count-segments'),
   metaTitle: document.querySelector('#meta-title'),
   metaDescription: document.querySelector('#meta-description'),
+  adminTripTitle: document.querySelector('#admin-trip-title'),
+  adminTripBadge: document.querySelector('#admin-trip-badge'),
+  adminHeaderCopy: document.querySelector('#admin-header-copy'),
+  adminBackLink: document.querySelector('#admin-back-link'),
+  adminOpenFrontLink: document.querySelector('#admin-open-front-link'),
   reloadBtn: document.querySelector('#reload-btn'),
   importLocalBtn: document.querySelector('#import-local-btn'),
   saveBtn: document.querySelector('#save-btn'),
@@ -185,6 +204,7 @@ function normalizeTripForSave(trip) {
   return {
     ...cloneData(trip),
     meta: {
+      ...(trip.meta || {}),
       title: normalizeString(trip.meta?.title),
       description: normalizeString(trip.meta?.description),
     },
@@ -218,12 +238,41 @@ async function fetchJson(url, options = {}) {
 }
 
 async function loadTrip(message = '已从数据库载入最新行程。') {
-  const payload = await fetchJson(API.currentTrip)
+  const payload = await TripApi.getTripFull(activeTripId)
   state.trip = cloneData(payload)
   state.originalTrip = cloneData(payload)
   state.dirty = false
   renderAll()
+  applyTripHeader()
   setStatus('编辑页已连接到数据库', message, 'success')
+}
+
+function applyTripHeader() {
+  const meta = state.trip?.meta || {}
+  const title = meta.title || '未命名行程'
+  document.title = `${title} · 后台编辑`
+  if (refs.adminTripTitle) refs.adminTripTitle.textContent = title
+  if (refs.adminTripBadge) {
+    refs.adminTripBadge.textContent = isDefaultTrip ? '默认行程' : '行程编辑'
+  }
+  if (refs.adminHeaderCopy) {
+    const hints = []
+    if (meta.destination) hints.push(meta.destination)
+    if (meta.startDate && meta.endDate) hints.push(`${meta.startDate} → ${meta.endDate}`)
+    else if (meta.startDate) hints.push(meta.startDate)
+    refs.adminHeaderCopy.textContent = hints.length
+      ? hints.join(' · ')
+      : (meta.description || '直接改标题、景点、路线和顺序，保存后前端地图会自动读取最新行程。')
+  }
+  if (refs.adminOpenFrontLink) {
+    refs.adminOpenFrontLink.href = `/trip?id=${encodeURIComponent(activeTripId)}`
+  }
+}
+
+function applyTripContextOnBoot() {
+  if (isDefaultTrip) return
+  if (refs.importLocalBtn) refs.importLocalBtn.hidden = true
+  if (refs.saveExportBtn) refs.saveExportBtn.hidden = true
 }
 
 function updateDirtyState(dirty = true) {
@@ -996,19 +1045,17 @@ async function saveTrip({ exportLocal = false } = {}) {
 
   try {
     const payload = normalizeTripForSave(state.trip)
-    const result = await fetchJson(API.currentTrip, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    })
+    const result = await TripApi.updateTripFull(activeTripId, payload)
 
     if (exportLocal) {
-      await fetchJson(API.exportLocal, { method: 'POST' })
+      await TripApi.exportCurrentToLocal()
     }
 
     state.trip = cloneData(result.payload)
     state.originalTrip = cloneData(result.payload)
     state.dirty = false
     renderAll()
+    applyTripHeader()
     setStatus(
       exportLocal ? '已保存到数据库，并写回 itinerary.json' : '已保存到数据库',
       `更新时间：${result.updatedAt || '刚刚'}`
@@ -1079,7 +1126,7 @@ function bindActionButtons() {
     }
     try {
       setStatus('正在导入本地文件...', '使用 itinerary.json 覆盖数据库')
-      const result = await fetchJson(API.importLocal, { method: 'POST' })
+      const result = await TripApi.importLocalToCurrent()
       state.trip = cloneData(result.payload)
       state.originalTrip = cloneData(result.payload)
       state.dirty = false
@@ -1218,6 +1265,7 @@ async function init() {
   bindFilterEditors()
   bindActionButtons()
   bindListEditors()
+  applyTripContextOnBoot()
 
   try {
     await loadTrip()

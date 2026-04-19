@@ -23,7 +23,11 @@
   <div class="app-shell">
     <header class="site-header">
       <div class="header-copy">
-        <span class="eyebrow">东京 → 富士山 → 京都 → 大阪</span>
+        <div class="header-breadcrumb">
+          <a href="/dashboard" class="back-link" aria-label="返回行程列表">← 全部行程</a>
+          <a href="/admin" id="trip-edit-link" class="edit-link" aria-label="编辑当前行程">编辑</a>
+        </div>
+        <span class="eyebrow" id="trip-eyebrow">Trip Map</span>
         <h1 id="trip-title">日本最终行程表</h1>
         <p id="trip-desc">正在载入行程信息...</p>
       </div>

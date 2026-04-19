@@ -5,18 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>日本行程后台编辑</title>
   <link rel="stylesheet" href="./admin.css">
+  <script defer src="./trip-api.js"></script>
   <script defer src="./admin.js"></script>
 </head>
 <body>
   <div class="admin-shell">
     <header class="admin-header">
       <div>
-        <p class="eyebrow">后台编辑</p>
-        <h1>日本行程管理台</h1>
-        <p class="header-copy">直接改标题、景点、路线和顺序，保存后前端地图会自动读取最新行程。</p>
+        <p class="eyebrow">
+          <a class="admin-back" id="admin-back-link" href="/dashboard">← 全部行程</a>
+          <span class="admin-eyebrow-divider">·</span>
+          <span id="admin-trip-badge" class="admin-trip-badge">后台编辑</span>
+        </p>
+        <h1 id="admin-trip-title">行程管理台</h1>
+        <p class="header-copy" id="admin-header-copy">直接改标题、景点、路线和顺序，保存后前端地图会自动读取最新行程。</p>
       </div>
       <div class="header-actions">
-        <a class="ghost-link" href="./" target="_blank" rel="noreferrer">打开前台地图</a>
+        <a class="ghost-link" id="admin-open-front-link" href="/trip" target="_blank" rel="noreferrer">打开前台地图</a>
       </div>
     </header>
 

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'trip-map-v1';
+const CACHE_VERSION = 'trip-map-v2';
 const APP_SHELL = `app-shell-${CACHE_VERSION}`;
 const VENDOR = `vendor-${CACHE_VERSION}`;
 const DATA = `data-${CACHE_VERSION}`;
@@ -84,10 +84,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.origin === self.location.origin && url.pathname === '/api/trips/current/full') {
+  if (url.origin === self.location.origin && /^\/api\/trips\/[^/]+\/full$/.test(url.pathname)) {
     event.respondWith(staleWhileRevalidate(req, DATA));
     return;
   }
+
+  if (url.origin === self.location.origin && url.pathname.startsWith('/api/')) return;
 
   if (url.origin === self.location.origin) {
     event.respondWith(staleWhileRevalidate(req, APP_SHELL));

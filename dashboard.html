@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>我的旅行计划 · Trip Map</title>
+  <link rel="stylesheet" href="./dashboard.css">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0f172a">
+  <script defer src="./trip-api.js"></script>
+  <script defer src="./dashboard.js"></script>
+</head>
+<body>
+  <div class="dash-shell">
+    <header class="dash-header">
+      <div class="dash-header-copy">
+        <span class="eyebrow">Trip Map</span>
+        <h1>我的旅行计划</h1>
+        <p id="dash-subtitle" class="dash-subtitle">从这里创建、打开、编辑你的每一段旅程。</p>
+      </div>
+      <div class="dash-header-actions">
+        <button id="duplicate-current-btn" type="button" class="secondary-btn" title="基于默认日本行程快速复制一份可编辑的副本">
+          <span aria-hidden="true">⎘</span> 复制默认行程
+        </button>
+        <button id="new-trip-btn" type="button" class="primary-btn">＋ 新建行程</button>
+      </div>
+    </header>
+
+    <section class="dash-toolbar" aria-label="筛选行程">
+      <label class="dash-search">
+        <span class="sr-only">搜索行程</span>
+        <input id="search-input" type="search" placeholder="按名称、目的地、描述搜索..." autocomplete="off">
+      </label>
+      <label class="dash-sort">
+        <span class="dash-sort-label">排序</span>
+        <select id="sort-select">
+          <option value="updated">最近更新</option>
+          <option value="name">名称 A→Z</option>
+          <option value="spots">景点数量</option>
+          <option value="created">创建时间</option>
+        </select>
+      </label>
+      <div class="dash-result-count" id="result-count" aria-live="polite"></div>
+    </section>
+
+    <main class="dash-main">
+      <div id="trip-grid" class="trip-grid" aria-live="polite"></div>
+      <div id="empty-state" class="empty-state" hidden>
+        <div class="empty-state-icon" aria-hidden="true">🧭</div>
+        <h2>开启你的第一段旅程</h2>
+        <p>收集景点、勾画路线、离线带走地图。一切从这里开始。</p>
+        <div class="empty-state-actions">
+          <button type="button" class="primary-btn" data-action="new-trip">创建新行程</button>
+          <button type="button" class="secondary-btn" data-action="duplicate-current">复制默认日本行程作为模板</button>
+        </div>
+      </div>
+      <div id="no-match-state" class="empty-state compact" hidden>
+        <p>没有匹配的行程，换个关键字试试。</p>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="create-dialog" class="create-dialog">
+    <form id="create-form" method="dialog">
+      <h2>新建行程</h2>
+      <label class="field">
+        <span>名称 <em class="req">*</em></span>
+        <input name="name" type="text" required placeholder="比如：京都 5 日游" autocomplete="off">
+      </label>
+      <label class="field">
+        <span>目的地（可选）</span>
+        <input name="destination" type="text" placeholder="比如：日本关西" autocomplete="off">
+      </label>
+      <label class="field">
+        <span>描述（可选）</span>
+        <textarea name="description" rows="2" placeholder="行程说明、同行人员等"></textarea>
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>开始日期</span>
+          <input name="startDate" type="date">
+        </label>
+        <label class="field">
+          <span>结束日期</span>
+          <input name="endDate" type="date">
+        </label>
+      </div>
+      <fieldset class="template-group">
+        <legend>模板</legend>
+        <label class="radio-row">
+          <input type="radio" name="template" value="empty" checked>
+          <div>
+            <strong>空白</strong>
+            <small>从零开始，景点和路线都为空</small>
+          </div>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="template" value="current">
+          <div>
+            <strong>基于当前默认行程</strong>
+            <small>保留地图配置和日配色，景点路线清空</small>
+          </div>
+        </label>
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" value="cancel" id="cancel-create">取消</button>
+        <button type="submit" class="primary-btn">创建并进入</button>
+      </div>
+      <p class="dialog-error" id="create-error" hidden></p>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+</body>
+</html>

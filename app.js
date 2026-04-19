@@ -1,10 +1,28 @@
 const MOBILE_BREAKPOINT = 840;
 const DEFAULT_DAY = 1;
+const DEFAULT_TRIP_ID = 'current';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const ITINERARY_SOURCE_CANDIDATES = [
-  { url: '/api/trips/current/full', label: '后端 API' },
-  { url: 'itinerary.json', label: '本地 JSON' },
-];
+
+function getActiveTripId() {
+  try {
+    const id = new URLSearchParams(window.location.search).get('id');
+    return (id && id.trim()) || DEFAULT_TRIP_ID;
+  } catch (_err) {
+    return DEFAULT_TRIP_ID;
+  }
+}
+
+function getItinerarySources(tripId) {
+  const sources = [
+    { url: `/api/trips/${encodeURIComponent(tripId)}/full`, label: '后端 API' },
+  ];
+  if (tripId === DEFAULT_TRIP_ID) {
+    sources.push({ url: 'itinerary.json', label: '本地 JSON' });
+  }
+  return sources;
+}
+
+const activeTripId = getActiveTripId();
 
 const MAP_PROVIDER = {
   GOOGLE: 'google',
@@ -314,8 +332,10 @@ function getDayLabel(day) {
 
 function cacheDom() {
   refs.body = document.body;
+  refs.tripEyebrow = document.getElementById('trip-eyebrow');
   refs.tripTitle = document.getElementById('trip-title');
   refs.tripDesc = document.getElementById('trip-desc');
+  refs.editTripLink = document.getElementById('trip-edit-link');
   refs.tripDayCount = document.getElementById('trip-day-count');
   refs.tripCityCount = document.getElementById('trip-city-count');
   refs.tripSpotCount = document.getElementById('trip-spot-count');
@@ -428,12 +448,15 @@ function updateLegendState() {
   }
 }
 
-async function fetchItineraryData() {
+async function fetchItineraryData(tripId = activeTripId) {
   const failures = [];
 
-  for (const source of ITINERARY_SOURCE_CANDIDATES) {
+  for (const source of getItinerarySources(tripId)) {
     try {
       const response = await fetch(source.url, { cache: 'no-store' });
+      if (response.status === 404) {
+        throw new Error(`未找到该行程 (id=${tripId})`);
+      }
       if (!response.ok) {
         throw new Error(`${source.label} 返回 ${response.status}`);
       }
@@ -556,11 +579,24 @@ function primeData() {
 }
 
 function populateHeader() {
-  refs.tripTitle.textContent = store.itineraryData.meta.title;
-  refs.tripDesc.textContent = store.itineraryData.meta.description;
+  const meta = store.itineraryData.meta || {};
+  const title = meta.title || '未命名行程';
+  refs.tripTitle.textContent = title;
+  refs.tripDesc.textContent = meta.description || (store.spots.length ? '' : '这个行程还没有景点，去「编辑」页添加第一个吧。');
   refs.tripDayCount.textContent = String(store.dayNumbers.length);
   refs.tripCityCount.textContent = String(store.cityNames.length);
   refs.tripSpotCount.textContent = String(store.spots.length);
+  document.title = title;
+  if (refs.tripEyebrow) {
+    const segments = [];
+    if (meta.destination) segments.push(meta.destination);
+    if (meta.startDate && meta.endDate) segments.push(`${meta.startDate} → ${meta.endDate}`);
+    else if (meta.startDate) segments.push(meta.startDate);
+    refs.tripEyebrow.textContent = segments.join(' · ') || (store.cityNames.length ? store.cityNames.join(' → ') : 'Trip Map');
+  }
+  if (refs.editTripLink) {
+    refs.editTripLink.href = `/admin?id=${encodeURIComponent(activeTripId)}`;
+  }
 }
 
 function getGoogleMapsConfig() {
