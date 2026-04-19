@@ -220,31 +220,32 @@ function createServer() {
     }
   });
 
-  app.use(express.static(ROOT_DIR, {
-    index: false,
-    extensions: ['html'],
-  }));
+  const FRONTEND_DIST = path.resolve(ROOT_DIR, 'frontend', 'dist');
+  console.log('Frontend Dist Path:', FRONTEND_DIST);
 
+  // 1. 静态资源托管：优先匹配 frontend/dist 中的物理文件
+  app.use(express.static(FRONTEND_DIST));
+
+  // 2. 旧版运行时配置(兼容性保留，React 版通常从 API 获取 Key)
   app.get('/runtime-config.js', (request, response) => {
     response.type('application/javascript');
     response.send(`window.GOOGLE_MAPS_API_KEY = ${JSON.stringify(GOOGLE_MAPS_API_KEY)};\n`);
   });
 
-  app.get('/', (request, response) => {
-    response.sendFile('index.html', { root: ROOT_DIR });
-  });
+  // 3. 核心入口路由由 React 接管
+  const serveIndex = (req, res) => {
+    res.sendFile('index.html', { root: FRONTEND_DIST }, (err) => {
+      if (err && !res.headersSent) {
+        console.error('SendFile Error:', err);
+        res.status(500).json({ ok: false, error: '无法加载前端入口文件' });
+      }
+    });
+  };
 
-  app.get('/dashboard', (request, response) => {
-    response.sendFile('dashboard.html', { root: ROOT_DIR });
-  });
-
-  app.get('/trip', (request, response) => {
-    response.sendFile('index.html', { root: ROOT_DIR });
-  });
-
-  app.get('/admin', (request, response) => {
-    response.sendFile('admin.html', { root: ROOT_DIR });
-  });
+  app.get('/', serveIndex);
+  app.get('/dashboard', serveIndex);
+  app.get('/trip', serveIndex);
+  app.get('/admin', serveIndex);
 
   app.use((request, response) => {
     response.status(404).json({ ok: false, error: '未找到对应资源。' });

@@ -1,0 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+export function SaveBar({ onSave, onReset, isSaving, isDirty }) {
+    return (_jsxs("div", { className: "save-bar", children: [_jsx("div", { className: "save-bar-info", children: isDirty ? (_jsx("span", { style: { color: 'var(--admin-accent)' }, children: "\u25CF \u60A8\u6709\u672A\u4FDD\u5B58\u7684\u66F4\u6539" })) : (_jsx("span", { style: { opacity: 0.6 }, children: "\u6240\u6709\u66F4\u6539\u5DF2\u4FDD\u5B58" })) }), _jsxs("div", { className: "save-bar-actions", children: [_jsx("button", { className: "btn btn-ghost", onClick: onReset, disabled: !isDirty || isSaving, children: "\u91CD\u7F6E" }), _jsx("button", { className: "btn btn-primary", onClick: onSave, disabled: !isDirty || isSaving, children: isSaving ? '正在保存...' : '保存更改' })] })] }));
+}

@@ -1,0 +1,253 @@
+/* 核心样式迁移自项目根目录 admin.css */
+:root {
+  --admin-bg: #f6f1ea;
+  --admin-panel: rgba(255, 255, 255, 0.88);
+  --admin-panel-strong: #ffffff;
+  --admin-line: rgba(82, 52, 30, 0.12);
+  --admin-text: #25180f;
+  --admin-muted: #7a6658;
+  --admin-accent: #b85c38;
+  --admin-accent-strong: #8f4020;
+  --admin-shadow: 0 18px 48px rgba(61, 35, 19, 0.12);
+  --admin-radius: 24px;
+}
+
+/* 在 AdminPage.tsx 中会通过副作用将这些变量应用到 body */
+.admin-page-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(239, 200, 158, 0.35), transparent 34%),
+    linear-gradient(180deg, #fbf7f0 0%, #f2ebe1 100%);
+  color: var(--admin-text);
+}
+
+.admin-shell {
+  width: min(1500px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 28px 0 100px; /* 为 SaveBar 留位置 */
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--admin-accent);
+}
+
+.status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 280px;
+}
+
+.admin-header,
+.topbar,
+.action-bar,
+.panel {
+  backdrop-filter: blur(18px);
+  background: var(--admin-panel);
+  border: 1px solid var(--admin-line);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px;
+  border-radius: var(--admin-radius);
+}
+
+.admin-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--admin-text);
+  text-decoration: none;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  font-size: 0.85rem;
+  transition: background 140ms ease;
+}
+
+.admin-back:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.topbar {
+  margin-top: 18px;
+  padding: 18px 22px;
+  border-radius: 22px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 12px;
+  flex: 1;
+}
+
+.summary-card {
+  background: var(--admin-panel-strong);
+  border: 1px solid var(--admin-line);
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-card span {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.summary-card small {
+  color: var(--admin-muted);
+}
+
+.editor-layout {
+  margin-top: 20px;
+  display: grid;
+  gap: 20px;
+}
+
+.panel {
+  border-radius: 24px;
+  padding: 22px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--admin-accent);
+}
+
+.field input,
+.field textarea,
+.field select {
+  padding: 10px 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: 12px;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--admin-accent);
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.card-list {
+  display: grid;
+  gap: 16px;
+}
+
+.editor-card {
+  background: #ffffff;
+  border: 1px solid var(--admin-line);
+  border-radius: 20px;
+  padding: 20px;
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* SaveBar 固定在底部 */
+.save-bar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1440px, calc(100vw - 48px));
+  background: var(--admin-text);
+  color: #fff;
+  padding: 16px 28px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+}
+
+.save-bar-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: var(--admin-accent);
+  color: #fff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 840px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+}

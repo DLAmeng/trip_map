@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trip-map",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--env-file=.env", "server.js"],
+      "port": 8080,
+      "autoPort": true
+    }
+  ]
+}

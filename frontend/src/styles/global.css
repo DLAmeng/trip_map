@@ -1,0 +1,135 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+a {
+  color: #1d4ed8;
+}
+
+code {
+  padding: 0.1rem 0.35rem;
+  background: #e2e8f0;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.app-nav a {
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.app-nav a.active {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.app-nav-hint {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  /* 移除固定 max-width，由页面组件内部通过 dash-shell / admin-shell 控制自适应宽度 */
+}
+
+.page h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.page > p {
+  margin: 0.5rem 0;
+}
+
+.page-todo {
+  padding: 0.75rem 1rem;
+  background: #fef9c3;
+  border: 1px solid #facc15;
+  border-radius: 0.5rem;
+  color: #854d0e;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.page-error {
+  padding: 0.75rem 1rem;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  border-radius: 0.5rem;
+}
+
+.dash-actions {
+  margin: 0.75rem 0;
+}
+
+.dash-actions button {
+  padding: 0.4rem 0.9rem;
+  border-radius: 0.4rem;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dash-actions button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.trip-raw-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.trip-raw-list li {
+  padding: 0.6rem 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.trip-raw-meta {
+  color: #64748b;
+  font-size: 0.8rem;
+}
