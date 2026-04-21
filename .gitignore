@@ -3,3 +3,5 @@ data/*.sqlite
 data/*.sqlite-*
 .env
 release/
+*.log
+.DS_Store

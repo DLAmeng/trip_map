@@ -1,8 +1,10 @@
 /*
  * React 版 Dashboard 的样式。
- * Phase 2 迁移策略:原样搬运根目录 dashboard.css 的 class 体系,只去掉
- * 顶层 html/body 这种全局样式(React 版交给 app-shell / global.css),
- * class 名完全保持,不做样式重构。Phase 5 统一样式方案时再整理。
+ *
+ * 核心优化：
+ * 1. 利用 CSS Grid 的 auto-fill 实现桌面(3列)/平板(2列)/大手机(1-2列)的无感自动切换。
+ * 2. 重构 Toolbar，在手机端(<640px)切换为纵向堆叠以防挤压。
+ * 3. 卡片按钮引入 Flex-wrap 2x2 模式，兼顾触控面积与布局平衡。
  */
 
 :root {
@@ -37,13 +39,13 @@
 }
 
 .dash-shell {
-  max-width: 1180px;
+  max-width: var(--container-max, 1180px);
   margin: 0 auto;
-  padding: 48px 32px 72px;
+  padding: var(--page-py, 48px) var(--page-px, 32px);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', sans-serif;
   background: linear-gradient(180deg, #fcf6e8 0%, #f1e7d0 60%, #e9dcbc 100%);
-  min-height: calc(100vh - 48px);
+  min-height: calc(100vh - 56px);
   color: var(--ink);
 }
 
@@ -53,8 +55,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 28px;
+  gap: var(--section-gap, 24px);
+  margin-bottom: var(--section-gap, 28px);
 }
 
 .dash-header-copy {
@@ -73,7 +75,7 @@
 
 .dash-header h1 {
   margin: 0;
-  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -104,6 +106,10 @@
   font-weight: 700;
   cursor: pointer;
   transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* 触控友好 */
 }
 
 .primary-btn {
@@ -158,7 +164,7 @@
 }
 
 .dash-search {
-  flex: 1 1 280px;
+  flex: 1 1 320px;
   min-width: 240px;
   display: flex;
   align-items: center;
@@ -206,14 +212,15 @@
   color: var(--ink-soft);
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+  padding-right: 8px;
 }
 
 /* ============ Grid ============ */
 
 .trip-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--grid-gap, 22px);
 }
 
 .trip-card {
@@ -332,6 +339,7 @@
 
 .trip-actions {
   display: flex;
+  flex-wrap: wrap; /* 关键：允许按钮换行 */
   gap: 8px;
   margin-top: auto;
   padding-top: 12px;
@@ -340,7 +348,7 @@
 
 .trip-actions a,
 .trip-actions button {
-  flex: 1;
+  flex: 1 1 calc(50% - 8px); /* 默认占据约 50% 宽度，支持 2x2 网格 */
   text-align: center;
   padding: 9px 10px;
   border-radius: var(--radius-md);
@@ -351,13 +359,18 @@
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
-  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+  transition: all 0.2s;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .trip-actions a.open-btn {
   background: var(--ocean);
   color: #fff;
   border-color: var(--ocean);
+  flex-grow: 2; /* 提高主要按钮优先级 */
 }
 
 .trip-actions a.open-btn:hover {
@@ -366,15 +379,14 @@
 
 .trip-actions a.edit-btn:hover {
   background: var(--sand-soft);
-  border-color: var(--line-strong);
+  border-color: var(--ocean-soft);
 }
 
 .trip-actions .delete-btn,
 .trip-actions .duplicate-btn {
-  flex: 0 0 auto;
-  padding: 9px 14px;
-  font-size: 0.95rem;
-  line-height: 1;
+  flex: 0 0 40px; /* 图标类按钮固定尺寸 */
+  padding: 0;
+  font-size: 1.1rem;
 }
 
 .trip-actions .delete-btn {
@@ -450,7 +462,7 @@
   border: none;
   border-radius: var(--radius-lg);
   padding: 0;
-  max-width: 460px;
+  max-width: 480px;
   width: calc(100vw - 32px);
   box-shadow: var(--shadow-md);
 }
@@ -565,8 +577,8 @@
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .dialog-actions button[type='button'] {
@@ -605,24 +617,71 @@
   background: var(--danger);
 }
 
-@media (max-width: 720px) {
+/* ============ 响应式重构 ============ */
+
+/* 1. 平板尺寸 (Tablet) */
+@media (max-width: 1024px) {
   .dash-shell {
-    padding: 28px 16px 56px;
-  }
-  .dash-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 18px;
-    margin-bottom: 20px;
-  }
-  .dash-header-actions {
-    justify-content: flex-start;
+    padding: 32px 24px;
   }
   .dash-toolbar {
-    border-radius: var(--radius-lg);
-    padding: 12px;
+    border-radius: 20px;
+  }
+}
+
+/* 2. 手机临界点 (Large Mobile / Small Tablet) */
+@media (max-width: 768px) {
+  .dash-toolbar {
+    border-radius: 16px;
+  }
+  /* 让 Grid 降级为单列前，在 iPad 竖屏下保持 auto-fill 自然的双列显示 */
+}
+
+/* 3. 手机尺寸 (Mobile) */
+@media (max-width: 640px) {
+  .dash-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .dash-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .dash-header-actions button {
+    flex: 1;
+  }
+  .dash-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: 20px;
+    padding: 16px;
+  }
+  .dash-search {
+    flex: none;
+    width: 100%;
+  }
+  .dash-search input {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 12px 16px;
+  }
+  .dash-sort {
+    justify-content: space-between;
+    margin-top: 4px;
+    padding: 0 4px;
+  }
+  .dash-result-count {
+    margin-left: 0;
+    margin-top: 8px;
+    padding-left: 4px;
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+    width: 100%;
   }
   .trip-grid {
+    grid-template-columns: 1fr;
+  }
+  .field-row {
     grid-template-columns: 1fr;
   }
 }

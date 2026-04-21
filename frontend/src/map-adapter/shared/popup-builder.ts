@@ -49,8 +49,14 @@ export function buildSpotPopupHtml(spot: SpotItem, options: PopupBuilderOptions)
     ? `<div class="popup-transport">${escapeHtml(spot.transportNote)}</div>`
     : '';
 
+  const photo =
+    Array.isArray(spot.photos) && spot.photos.length > 0
+      ? `<div class="popup-photo"><img src="${escapeHtml(spot.photos[0])}" alt="" /></div>`
+      : '';
+
   return `
     <div class="popup-shell">
+      ${photo}
       <div class="popup-day" style="color:${color}">第 ${spot.day} 天 · ${escapeHtml(formatTimeSlot(spot.timeSlot))}</div>
       <div class="popup-name">${escapeHtml(spot.name)}${mustBadge}</div>
       ${subLabel}

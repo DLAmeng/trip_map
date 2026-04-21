@@ -18,6 +18,8 @@ export interface LatLng {
 export interface MapControllerConfig {
   center: LatLng;
   zoom: number;
+  apiKey?: string;
+  mapId?: string;
   /** 一维数组,index = day - 1;超出长度时 adapter 内部 fallback */
   dayColors: string[];
   /** 空白处点击 → React 清空 selection */
@@ -45,6 +47,12 @@ export interface MarkerLayer {
   setSelected(id: string | null, options?: { pan?: boolean }): void;
   /** 手动打开指定 spot 的 popup(列表项点击用) */
   openPopup(id: string): void;
+  /**
+   * 标记"下一段"高亮。对齐旧版 app.js `updateHighlights` 里的 `.marker-next` 语义:
+   * 当 filter.nextOnly 打开时,这些 marker(即 nextStopId 非空的)会叠加
+   * 一圈视觉强调;集合为空则清除所有强调样式。
+   */
+  setNextHighlight?(ids: Set<string>): void;
 }
 
 export interface RouteFilter {
@@ -58,5 +66,5 @@ export interface RouteLayer {
 
 export type MapControllerFactory = (
   container: HTMLElement,
-  config: MapControllerConfig,
+  config: MapControllerConfig & { onError?: (err: Error) => void },
 ) => MapController;

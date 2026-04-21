@@ -80,6 +80,14 @@ export interface SpotItem {
   nearNextTransport?: boolean;
   tags?: string[];
   transportNote?: string;
+  photos?: string[];
+  /** Google Places 自动填充字段(Admin 侧编辑 / 补全使用) */
+  googleMapsUri?: string;
+  googlePlaceId?: string;
+  rating?: number | null;
+  website?: string;
+  phone?: string;
+  openingHours?: string[];
 }
 
 /**

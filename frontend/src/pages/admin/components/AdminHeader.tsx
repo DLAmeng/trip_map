@@ -15,22 +15,21 @@ export function AdminHeader({ title, tripId, stats }: AdminHeaderProps) {
     <>
       <header className="admin-header">
         <div>
-          <p className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <p className="eyebrow">
             <Link className="admin-back" to="/dashboard">← 全部行程</Link>
-            <span style={{ opacity: 0.5 }}>·</span>
-            <span style={{ color: 'var(--admin-accent)', fontWeight: 700 }}>后台编辑</span>
+            <span className="admin-eyebrow-divider">·</span>
+            <span className="admin-trip-badge">后台编辑</span>
           </p>
-          <h1 style={{ margin: '8px 0 0', fontSize: '1.75rem' }}>{title || '未命名行程'}</h1>
-          <p style={{ color: 'var(--admin-muted)', marginTop: '8px', maxWidth: '60ch' }}>
+          <h1 className="admin-header-title">{title || '未命名行程'}</h1>
+          <p className="admin-header-desc">
             在这里编辑行程的基础信息、景点和交通路线。保存后前台地图将同步更新。
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="header-actions">
           <Link
             to={`/trip?id=${encodeURIComponent(tripId)}`}
             target="_blank"
             className="btn btn-ghost"
-            style={{ textDecoration: 'none', color: 'var(--admin-accent-strong)', background: '#fff4ed' }}
           >
             打开前台地图
           </Link>

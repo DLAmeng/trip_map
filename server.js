@@ -4,6 +4,8 @@ const path = require('node:path');
 const repository = require('./trip-repository');
 const tripService = require('./trip-service');
 
+
+
 const app = express();
 const ROOT_DIR = __dirname;
 const DATA_DIR = path.join(ROOT_DIR, 'data');

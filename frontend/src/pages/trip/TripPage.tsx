@@ -6,11 +6,19 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getTripFull, DEFAULT_TRIP_ID } from '../../api/trip-api';
 import { normalizeTripData, computeStats } from '../../selectors/tripSelectors';
-import { DEFAULT_FILTER, type FilterState } from '../../selectors/filterState';
+import { type FilterState } from '../../selectors/filterState';
 import { TripHeader } from './TripHeader';
-import { TripFilters } from './TripFilters';
 import { TripMapCanvas } from './TripMapCanvas';
 import { SpotList } from './SpotList';
+import { MobileFilterSheet } from './components/MobileFilterSheet';
+import { SummaryBar } from './components/SummaryBar';
+import { LoadingScreen } from './components/LoadingScreen';
+import { MobileTripHeaderCard } from './components/MobileTripHeaderCard';
+import { MobileTripBottomSwitcher, type MobileTripMode } from './components/MobileTripBottomSwitcher';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useIsMobile } from '../../hooks/useIsMobile';
+
+// TripStats 类型现在统一从 selectors/tripSelectors 导出,此处保留空位以便阅读代码时知道它在哪里。
 
 /**
  * Phase 3 Trip 页壳组件。
@@ -25,7 +33,7 @@ import { SpotList } from './SpotList';
  * 地图 API 调用在 useTripMap + adapter 里。
  */
 export function TripPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const tripId = params.get('id') || DEFAULT_TRIP_ID;
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
@@ -44,27 +52,108 @@ export function TripPage() {
     return computeStats(normalized);
   }, [normalized]);
 
-  const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
-  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  // 从 URL 参数派生 UI 状态
+  const filter: FilterState = useMemo(() => {
+    const dayParam = params.get('day');
+    return {
+      day: dayParam ? Number(dayParam) : null,
+      city: params.get('city') || null,
+      mustOnly: params.get('mustVisit') === 'true',
+      nextOnly: params.get('nextOnly') === 'true',
+    };
+  }, [params]);
+
+  const selectedSpotId = params.get('spot') || null;
+
+  const [isListVisible, setIsListVisible] = useState(() => window.innerWidth > 1024);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const isOnline = useOnlineStatus();
+  const isMobile = useIsMobile();
+
+  // 当前激活的底部 switcher 模式(仅手机端用)。
+  // 'summary' / 'list' / 'filter' / null;null = 纯地图视图
+  const activeMobileMode: MobileTripMode | null =
+    activeTool === 'summary' ? 'summary' : isListVisible ? 'list' : isFilterSheetOpen ? 'filter' : null;
+
+  const hasActiveFilter =
+    filter.day !== null ||
+    filter.city !== null ||
+    filter.mustOnly ||
+    filter.nextOnly;
+
+  const closeAllPopups = useCallback(() => {
+    // 桌面默认展开列表,手机点空白处会收起所有 sheet(list / filter / summary)
+    setIsListVisible(!isMobile);
+    setIsFilterSheetOpen(false);
+    setActiveTool(null);
+  }, [isMobile]);
+
+  // 状态更新函数改为修改 URL 参数
+  const setFilter = useCallback((updater: FilterState | ((prev: FilterState) => FilterState)) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      const current: FilterState = {
+        day: prev.get('day') ? Number(prev.get('day')) : null,
+        city: prev.get('city') || null,
+        mustOnly: prev.get('mustVisit') === 'true',
+        nextOnly: prev.get('nextOnly') === 'true',
+      };
+      const nextFilter = typeof updater === 'function' ? updater(current) : updater;
+
+      if (nextFilter.day !== null) next.set('day', String(nextFilter.day));
+      else next.delete('day');
+
+      if (nextFilter.city) next.set('city', nextFilter.city);
+      else next.delete('city');
+
+      if (nextFilter.mustOnly) next.set('mustVisit', 'true');
+      else next.delete('mustVisit');
+
+      if (nextFilter.nextOnly) next.set('nextOnly', 'true');
+      else next.delete('nextOnly');
+
+      // 切换过滤条件时通常需要清除具体选中，以触发 Fit Day
+      next.delete('spot');
+
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
   const handleSelectSpot = useCallback((id: string) => {
-    setSelectedSpotId((prev) => (prev === id ? prev : id));
-  }, []);
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (prev.get('spot') === id) return prev;
+
+      next.set('spot', id);
+
+      // 点击景点后自动切换到对应天数的过滤视图
+      const spot = normalized?.spotById.get(id);
+      if (spot) {
+        next.set('day', String(spot.day));
+      }
+      return next;
+    }, { replace: true });
+  }, [normalized, setParams]);
 
   const handleMapClick = useCallback(() => {
-    setSelectedSpotId(null);
-  }, []);
+    setParams((prev) => {
+      if (!prev.has('spot')) return prev;
+      const next = new URLSearchParams(prev);
+      next.delete('spot');
+      return next;
+    }, { replace: true });
+  }, [setParams]);
 
-  // loading 态
+  // loading 态:用全屏 loading card 对齐旧版
   if (isLoading) {
     return (
       <div className="trip-shell">
-        <div className="trip-status" role="status" aria-live="polite">
-          <h2>加载中…</h2>
-          <p>
-            正在读取行程 <code>{tripId}</code>
-          </p>
-        </div>
+        <LoadingScreen
+          eyebrow="正在整理路线"
+          title="正在加载行程..."
+          message={`正在读取行程 ${tripId}`}
+        />
       </div>
     );
   }
@@ -93,44 +182,122 @@ export function TripPage() {
   }
 
   return (
-    <div className="trip-shell">
-      <TripHeader meta={data.meta} stats={stats} tripId={tripId} />
+    <div className={`trip-shell${isMobile ? ' trip-shell-mobile' : ''}`}>
+      {/* 手机端:顶部行程上下文卡片(搜索栏 MapSearch 已经在 TripMapCanvas 内常驻渲染) */}
+      {isMobile ? (
+        <MobileTripHeaderCard
+          meta={data.meta}
+          tripId={tripId}
+          cityNames={normalized.cityNames}
+        />
+      ) : (
+        <TripHeader
+          meta={data.meta}
+          tripId={tripId}
+          stats={stats}
+          dayNumbers={normalized.dayNumbers}
+          cityNames={normalized.cityNames}
+          filter={filter}
+          onDaySelect={(day) => setFilter((prev) => ({ ...prev, day }))}
+        />
+      )}
 
-      <div className="main-content">
+      <div className={`main-content ${!isListVisible ? 'list-hidden' : ''}`}>
         <TripMapCanvas
           config={data.config}
           spots={normalized.spots}
           segments={normalized.routeSegments}
           spotById={normalized.spotById}
+          cityNames={normalized.cityNames}
           filter={filter}
+          onFilterChange={setFilter}
           selectedSpotId={selectedSpotId}
           onSelectSpot={handleSelectSpot}
           onMapClick={handleMapClick}
+          stats={stats}
+          onToggleList={() => setIsListVisible(!isListVisible)}
+          isListVisible={isListVisible}
+          activeTool={activeTool}
+          setActiveTool={setActiveTool}
+          isOnline={isOnline}
+          isMobile={isMobile}
         />
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateRows: 'auto minmax(0, 1fr)',
-            gap: '12px',
-            minWidth: 0,
-            minHeight: 0,
-          }}
-        >
-          <TripFilters
-            dayNumbers={normalized.dayNumbers}
-            filter={filter}
-            onChange={setFilter}
-          />
-          <SpotList
-            spotsByDay={normalized.spotsByDay}
-            dayNumbers={normalized.dayNumbers}
-            dayColors={data.config.dayColors}
-            filter={filter}
-            selectedSpotId={selectedSpotId}
-            onSelect={handleSelectSpot}
-          />
-        </div>
+        {isListVisible && (
+          <>
+            {isMobile && (
+              <div className="sheet-backdrop" onClick={closeAllPopups} />
+            )}
+            <div className="spot-list-wrapper">
+              <SpotList
+                spotsByDay={normalized.spotsByDay}
+                dayNumbers={normalized.dayNumbers}
+                dayColors={data.config.dayColors}
+                filter={filter}
+                selectedSpotId={selectedSpotId}
+                onSelect={handleSelectSpot}
+                onDayClick={(day) =>
+                  setFilter((prev) => ({ ...prev, day }))
+                }
+              />
+            </div>
+          </>
+        )}
       </div>
+
+      {/* 移动端底部胶囊切换栏 —— 概况 / 列表 / 筛选 */}
+      {isMobile ? (
+        <MobileTripBottomSwitcher
+          activeMode={activeMobileMode}
+          hasActiveFilter={hasActiveFilter}
+          onSelectSummary={() => {
+            setActiveTool(activeTool === 'summary' ? null : 'summary');
+            setIsListVisible(false);
+            setIsFilterSheetOpen(false);
+          }}
+          onSelectList={() => {
+            setIsListVisible(!isListVisible);
+            setActiveTool(null);
+            setIsFilterSheetOpen(false);
+          }}
+          onSelectFilter={() => {
+            setIsFilterSheetOpen(true);
+            setActiveTool(null);
+            setIsListVisible(false);
+          }}
+        />
+      ) : null}
+
+      {/* 移动端行程概况弹窗 */}
+      {activeTool === 'summary' && isMobile && (
+        <>
+          <div className="sheet-backdrop" onClick={closeAllPopups} />
+          <div className="mobile-summary-modal">
+            <div className="modal-header">
+              <h3>行程概况</h3>
+            </div>
+            <div className="modal-body">
+              <SummaryBar
+                stats={stats}
+                isFiltered={
+                  filter.day !== null ||
+                  filter.city !== null ||
+                  filter.mustOnly ||
+                  filter.nextOnly
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      <MobileFilterSheet
+        isOpen={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        dayNumbers={normalized.dayNumbers}
+        cityNames={normalized.cityNames}
+        filter={filter}
+        onChange={setFilter}
+      />
     </div>
   );
 }

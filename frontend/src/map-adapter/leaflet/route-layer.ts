@@ -67,12 +67,16 @@ export function createLeafletRouteLayer({
 
   function styleFor(segment: RouteSegment, active: boolean): L.PathOptions {
     const isIntercity = segment.scope === 'intercity';
+    const transportType = segment.transportType?.toLowerCase() || '';
+    const isAnimated = transportType === 'walk' || transportType === 'bus';
+
     return {
       color: getRouteColor(segment.transportType),
       opacity: active ? (isIntercity ? 0.88 : 0.72) : (isIntercity ? 0.2 : 0.12),
       weight: active ? (isIntercity ? 3.8 : 3.4) : (isIntercity ? 2.8 : 2.2),
       lineJoin: 'round',
       lineCap: 'round',
+      className: isAnimated ? 'route-path-animated' : '',
     };
   }
 

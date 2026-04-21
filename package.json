@@ -4,10 +4,11 @@
   "private": true,
   "description": "日本旅行行程地图页，包含 Express + SQLite 后端。",
   "scripts": {
-    "start": "node server.js",
-    "dev:backend": "node server.js",
+    "start": "node --env-file=.env server.js",
+    "dev:backend": "node --env-file=.env server.js",
     "dev:frontend": "npm run dev --prefix frontend",
-    "build:frontend": "npm run build --prefix frontend"
+    "build:frontend": "npm run build --prefix frontend",
+    "build:watch": "npm run build:watch --prefix frontend"
   },
   "dependencies": {
     "express": "^5.1.0"

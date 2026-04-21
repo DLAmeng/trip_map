@@ -20,7 +20,7 @@ export const createLeafletController: MapControllerFactory = (container, config)
   const initialCenter: LatLng = config.center;
   const initialZoom = config.zoom;
 
-  const map = L.map(container, { zoomControl: true }).setView(
+  const map = L.map(container, { zoomControl: false }).setView(
     [initialCenter.lat, initialCenter.lng],
     initialZoom,
   );

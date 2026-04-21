@@ -1,23 +1,52 @@
 import { Link } from 'react-router-dom';
 import type { TripMeta } from '../../types/trip';
+import type { FilterState } from '../../selectors/filterState';
 import type { TripStats } from '../../selectors/tripSelectors';
 
 interface TripHeaderProps {
   meta: TripMeta;
-  stats: TripStats;
   tripId: string;
+  stats: TripStats;
+  dayNumbers: number[];
+  cityNames: string[];
+  filter: FilterState;
+  onDaySelect: (day: number | null) => void;
 }
 
 /**
- * 纯展示组件:标题 / 描述 / 3 个统计 pill + back-link / edit-link。
+ * 对齐旧版 `legacy/old-frontend/index.html` 的 `.site-header`:
+ * - 左侧:breadcrumb + eyebrow (destination · startDate → endDate) + 标题 + 描述
+ * - 右侧:天数 / 城市 / 景点 三个统计胶囊 + Day 下拉
  *
- * 对应原生 index.html 里的 `.site-header`(styles.css L97-257)。
- * 第一版不做 header-actions 的 day select 和 mustOnly(那些在 TripFilters 里),
- * 这里只保留信息 + 导航链接,边界清晰。
+ * 统计数据由 Trip 页 selectors 计算,header 只做展示。Day 下拉切换 `filter.day`,
+ * 保持 URL 同步,和原版 `#today-btn` 语义一致。
  */
-export function TripHeader({ meta, stats, tripId }: TripHeaderProps) {
+export function TripHeader({
+  meta,
+  tripId,
+  stats,
+  dayNumbers,
+  cityNames,
+  filter,
+  onDaySelect,
+}: TripHeaderProps) {
   const title = meta.title?.trim() || '未命名行程';
   const description = meta.description?.trim() || '';
+
+  // eyebrow 优先展示 destination + 日期区间;都缺则 fallback 到城市列表,都没有就 "Trip Map"
+  const eyebrowSegments: string[] = [];
+  if (meta.destination) eyebrowSegments.push(meta.destination);
+  if (meta.startDate && meta.endDate) {
+    eyebrowSegments.push(`${meta.startDate} → ${meta.endDate}`);
+  } else if (meta.startDate) {
+    eyebrowSegments.push(meta.startDate);
+  }
+  const eyebrowText =
+    eyebrowSegments.length > 0
+      ? eyebrowSegments.join(' · ')
+      : cityNames.length > 0
+        ? cityNames.join(' → ')
+        : 'Trip Map';
 
   return (
     <header className="site-header">
@@ -30,23 +59,47 @@ export function TripHeader({ meta, stats, tripId }: TripHeaderProps) {
             编辑
           </Link>
         </nav>
-        <span className="eyebrow">Trip Map</span>
+        <span className="eyebrow">{eyebrowText}</span>
         <h1>{title}</h1>
         {description ? <p>{description}</p> : null}
       </div>
 
-      <div className="header-stats">
-        <div className="stat-pill" aria-label={`${stats.days} 天`}>
-          <span>{stats.days}</span>
-          <small>天数</small>
+      <div className="header-stats-group">
+        <div className="header-stats" aria-label="行程摘要">
+          <div className="stat-pill">
+            <span>{stats.days}</span>
+            <small>天数</small>
+          </div>
+          <div className="stat-pill">
+            <span>{stats.cities}</span>
+            <small>城市</small>
+          </div>
+          <div className="stat-pill">
+            <span>{stats.spots}</span>
+            <small>景点</small>
+          </div>
         </div>
-        <div className="stat-pill" aria-label={`${stats.cities} 座城市`}>
-          <span>{stats.cities}</span>
-          <small>城市</small>
-        </div>
-        <div className="stat-pill" aria-label={`${stats.spots} 个景点`}>
-          <span>{stats.spots}</span>
-          <small>景点</small>
+
+        <div className="header-actions">
+          <label className="sr-only" htmlFor="header-day-select">
+            选择聚焦天数
+          </label>
+          <select
+            id="header-day-select"
+            className={`pill-select${filter.day !== null ? ' active' : ''}`}
+            value={filter.day === null ? 'all' : String(filter.day)}
+            onChange={(event) => {
+              const raw = event.target.value;
+              onDaySelect(raw === 'all' ? null : Number(raw));
+            }}
+          >
+            <option value="all">全部天数</option>
+            {dayNumbers.map((day) => (
+              <option key={day} value={day}>
+                第 {day} 天
+              </option>
+            ))}
+          </select>
         </div>
       </div>
     </header>

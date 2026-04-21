@@ -54,12 +54,21 @@ export function useTripMap(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segments, spotById]);
 
-  // 3. filter 变化 → 同步 marker 显隐 + route 过滤
+  // 3. filter 变化 → 同步 marker 显隐 + route 过滤 + next 高亮
   useEffect(() => {
     const controller = controllerRef.current;
     if (!controller) return;
     controller.markers.setVisibleSpots(getVisibleSpotIds(spots, filter));
     controller.routes.setActiveFilter({ day: filter.day });
+
+    // "只看下一段"模式下,把所有 nextStopId 非空的 spot 标记为 next;
+    // 关闭时传空集,adapter 清除强调样式。
+    if (controller.markers.setNextHighlight) {
+      const nextIds = filter.nextOnly
+        ? new Set(spots.filter((s) => s.nextStopId).map((s) => s.id))
+        : new Set<string>();
+      controller.markers.setNextHighlight(nextIds);
+    }
   }, [controllerRef, filter, spots]);
 
   // 4. selectedSpotId 变化 → 同步选中

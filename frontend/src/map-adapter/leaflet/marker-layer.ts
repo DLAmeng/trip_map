@@ -1,4 +1,5 @@
 import L from 'leaflet';
+import 'leaflet.markercluster';
 import type { SpotItem } from '../../types/trip';
 import type { MarkerLayer } from '../types';
 import { buildSpotPopupHtml } from '../shared/popup-builder';
@@ -7,6 +8,7 @@ interface MarkerEntry {
   spot: SpotItem;
   marker: L.Marker;
   visible: boolean;
+  isNext: boolean;
 }
 
 interface CreateMarkerLayerParams {
@@ -25,6 +27,14 @@ export function createLeafletMarkerLayer({
   dayColors,
   onSpotClick,
 }: CreateMarkerLayerParams): MarkerLayer & { destroy(): void } {
+  const clusterGroup = (L as any).markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 40,
+    spiderfyOnMaxZoom: true,
+    disableClusteringAtZoom: 16,
+  });
+  map.addLayer(clusterGroup);
+
   const entries = new Map<string, MarkerEntry>();
   const fallbackColor = '#888';
 
@@ -32,14 +42,15 @@ export function createLeafletMarkerLayer({
     return dayColors[day - 1] ?? fallbackColor;
   }
 
-  function makeIcon(spot: SpotItem, isActive: boolean): L.DivIcon {
+  function makeIcon(spot: SpotItem, isActive: boolean, isNext = false): L.DivIcon {
     const base = spot.mustVisit ? 24 : 20;
     const size = isActive ? base + 6 : base;
     const color = getColor(spot.day);
     const mustClass = spot.mustVisit ? ' is-must' : '';
     const activeClass = isActive ? ' is-active' : '';
+    const nextClass = isNext ? ' is-next' : '';
     return L.divIcon({
-      html: `<div class="spot-marker${mustClass}${activeClass}" style="--marker-color:${color};--marker-size:${size}px"></div>`,
+      html: `<div class="spot-marker${mustClass}${activeClass}${nextClass}" style="--marker-color:${color};--marker-size:${size}px"></div>`,
       className: 'marker-shell',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2],
@@ -47,9 +58,7 @@ export function createLeafletMarkerLayer({
   }
 
   function removeAll(): void {
-    entries.forEach((entry) => {
-      entry.marker.remove();
-    });
+    clusterGroup.clearLayers();
     entries.clear();
   }
 
@@ -71,8 +80,8 @@ export function createLeafletMarkerLayer({
         L.DomEvent.stopPropagation(event);
         onSpotClick?.(spot.id);
       });
-      marker.addTo(map);
-      entries.set(spot.id, { spot, marker, visible: true });
+      clusterGroup.addLayer(marker);
+      entries.set(spot.id, { spot, marker, visible: true, isNext: false });
     }
   }
 
@@ -81,9 +90,9 @@ export function createLeafletMarkerLayer({
       const shouldShow = visibleIds.has(id);
       if (shouldShow === entry.visible) return;
       if (shouldShow) {
-        entry.marker.addTo(map);
+        clusterGroup.addLayer(entry.marker);
       } else {
-        entry.marker.remove();
+        clusterGroup.removeLayer(entry.marker);
       }
       entry.visible = shouldShow;
     });
@@ -96,7 +105,7 @@ export function createLeafletMarkerLayer({
     if (selectedId && selectedId !== id) {
       const prev = entries.get(selectedId);
       if (prev) {
-        prev.marker.setIcon(makeIcon(prev.spot, false));
+        prev.marker.setIcon(makeIcon(prev.spot, false, prev.isNext));
         prev.marker.closePopup();
       }
     }
@@ -104,13 +113,28 @@ export function createLeafletMarkerLayer({
     if (!id) return;
     const entry = entries.get(id);
     if (!entry) return;
-    entry.marker.setIcon(makeIcon(entry.spot, true));
+    entry.marker.setIcon(makeIcon(entry.spot, true, entry.isNext));
     if (options?.pan !== false && entry.visible) {
-      map.panTo([entry.spot.lat, entry.spot.lng], { animate: true, duration: 0.4 });
+      // 自动平移并确保缩放级别至少为 15
+      map.setView([entry.spot.lat, entry.spot.lng], Math.max(map.getZoom(), 15), {
+        animate: true,
+        duration: 0.4,
+      });
     }
     if (entry.visible) {
       entry.marker.openPopup();
     }
+  }
+
+  function setNextHighlight(ids: Set<string>): void {
+    entries.forEach((entry, id) => {
+      const shouldBeNext = ids.has(id);
+      if (shouldBeNext === entry.isNext) return;
+      entry.isNext = shouldBeNext;
+      // 用当前 selected 状态重建 icon
+      const isActive = selectedId === id;
+      entry.marker.setIcon(makeIcon(entry.spot, isActive, shouldBeNext));
+    });
   }
 
   function openPopup(id: string): void {
@@ -121,7 +145,8 @@ export function createLeafletMarkerLayer({
 
   function destroy(): void {
     removeAll();
+    map.removeLayer(clusterGroup);
   }
 
-  return { render, setVisibleSpots, setSelected, openPopup, destroy };
+  return { render, setVisibleSpots, setSelected, openPopup, setNextHighlight, destroy };
 }

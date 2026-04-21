@@ -1,3 +1,48 @@
+:root {
+  color-scheme: light;
+
+  /* 响应式间距变量 */
+  --page-px: 16px;
+  --page-py: 20px;
+  --section-gap: 20px;
+  --grid-gap: 16px;
+  --container-max: 1200px;
+  --container-wide: 1500px;
+}
+
+/* 断点策略：Mobile-first 增强 */
+@media (min-width: 640px) {
+  :root {
+    --page-px: 24px;
+    --page-py: 32px;
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --page-px: 32px;
+    --page-py: 40px;
+    --section-gap: 24px;
+    --grid-gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --page-px: 48px;
+    --page-py: 48px;
+    --section-gap: 28px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --page-px: 64px;
+    --page-py: 56px;
+    --section-gap: 32px;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -32,18 +77,21 @@ code {
 .app-nav {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
+  gap: 8px;
+  padding: 12px var(--page-px);
   background: #0f172a;
   color: #e2e8f0;
+  flex-wrap: wrap; /* 允许小屏换行 */
 }
 
 .app-nav a {
   color: #cbd5e1;
   text-decoration: none;
-  padding: 0.3rem 0.7rem;
-  border-radius: 0.4rem;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 0.95rem;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
 }
 
 .app-nav a.active {
@@ -51,17 +99,43 @@ code {
   color: #ffffff;
 }
 
+.app-nav a:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
 .app-nav-hint {
   margin-left: auto;
   font-size: 0.8rem;
   color: #94a3b8;
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .app-nav-hint {
+    flex-basis: 100%; /* 小屏下强制换行到第二行 */
+    margin-left: 0;
+    padding-top: 4px;
+    padding-left: 4px;
+    order: 10;
+  }
+}
+
+/* 手机 / 平板 portrait:隐藏开发期顶部导航,让 Trip / Dashboard / Admin 各自独占视口
+ * App 的 Page 组件自己做顶部 header(如 Trip 页用浮动卡片) */
+@media (max-width: 1024px) {
+  .app-nav {
+    display: none;
+  }
 }
 
 .app-main {
   flex: 1;
   width: 100%;
   margin: 0 auto;
-  /* 移除固定 max-width，由页面组件内部通过 dash-shell / admin-shell 控制自适应宽度 */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .page h1 {
