@@ -42,7 +42,10 @@ export const createLeafletController: MapControllerFactory = (container, config)
     dayColors: config.dayColors,
     onSpotClick: config.onSpotClick,
   });
-  const routes = createLeafletRouteLayer({ map });
+  const routes = createLeafletRouteLayer({
+    map,
+    onRouteClick: config.onRouteClick,
+  });
 
   function fitBounds(points: LatLng[], padding = 48): void {
     if (!points.length) return;

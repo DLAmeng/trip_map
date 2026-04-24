@@ -14,7 +14,7 @@ interface BatchImportPanelProps {
 }
 
 /**
- * 对齐旧版 `legacy/old-frontend/admin.html` 的 `panel-import`:
+ * 批量导入面板:
  * - 支持上传多个 GPX / KML 文件
  * - 支持粘贴 Google Maps 链接(每行一条)
  * - 解析后弹出预览,让用户选"导入到第几天"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { RouteSegment, SpotItem } from '../../../types/trip';
@@ -23,7 +23,7 @@ const TRANSPORT_OPTIONS = [
 ];
 
 function resolveSpotName(spots: SpotItem[], id: string): string {
-  const hit = spots.find((s) => s.id === id);
+  const hit = spots.find((spot) => spot.id === id);
   return hit ? hit.name || hit.id : '';
 }
 
@@ -49,11 +49,15 @@ export function SegmentEditorCard({
     zIndex: isDragging ? 10 : 1,
   };
 
-  // path 在 UI 里用字符串编辑,blur 时 parse;错误本地化提示
   const [pathDraft, setPathDraft] = useState(() =>
     JSON.stringify(segment.path ?? [], null, 2),
   );
   const [pathError, setPathError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPathDraft(JSON.stringify(segment.path ?? [], null, 2));
+    setPathError(null);
+  }, [segment.id, segment.path]);
 
   const commitPath = (raw: string) => {
     const trimmed = raw.trim();
@@ -62,11 +66,13 @@ export function SegmentEditorCard({
       setPathError(null);
       return;
     }
+
     try {
       const parsed = JSON.parse(trimmed);
       if (!Array.isArray(parsed)) {
         throw new Error('path 必须是 [[lat,lng], ...] 数组');
       }
+
       const cleaned: Array<[number, number]> = [];
       for (const pair of parsed) {
         if (!Array.isArray(pair) || pair.length < 2) continue;
@@ -75,10 +81,11 @@ export function SegmentEditorCard({
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         cleaned.push([lat, lng]);
       }
+
       onUpdate({ path: cleaned });
       setPathError(null);
-    } catch (err) {
-      setPathError(err instanceof Error ? err.message : String(err));
+    } catch (error) {
+      setPathError(error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -97,7 +104,10 @@ export function SegmentEditorCard({
           ⠿
         </div>
         <div className="card-title-wrap" style={{ flex: 1, minWidth: 180 }}>
-          <div className="card-badges" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}>
+          <div
+            className="card-badges"
+            style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 4 }}
+          >
             <span className="badge">第 {segment.day} 天</span>
             <span className="badge">{segment.scope || 'city'}</span>
             <span className="badge">{segment.transportType || '未设交通'}</span>
@@ -126,7 +136,7 @@ export function SegmentEditorCard({
           <input
             type="text"
             value={segment.id ?? ''}
-            onChange={(e) => onUpdate({ id: e.target.value })}
+            onChange={(event) => onUpdate({ id: event.target.value })}
           />
         </div>
         <div className="field">
@@ -134,9 +144,9 @@ export function SegmentEditorCard({
           <input
             type="number"
             value={segment.day ?? ''}
-            onChange={(e) =>
+            onChange={(event) =>
               onUpdate({
-                day: e.target.value === '' ? (undefined as any) : parseInt(e.target.value),
+                day: event.target.value === '' ? (undefined as never) : parseInt(event.target.value, 10),
               })
             }
           />
@@ -145,7 +155,9 @@ export function SegmentEditorCard({
           <label>范围 (scope)</label>
           <select
             value={segment.scope ?? 'city'}
-            onChange={(e) => onUpdate({ scope: e.target.value as 'city' | 'intercity' })}
+            onChange={(event) =>
+              onUpdate({ scope: event.target.value as RouteSegment['scope'] })
+            }
           >
             <option value="city">城市内 (city)</option>
             <option value="intercity">跨城市 (intercity)</option>
@@ -157,12 +169,12 @@ export function SegmentEditorCard({
             type="text"
             list={`transport-options-${segment.id}`}
             value={segment.transportType ?? ''}
-            onChange={(e) => onUpdate({ transportType: e.target.value })}
+            onChange={(event) => onUpdate({ transportType: event.target.value })}
             placeholder="walk / metro / bus..."
           />
           <datalist id={`transport-options-${segment.id}`}>
-            {TRANSPORT_OPTIONS.map((t) => (
-              <option key={t} value={t} />
+            {TRANSPORT_OPTIONS.map((transportType) => (
+              <option key={transportType} value={transportType} />
             ))}
           </datalist>
         </div>
@@ -171,12 +183,12 @@ export function SegmentEditorCard({
           <label>起点景点</label>
           <select
             value={segment.fromSpotId ?? ''}
-            onChange={(e) => onUpdate({ fromSpotId: e.target.value })}
+            onChange={(event) => onUpdate({ fromSpotId: event.target.value })}
           >
             <option value="">请选择起点</option>
-            {spots.map((s) => (
-              <option key={s.id} value={s.id}>
-                D{s.day} · {s.name || s.id}
+            {spots.map((spot) => (
+              <option key={spot.id} value={spot.id}>
+                D{spot.day} · {spot.name || spot.id}
               </option>
             ))}
           </select>
@@ -185,12 +197,12 @@ export function SegmentEditorCard({
           <label>终点景点</label>
           <select
             value={segment.toSpotId ?? ''}
-            onChange={(e) => onUpdate({ toSpotId: e.target.value })}
+            onChange={(event) => onUpdate({ toSpotId: event.target.value })}
           >
             <option value="">请选择终点</option>
-            {spots.map((s) => (
-              <option key={s.id} value={s.id}>
-                D{s.day} · {s.name || s.id}
+            {spots.map((spot) => (
+              <option key={spot.id} value={spot.id}>
+                D{spot.day} · {spot.name || spot.id}
               </option>
             ))}
           </select>
@@ -201,7 +213,7 @@ export function SegmentEditorCard({
           <input
             type="text"
             value={segment.label ?? ''}
-            onChange={(e) => onUpdate({ label: e.target.value })}
+            onChange={(event) => onUpdate({ label: event.target.value })}
             placeholder="如: 东京 → 京都 (新干线 Hikari)"
           />
         </div>
@@ -210,7 +222,7 @@ export function SegmentEditorCard({
           <input
             type="text"
             value={segment.duration ?? ''}
-            onChange={(e) => onUpdate({ duration: e.target.value })}
+            onChange={(event) => onUpdate({ duration: event.target.value })}
             placeholder="如: 2h 15min"
           />
         </div>
@@ -226,7 +238,7 @@ export function SegmentEditorCard({
             <textarea
               rows={3}
               value={segment.note ?? ''}
-              onChange={(e) => onUpdate({ note: e.target.value })}
+              onChange={(event) => onUpdate({ note: event.target.value })}
               placeholder="具体的换乘信息、班次等..."
             />
           </div>
@@ -240,11 +252,10 @@ export function SegmentEditorCard({
             <textarea
               rows={5}
               value={pathDraft}
-              onChange={(e) => {
-                setPathDraft(e.target.value);
-                // 打字过程中不 commit,避免中间状态报错闪烁
+              onChange={(event) => {
+                setPathDraft(event.target.value);
               }}
-              onBlur={(e) => commitPath(e.target.value)}
+              onBlur={(event) => commitPath(event.target.value)}
               spellCheck={false}
               style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}
             />

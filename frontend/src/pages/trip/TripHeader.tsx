@@ -14,7 +14,7 @@ interface TripHeaderProps {
 }
 
 /**
- * 对齐旧版 `legacy/old-frontend/index.html` 的 `.site-header`:
+ * Trip 顶部标题栏:
  * - 左侧:breadcrumb + eyebrow (destination · startDate → endDate) + 标题 + 描述
  * - 右侧:天数 / 城市 / 景点 三个统计胶囊 + Day 下拉
  *

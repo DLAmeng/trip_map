@@ -32,7 +32,10 @@ export const createLeafletController = (container, config) => {
         dayColors: config.dayColors,
         onSpotClick: config.onSpotClick,
     });
-    const routes = createLeafletRouteLayer({ map });
+    const routes = createLeafletRouteLayer({
+        map,
+        onRouteClick: config.onRouteClick,
+    });
     function fitBounds(points, padding = 48) {
         if (!points.length)
             return;

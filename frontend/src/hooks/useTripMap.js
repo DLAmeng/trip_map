@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { getVisibleSpotIds, } from '../selectors/filterState';
+import { getVisibleRouteContext, getVisibleSpotIds, } from '../selectors/filterState';
 /**
  * 串联 React 状态 ↔ adapter 的 hook。所有地图 API 调用都在这里集中,
  * React 组件(TripMapCanvas / TripPage)不直接碰 Leaflet。
@@ -12,6 +12,15 @@ import { getVisibleSpotIds, } from '../selectors/filterState';
  */
 export function useTripMap(controllerRef, params) {
     const { spots, segments, spotById, filter, selectedSpotId } = params;
+    function buildRouteFilter() {
+        const routeContext = getVisibleRouteContext(spots, filter);
+        return {
+            day: filter.day,
+            city: filter.city,
+            visibleDays: routeContext.visibleDays,
+            visibleCities: routeContext.visibleCities,
+        };
+    }
     // 1. spots 变化 → 重建 marker
     useEffect(() => {
         const controller = controllerRef.current;
@@ -22,6 +31,7 @@ export function useTripMap(controllerRef, params) {
         controller.markers.setVisibleSpots(getVisibleSpotIds(spots, filter));
         if (selectedSpotId) {
             controller.markers.setSelected(selectedSpotId, { pan: false });
+            controller.markers.openPopup(selectedSpotId);
         }
         // filter/selectedSpotId 有各自的 effect 再跑一次,这里只做首帧 sync
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -32,7 +42,7 @@ export function useTripMap(controllerRef, params) {
         if (!controller)
             return;
         controller.routes.render(segments, spotById);
-        controller.routes.setActiveFilter({ day: filter.day });
+        controller.routes.setActiveFilter(buildRouteFilter());
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [segments, spotById]);
     // 3. filter 变化 → 同步 marker 显隐 + route 过滤 + next 高亮
@@ -41,7 +51,7 @@ export function useTripMap(controllerRef, params) {
         if (!controller)
             return;
         controller.markers.setVisibleSpots(getVisibleSpotIds(spots, filter));
-        controller.routes.setActiveFilter({ day: filter.day });
+        controller.routes.setActiveFilter(buildRouteFilter());
         // "只看下一段"模式下,把所有 nextStopId 非空的 spot 标记为 next;
         // 关闭时传空集,adapter 清除强调样式。
         if (controller.markers.setNextHighlight) {
@@ -57,5 +67,8 @@ export function useTripMap(controllerRef, params) {
         if (!controller)
             return;
         controller.markers.setSelected(selectedSpotId, { pan: true });
+        if (selectedSpotId) {
+            controller.markers.openPopup(selectedSpotId);
+        }
     }, [controllerRef, selectedSpotId]);
 }

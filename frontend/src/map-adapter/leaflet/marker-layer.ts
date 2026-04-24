@@ -2,7 +2,7 @@ import L from 'leaflet';
 import 'leaflet.markercluster';
 import type { SpotItem } from '../../types/trip';
 import type { MarkerLayer } from '../types';
-import { buildSpotPopupHtml } from '../shared/popup-builder';
+import { buildSpotPopupElement } from '../shared/popup-builder';
 
 interface MarkerEntry {
   spot: SpotItem;
@@ -33,7 +33,31 @@ export function createLeafletMarkerLayer({
     spiderfyOnMaxZoom: true,
     disableClusteringAtZoom: 16,
   });
+  const normalMarkerGroup = L.layerGroup();
   map.addLayer(clusterGroup);
+
+  function syncMarkerMode(): void {
+    const useClusters = map.getZoom() < 9;
+    if (useClusters) {
+      if (map.hasLayer(normalMarkerGroup)) {
+        map.removeLayer(normalMarkerGroup);
+      }
+      if (!map.hasLayer(clusterGroup)) {
+        map.addLayer(clusterGroup);
+      }
+      return;
+    }
+
+    if (map.hasLayer(clusterGroup)) {
+      map.removeLayer(clusterGroup);
+    }
+    if (!map.hasLayer(normalMarkerGroup)) {
+      map.addLayer(normalMarkerGroup);
+    }
+  }
+
+  map.on('zoomend', syncMarkerMode);
+  syncMarkerMode();
 
   const entries = new Map<string, MarkerEntry>();
   const fallbackColor = '#888';
@@ -59,6 +83,7 @@ export function createLeafletMarkerLayer({
 
   function removeAll(): void {
     clusterGroup.clearLayers();
+    normalMarkerGroup.clearLayers();
     entries.clear();
   }
 
@@ -70,7 +95,10 @@ export function createLeafletMarkerLayer({
         riseOnHover: true,
         keyboard: true,
       });
-      marker.bindPopup(buildSpotPopupHtml(spot, { dayColors, fallbackColor }), {
+      marker.bindPopup(buildSpotPopupElement(spot, {
+        dayColors,
+        fallbackColor,
+      }), {
         maxWidth: 240,
         closeButton: false,
         offset: L.point(0, -6),
@@ -81,8 +109,10 @@ export function createLeafletMarkerLayer({
         onSpotClick?.(spot.id);
       });
       clusterGroup.addLayer(marker);
+      normalMarkerGroup.addLayer(marker);
       entries.set(spot.id, { spot, marker, visible: true, isNext: false });
     }
+    syncMarkerMode();
   }
 
   function setVisibleSpots(visibleIds: Set<string>): void {
@@ -91,8 +121,10 @@ export function createLeafletMarkerLayer({
       if (shouldShow === entry.visible) return;
       if (shouldShow) {
         clusterGroup.addLayer(entry.marker);
+        normalMarkerGroup.addLayer(entry.marker);
       } else {
         clusterGroup.removeLayer(entry.marker);
+        normalMarkerGroup.removeLayer(entry.marker);
       }
       entry.visible = shouldShow;
     });
@@ -122,7 +154,7 @@ export function createLeafletMarkerLayer({
       });
     }
     if (entry.visible) {
-      entry.marker.openPopup();
+      openPopup(id);
     }
   }
 
@@ -140,12 +172,20 @@ export function createLeafletMarkerLayer({
   function openPopup(id: string): void {
     const entry = entries.get(id);
     if (!entry || !entry.visible) return;
+    if (map.hasLayer(clusterGroup)) {
+      clusterGroup.zoomToShowLayer(entry.marker, () => {
+        entry.marker.openPopup();
+      });
+      return;
+    }
     entry.marker.openPopup();
   }
 
   function destroy(): void {
     removeAll();
+    map.off('zoomend', syncMarkerMode);
     map.removeLayer(clusterGroup);
+    map.removeLayer(normalMarkerGroup);
   }
 
   return { render, setVisibleSpots, setSelected, openPopup, setNextHighlight, destroy };

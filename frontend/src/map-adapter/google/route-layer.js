@@ -1,9 +1,7 @@
-export function createGoogleRouteLayer() {
+export function createGoogleRouteLayer({ onRouteClick } = {}) {
     let map = null;
     let routeRefs = [];
-    let currentFilter = { day: null };
-    let animationFrameId = null;
-    let iconOffset = 0;
+    let currentFilter = { day: null, city: null };
     // 缓冲逻辑
     let pendingSegments = null;
     let pendingSpotById = null;
@@ -14,42 +12,31 @@ export function createGoogleRouteLayer() {
         bus: '#10b981',
         shinkansen: '#dc2626',
         train: '#7c3aed',
+        jrrapid: '#7c3aed',
+        nankai: '#0f766e',
         drive: '#475569',
     };
     function destroy() {
         routeRefs.forEach((ref) => {
-            ref.polyline.setMap(null);
+            ref.bodyLine.setMap(null);
+            ref.casingLine.setMap(null);
         });
         routeRefs = [];
     }
     function applyVisibility() {
         routeRefs.forEach((ref) => {
-            const isVisible = currentFilter.day === null || ref.day === currentFilter.day;
-            ref.polyline.setMap(isVisible ? map : null);
+            const dayMatches = !currentFilter.visibleDays ||
+                currentFilter.visibleDays.size === 0 ||
+                currentFilter.visibleDays.has(ref.day);
+            const cityMatches = currentFilter.city === null ||
+                !currentFilter.visibleCities ||
+                currentFilter.visibleCities.size === 0 ||
+                [...ref.cities].some((city) => currentFilter.visibleCities?.has(city));
+            const isVisible = dayMatches && cityMatches;
+            // 两层都做 show/hide,避免过滤时只剩描边或只剩本体
+            ref.bodyLine.setMap(isVisible ? map : null);
+            ref.casingLine.setMap(isVisible ? map : null);
         });
-    }
-    function startAnimation() {
-        if (animationFrameId)
-            return;
-        const animate = () => {
-            // 改为基于像素的绝对偏移，保持恒定极慢速流动 (约 6px/s)，不随缩放变快
-            iconOffset = (iconOffset + 0.1) % 50;
-            routeRefs.forEach((ref) => {
-                const icons = ref.polyline.get('icons');
-                if (icons && icons.length > 0) {
-                    icons[0].offset = iconOffset + 'px';
-                    ref.polyline.set('icons', icons);
-                }
-            });
-            animationFrameId = requestAnimationFrame(animate);
-        };
-        animationFrameId = requestAnimationFrame(animate);
-    }
-    function stopAnimation() {
-        if (animationFrameId) {
-            cancelAnimationFrame(animationFrameId);
-            animationFrameId = null;
-        }
     }
     const layer = {
         init(m) {
@@ -58,7 +45,6 @@ export function createGoogleRouteLayer() {
                 layer.render(pendingSegments, pendingSpotById);
             }
             applyVisibility();
-            startAnimation();
         },
         render(segments, spotById) {
             pendingSegments = segments;
@@ -80,38 +66,54 @@ export function createGoogleRouteLayer() {
                     ];
                 }
                 const transportType = seg.transportType?.toLowerCase() || '';
-                const isAnimated = transportType === 'walk' || transportType === 'bus';
-                const polyline = new google.maps.Polyline({
+                const bodyColor = TRANSPORT_COLORS[transportType] || '#888';
+                // 先建 casing(底层描边),zIndex 更低,clickable:false 不拦截事件
+                const casingLine = new google.maps.Polyline({
                     path,
                     geodesic: true,
-                    strokeColor: TRANSPORT_COLORS[seg.transportType] || '#888',
-                    strokeOpacity: 0.8,
-                    strokeWeight: 4,
+                    strokeColor: '#1a1a1a',
+                    strokeOpacity: 0.45,
+                    strokeWeight: 8,
+                    clickable: false,
+                    zIndex: 1,
                     map: map,
-                    icons: isAnimated
-                        ? [
-                            {
-                                icon: {
-                                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                                    scale: 2,
-                                    strokeColor: TRANSPORT_COLORS[seg.transportType],
-                                    fillOpacity: 1,
-                                    fillColor: TRANSPORT_COLORS[seg.transportType],
-                                },
-                                offset: '0',
-                                repeat: '50px',
-                            },
-                        ]
-                        : undefined,
+                });
+                const bodyLine = new google.maps.Polyline({
+                    path,
+                    geodesic: true,
+                    strokeColor: bodyColor,
+                    strokeOpacity: 0.85,
+                    strokeWeight: 4,
+                    clickable: true,
+                    zIndex: 2,
+                    map: map,
+                });
+                bodyLine.addListener('click', (event) => {
+                    const domEvent = event.domEvent;
+                    domEvent?.stopPropagation?.();
+                    domEvent?.preventDefault?.();
+                    onRouteClick?.(seg.id, {
+                        clientX: domEvent?.clientX ?? 0,
+                        clientY: domEvent?.clientY ?? 0,
+                        lat: event.latLng?.lat(),
+                        lng: event.latLng?.lng(),
+                    });
                 });
                 // Google Maps Tooltip (Simple Title)
                 // const tooltip = buildRouteTooltipHtml(seg);
                 // Note: Google Polylines don't have built-in easy tooltips like Leaflet,
                 // we could use InfoWindow on click, but keeping it simple for now.
+                const cities = new Set();
+                if (fromSpot?.city)
+                    cities.add(fromSpot.city);
+                if (toSpot?.city)
+                    cities.add(toSpot.city);
                 return {
-                    polyline,
+                    bodyLine,
+                    casingLine,
                     segmentId: seg.id,
                     day: seg.day,
+                    cities,
                 };
             });
             applyVisibility();
@@ -121,7 +123,6 @@ export function createGoogleRouteLayer() {
             applyVisibility();
         },
         destroy() {
-            stopAnimation();
             destroy();
         },
     };

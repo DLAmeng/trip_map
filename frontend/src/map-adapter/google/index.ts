@@ -55,7 +55,9 @@ export const createGoogleController: MapControllerFactory = (container, config) 
     onSpotClick: config.onSpotClick,
   });
 
-  routes = createGoogleRouteLayer();
+  routes = createGoogleRouteLayer({
+    onRouteClick: config.onRouteClick,
+  });
 
   const controller: MapController = {
     markers,

@@ -1,5 +1,5 @@
 /**
- * 批量导入景点的解析工具。对齐 `legacy/old-frontend/admin.js`:
+ * 批量导入景点的解析工具。
  * - GPX:解析 <wpt> 节点
  * - KML / KMZ(文本):解析 <Placemark> 下 Point 坐标
  * - Google Maps 链接:从 URL 参数里提取 @lat,lng / ll= / q= 模式的坐标

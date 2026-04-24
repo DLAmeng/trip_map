@@ -43,13 +43,23 @@ function stripManagedSecrets(payload) {
   return nextPayload;
 }
 
-function applyRuntimeConfig(payload, { googleMapsApiKey } = {}) {
+function applyRuntimeConfig(payload, { googleMapsApiKey, rapidApiRail } = {}) {
   const nextPayload = cloneDeep(payload);
   if (googleMapsApiKey) {
     nextPayload.config = nextPayload.config || {};
     nextPayload.config.googleMaps = nextPayload.config.googleMaps || {};
     nextPayload.config.googleMaps.apiKey = googleMapsApiKey;
   }
+  nextPayload.config = nextPayload.config || {};
+  nextPayload.config.routing = nextPayload.config.routing || {};
+  nextPayload.config.routing.rapidApi = {
+    enabled: Boolean(rapidApiRail?.enabled),
+    endpoint: rapidApiRail?.endpoint || '/api/routing/rapidapi/rail-segment',
+    timeoutMs: Number.isFinite(rapidApiRail?.timeoutMs) ? rapidApiRail.timeoutMs : 5000,
+    cachedSegmentIds: Array.isArray(rapidApiRail?.cachedSegmentIds)
+      ? rapidApiRail.cachedSegmentIds
+      : [],
+  };
   return nextPayload;
 }
 

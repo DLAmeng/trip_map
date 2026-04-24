@@ -44,6 +44,12 @@ export interface GoogleMapsConfig {
 export interface RoutingConfig {
   provider?: string;
   baseUrl?: string;
+  rapidApi?: {
+    enabled?: boolean;
+    endpoint?: string;
+    timeoutMs?: number;
+    cachedSegmentIds?: string[];
+  };
 }
 
 export interface TripConfig {
@@ -72,7 +78,7 @@ export interface SpotItem {
   lat: number;
   lng: number;
   mustVisit: boolean;
-  type: 'spot' | 'transport';
+  type: 'spot' | 'transport' | 'accommodation';
   description?: string;
   whyGo?: string;
   stayMinutes?: number;
@@ -88,6 +94,39 @@ export interface SpotItem {
   website?: string;
   phone?: string;
   openingHours?: string[];
+  /** Trip 页派生字段:给 popup/列表做“下一站”提示,不回写后端 */
+  nextStopName?: string;
+  nextStopLat?: number;
+  nextStopLng?: number;
+  /** Trip 页派生字段:给 popup 做“上一段 → 当前景点”导航,不回写后端 */
+  prevStopName?: string;
+  prevStopLat?: number;
+  prevStopLng?: number;
+  prevSegmentLabel?: string;
+  /** 地图是否隐藏该 entry 的 marker(true = 不画),由 data 或 heuristic 决定 */
+  hideFromMap?: boolean;
+  /** 列表是否隐藏(预留给 SpotList / MobileDrawer,第一版未启用) */
+  hideFromList?: boolean;
+}
+
+export interface RouteTransitSummary {
+  transitCount?: number | null;
+  walkDistanceMeters?: number | null;
+  totalDistanceMeters?: number | null;
+  totalDurationSec?: number | null;
+  moveTypes?: string[] | null;
+  fareYen?: number | null;
+}
+
+export interface RouteTransitLeg {
+  mode?: string | null;
+  lineName?: string | null;
+  fromName?: string | null;
+  toName?: string | null;
+  durationSec?: number | null;
+  distanceMeters?: number | null;
+  companyName?: string | null;
+  fareYen?: number | null;
 }
 
 /**
@@ -105,6 +144,12 @@ export interface RouteSegment {
   duration?: string;
   note?: string;
   path?: Array<[number, number]>;
+  realDistanceMeters?: number | null;
+  realDurationSec?: number | null;
+  realWarnings?: string[] | null;
+  runtimeSource?: string | null;
+  runtimeTransitSummary?: RouteTransitSummary | null;
+  runtimeTransitLegs?: RouteTransitLeg[] | null;
 }
 
 export interface TripFullPayload {

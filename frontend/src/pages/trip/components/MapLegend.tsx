@@ -52,7 +52,16 @@ export function MapLegend({
           onClick={() => setIsCollapsed(!isCollapsed)}
           title={isCollapsed ? '显示图例' : '隐藏图例'}
         >
-          {isCollapsed ? '+' : '−'}
+          {isCollapsed ? (
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+              <path
+                d="M3 5.5h5.5M11.5 5.5H17M5 10h10M3 14.5h4.5M10 14.5H17"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : '−'}
         </button>
       </div>
       {!isCollapsed && (
@@ -69,7 +78,6 @@ export function MapLegend({
                     stroke={item.color}
                     strokeWidth="3"
                     strokeDasharray={item.dash}
-                    className={item.dash ? 'animated-dash' : ''}
                   />
                 </svg>
               </div>

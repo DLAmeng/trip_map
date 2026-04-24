@@ -1,6 +1,6 @@
 /**
  * 前端 trip API 客户端(TypeScript 版),跟根目录 trip-api.js 一一对应。
- * 所有 trip CRUD 走这里,迁移期的 React 页面和原生页面保持同一个后端契约。
+ * 所有 trip CRUD 都经由这里,保持前后端契约收口在同一层。
  * Places 搜索、照片上传、runtime-config 等 Phase 2+ 再按需补到 api/ 里。
  */
 export const DEFAULT_TRIP_ID = 'current';

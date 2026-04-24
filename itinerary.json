@@ -38,55 +38,6 @@
   },
   "spots": [
     {
-      "id": "d1-s1",
-      "day": 1,
-      "city": "东京",
-      "area": "新宿",
-      "name": "新宿酒店 / 新宿站周边",
-      "nameEn": "",
-      "timeSlot": "中午",
-      "order": 1,
-      "lat": 35.6896,
-      "lng": 139.7006,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "第一天只安排抵达东京、入住新宿和休息，把体力留给后面完整的东京线。",
-      "whyGo": "全程住新宿的话，第一晚留在附近最省力，第二天出发也更顺。",
-      "stayMinutes": 60,
-      "nextStopId": "d1-s2",
-      "nearNextTransport": false,
-      "tags": [
-        "入住",
-        "新宿"
-      ],
-      "transportNote": ""
-    },
-    {
-      "id": "d1-s2",
-      "day": 1,
-      "city": "东京",
-      "area": "新宿",
-      "name": "新宿附近轻松活动",
-      "nameEn": "",
-      "timeSlot": "晚上",
-      "order": 2,
-      "lat": 35.6918,
-      "lng": 139.7039,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "在新宿附近简单吃饭、补给、熟悉街区，不给自己安排必须完成的景点任务。",
-      "whyGo": "把第一晚当作休息日，会比特地跑浅草更舒服，也能避免第二天重复折返。",
-      "stayMinutes": 90,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "休息",
-        "新宿",
-        "补给"
-      ],
-      "transportNote": "今晚只在新宿附近轻松活动，明天再完整走浅草、上野、秋叶原。"
-    },
-    {
       "id": "d1-s3",
       "day": 2,
       "city": "东京",
@@ -367,83 +318,11 @@
       "description": "把 Nintendo TOKYO、Pokémon Center SHIBUYA、CAPCOM STORE 一次补齐。",
       "whyGo": "官方店集中，适合做东京西线的重头戏。",
       "stayMinutes": 120,
-      "nextStopId": "d4-s4",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "官方店",
         "涩谷"
-      ],
-      "transportNote": ""
-    },
-    {
-      "id": "d4-s4",
-      "day": 4,
-      "city": "东京",
-      "area": "新宿",
-      "name": "回到新宿收尾",
-      "nameEn": "",
-      "timeSlot": "晚上",
-      "order": 4,
-      "lat": 35.6896,
-      "lng": 139.7006,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "第 4 天最后一定收在新宿，方便第二天直接去巴士总站。",
-      "whyGo": "不用带着行李折返，这是东京段收尾的正确逻辑。",
-      "stayMinutes": 45,
-      "nextStopId": null,
-      "nearNextTransport": true,
-      "tags": [
-        "新宿",
-        "收尾"
-      ],
-      "transportNote": "明天从巴士新宿出发去河口湖。"
-    },
-    {
-      "id": "d5-s0",
-      "day": 5,
-      "city": "东京",
-      "area": "新宿",
-      "name": "巴士新宿（Busta Shinjuku）",
-      "nameEn": "",
-      "timeSlot": "上午",
-      "order": 0,
-      "lat": 35.6938,
-      "lng": 139.6956,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "从这里搭你已经定好的高速巴士，正式离开东京进入富士山线。",
-      "whyGo": "直达、便宜、出发点也和前一晚新宿住宿逻辑一致。",
-      "stayMinutes": 10,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "跨城",
-        "巴士"
-      ],
-      "transportNote": "高速巴士前往河口湖。"
-    },
-    {
-      "id": "d5-t1",
-      "day": 5,
-      "city": "富士山",
-      "area": "河口湖站",
-      "name": "河口湖站",
-      "nameEn": "",
-      "timeSlot": "中午",
-      "order": 0.5,
-      "lat": 35.5041,
-      "lng": 138.7569,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "高速巴士抵达后，从这里转入富士山当天的本地移动。",
-      "whyGo": "后面去忠灵塔和回湖边都以这里做换乘最顺。",
-      "stayMinutes": 10,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "河口湖站",
-        "换乘"
       ],
       "transportNote": ""
     },
@@ -511,37 +390,13 @@
       "description": "傍晚回到河口湖湖边，节奏转慢，开始进入住温泉旅馆的一晚。",
       "whyGo": "让富士山线从拍照切到度假感，情绪会更顺。",
       "stayMinutes": 60,
-      "nextStopId": "d5-s4",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "湖边",
         "散步"
       ],
       "transportNote": ""
-    },
-    {
-      "id": "d5-s4",
-      "day": 5,
-      "city": "富士山",
-      "area": "河口湖",
-      "name": "河口湖温泉旅馆",
-      "nameEn": "",
-      "timeSlot": "晚上",
-      "order": 4,
-      "lat": 35.5032,
-      "lng": 138.7595,
-      "mustVisit": true,
-      "type": "accommodation",
-      "description": "这晚的重点是泡汤、休息、慢下来，把富士山的度假感吃满。",
-      "whyGo": "这不是赶路夜，而是整趟路线里最适合慢下来的一个晚上。",
-      "stayMinutes": 720,
-      "nextStopId": null,
-      "nearNextTransport": true,
-      "tags": [
-        "温泉",
-        "住宿"
-      ],
-      "transportNote": "明天下午从河口湖坐巴士去三岛，再转 Hikari 到京都。"
     },
     {
       "id": "d6-s1",
@@ -559,83 +414,11 @@
       "description": "早上不排太满，沿湖边慢慢走、拍湖景、找地方喝咖啡。",
       "whyGo": "很多时候这天早上的富士山视野比前一天更好。",
       "stayMinutes": 90,
-      "nextStopId": "d6-s2",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "晨景",
         "湖边"
-      ],
-      "transportNote": ""
-    },
-    {
-      "id": "d6-s2",
-      "day": 6,
-      "city": "富士山",
-      "area": "河口湖站",
-      "name": "河口湖站周边",
-      "nameEn": "",
-      "timeSlot": "中午",
-      "order": 2,
-      "lat": 35.5041,
-      "lng": 138.7569,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "第 6 天最后一个区域一定收回车站附近，方便拖箱赶后续换乘。",
-      "whyGo": "这会比从远处收尾再赶车轻松很多。",
-      "stayMinutes": 40,
-      "nextStopId": null,
-      "nearNextTransport": true,
-      "tags": [
-        "河口湖站",
-        "收尾"
-      ],
-      "transportNote": "接下来是河口湖 → 三岛巴士，再转 Hikari 去京都。"
-    },
-    {
-      "id": "d6-t1",
-      "day": 6,
-      "city": "三岛",
-      "area": "三岛站",
-      "name": "三岛站",
-      "nameEn": "",
-      "timeSlot": "下午",
-      "order": 2.5,
-      "lat": 35.1265,
-      "lng": 138.9107,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "从河口湖巴士抵达后，在这里换乘东海道新干线。",
-      "whyGo": "这是你这段跨城交通里最合理的换乘节点。",
-      "stayMinutes": 20,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "三岛",
-        "换乘"
-      ],
-      "transportNote": "转乘 Hikari 新干线前往京都。"
-    },
-    {
-      "id": "d6-t2",
-      "day": 6,
-      "city": "京都",
-      "area": "京都站",
-      "name": "京都站",
-      "nameEn": "",
-      "timeSlot": "晚上",
-      "order": 3,
-      "lat": 34.9858,
-      "lng": 135.7585,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "抵达京都后不再塞景点，直接入住京都站附近休息。",
-      "whyGo": "为后面 4 天京都行程留体力。",
-      "stayMinutes": 10,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "京都站",
-        "到达"
       ],
       "transportNote": ""
     },
@@ -871,7 +654,7 @@
       "description": "把宇治的老街、抹茶甜品和河边散步都放在这里慢慢消化。",
       "whyGo": "就算没有任天堂博物馆门票，这一天也依然成立。",
       "stayMinutes": 120,
-      "nextStopId": "d10-s4",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "宇治",
@@ -895,107 +678,11 @@
       "description": "这是有票版本的加分路线，没有票就把更多时间留给宇治本身。",
       "whyGo": "它是 Day 10 的可选分支，不是硬塞进来的必需项。",
       "stayMinutes": 120,
-      "nextStopId": "d10-s4",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "任天堂",
         "可选"
-      ],
-      "transportNote": ""
-    },
-    {
-      "id": "d10-s4",
-      "day": 10,
-      "city": "京都",
-      "area": "京都站",
-      "name": "回到京都站附近",
-      "nameEn": "",
-      "timeSlot": "晚上",
-      "order": 4,
-      "lat": 34.9858,
-      "lng": 135.7585,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "这天最后还是要回到京都站附近，为第二天去大阪做准备。",
-      "whyGo": "京都 → 大阪最顺的出发点就是京都站。",
-      "stayMinutes": 30,
-      "nextStopId": null,
-      "nearNextTransport": true,
-      "tags": [
-        "京都站",
-        "回程准备"
-      ],
-      "transportNote": "明天从京都站坐 JR 新快速去大阪。"
-    },
-    {
-      "id": "d11-s0",
-      "day": 11,
-      "city": "京都",
-      "area": "京都站",
-      "name": "京都站",
-      "nameEn": "",
-      "timeSlot": "上午",
-      "order": 0,
-      "lat": 34.9858,
-      "lng": 135.7585,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "从这里按计划搭 JR 新快速离开京都。",
-      "whyGo": "这就是你已经定下来的最合理跨城方案。",
-      "stayMinutes": 10,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "JR",
-        "出发"
-      ],
-      "transportNote": "JR 新快速前往大阪。"
-    },
-    {
-      "id": "d11-t1",
-      "day": 11,
-      "city": "大阪",
-      "area": "梅田 / 大阪站",
-      "name": "大阪站 / 梅田",
-      "nameEn": "",
-      "timeSlot": "中午",
-      "order": 0.5,
-      "lat": 34.7025,
-      "lng": 135.4959,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "JR 新快速先抵达大阪站，之后再转往难波。",
-      "whyGo": "这样和你计划里的 JR 新快速逻辑一致，也更接近真实换乘。",
-      "stayMinutes": 10,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "大阪站",
-        "换乘"
-      ],
-      "transportNote": ""
-    },
-    {
-      "id": "d11-s1",
-      "day": 11,
-      "city": "大阪",
-      "area": "难波",
-      "name": "难波入住",
-      "nameEn": "",
-      "timeSlot": "中午",
-      "order": 1,
-      "lat": 34.6687,
-      "lng": 135.5013,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "到大阪后先把酒店放在难波，最后去 KIX 会轻松很多。",
-      "whyGo": "难波是你大阪段最合理的落脚点。",
-      "stayMinutes": 45,
-      "nextStopId": "d11-s2",
-      "nearNextTransport": false,
-      "tags": [
-        "难波",
-        "入住"
       ],
       "transportNote": ""
     },
@@ -1096,30 +783,6 @@
       "transportNote": "结束后回难波住宿。"
     },
     {
-      "id": "d13-s0",
-      "day": 13,
-      "city": "大阪",
-      "area": "难波",
-      "name": "难波出发 / 分头行动",
-      "nameEn": "",
-      "timeSlot": "上午",
-      "order": 1,
-      "lat": 34.6678,
-      "lng": 135.5008,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "这一天从难波附近出发后分头行动，你去电电城，她继续在难波 / 心斋桥一带轻松逛。",
-      "whyGo": "先把共同起点定在难波，顺序和地图都会更清楚。",
-      "stayMinutes": 20,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "难波",
-        "分头行动"
-      ],
-      "transportNote": ""
-    },
-    {
       "id": "d13-s1",
       "day": 13,
       "city": "大阪",
@@ -1135,7 +798,7 @@
       "description": "这一天把你在大阪想补的模型、游戏、二次元和数码内容放到电电城。",
       "whyGo": "它是大阪版本的兴趣向主线。",
       "stayMinutes": 180,
-      "nextStopId": "d13-s3",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "电电城",
@@ -1159,61 +822,13 @@
       "description": "这条是她继续轻松逛街、休息和补买东西的平行路线。",
       "whyGo": "把你们两个人的偏好拆开，会比硬绑在同一路线上更舒服。",
       "stayMinutes": 150,
-      "nextStopId": "d13-s3",
+      "nextStopId": null,
       "nearNextTransport": false,
       "tags": [
         "平行路线",
         "逛街"
       ],
       "transportNote": ""
-    },
-    {
-      "id": "d13-s3",
-      "day": 13,
-      "city": "大阪",
-      "area": "难波",
-      "name": "南海难波站",
-      "nameEn": "",
-      "timeSlot": "晚上",
-      "order": 4,
-      "lat": 34.668,
-      "lng": 135.501,
-      "mustVisit": false,
-      "type": "spot",
-      "description": "第 13 天最后一定收在南海难波站附近，为第 14 天去 KIX 做准备。",
-      "whyGo": "这样第二天去机场最轻松。",
-      "stayMinutes": 30,
-      "nextStopId": null,
-      "nearNextTransport": true,
-      "tags": [
-        "南海",
-        "收尾"
-      ],
-      "transportNote": "明天直接搭南海线 / Rapi:t 去 KIX。"
-    },
-    {
-      "id": "d14-s1",
-      "day": 14,
-      "city": "大阪",
-      "area": "KIX",
-      "name": "关西国际机场（KIX）",
-      "nameEn": "",
-      "timeSlot": "上午",
-      "order": 1,
-      "lat": 34.4347,
-      "lng": 135.244,
-      "mustVisit": false,
-      "type": "transport",
-      "description": "第 14 天不再排景点，直接从难波轻松去机场。",
-      "whyGo": "因为前一天已经故意把收尾放在南海难波附近。",
-      "stayMinutes": 15,
-      "nextStopId": null,
-      "nearNextTransport": false,
-      "tags": [
-        "机场",
-        "回程"
-      ],
-      "transportNote": "回程航班。"
     }
   ],
   "transports": [
@@ -1264,84 +879,6 @@
     }
   ],
   "routeSegments": [
-    {
-      "id": "seg-d1-1",
-      "day": 1,
-      "scope": "city",
-      "fromSpotId": "d1-s1",
-      "toSpotId": "d1-s2",
-      "transportType": "walk",
-      "label": "步行 / 新宿附近轻松活动",
-      "duration": "约 8 分",
-      "note": "入住后只在新宿附近吃饭、补给和熟悉周边，不再特地跑浅草。",
-      "path": [
-        [
-          35.6896,
-          139.7006
-        ],
-        [
-          35.6902,
-          139.7016
-        ],
-        [
-          35.691,
-          139.7028
-        ],
-        [
-          35.6918,
-          139.7039
-        ]
-      ]
-    },
-    {
-      "id": "seg-d2-1",
-      "day": 2,
-      "scope": "city",
-      "fromSpotId": "d1-s1",
-      "toSpotId": "d1-s3",
-      "transportType": "metro",
-      "label": "都营新宿线 / 浅草线",
-      "duration": "约 35 分",
-      "note": "从新宿直接去浅草，开始完整的东京东侧线。",
-      "path": [
-        [
-          35.6896,
-          139.7006
-        ],
-        [
-          35.6912,
-          139.7065
-        ],
-        [
-          35.6938,
-          139.7208
-        ],
-        [
-          35.6955,
-          139.7358
-        ],
-        [
-          35.6949,
-          139.7568
-        ],
-        [
-          35.6928,
-          139.7818
-        ],
-        [
-          35.6978,
-          139.7898
-        ],
-        [
-          35.7039,
-          139.7925
-        ],
-        [
-          35.7111,
-          139.7964
-        ]
-      ]
-    },
     {
       "id": "seg-d2-2",
       "day": 2,
@@ -1471,51 +1008,6 @@
         [
           35.6984,
           139.773
-        ]
-      ]
-    },
-    {
-      "id": "seg-d2-6",
-      "day": 2,
-      "scope": "city",
-      "fromSpotId": "d2-s3",
-      "toSpotId": "d1-s1",
-      "transportType": "metro",
-      "label": "JR 总武线 / 中央线",
-      "duration": "约 20 分",
-      "note": "晚上从秋叶原直接回新宿休息。",
-      "path": [
-        [
-          35.6984,
-          139.773
-        ],
-        [
-          35.6988,
-          139.7668
-        ],
-        [
-          35.6993,
-          139.7548
-        ],
-        [
-          35.6998,
-          139.7406
-        ],
-        [
-          35.6999,
-          139.7265
-        ],
-        [
-          35.6992,
-          139.7138
-        ],
-        [
-          35.6968,
-          139.7032
-        ],
-        [
-          35.6896,
-          139.7006
         ]
       ]
     },
@@ -1681,141 +1173,6 @@
       ]
     },
     {
-      "id": "seg-d4-3",
-      "day": 4,
-      "scope": "city",
-      "fromSpotId": "d4-s3",
-      "toSpotId": "d4-s4",
-      "transportType": "metro",
-      "label": "JR 山手线",
-      "duration": "约 10 分",
-      "note": "最后从涩谷回新宿收尾。",
-      "path": [
-        [
-          35.658,
-          139.7016
-        ],
-        [
-          35.6636,
-          139.7032
-        ],
-        [
-          35.6694,
-          139.7028
-        ],
-        [
-          35.6748,
-          139.7022
-        ],
-        [
-          35.6808,
-          139.7014
-        ],
-        [
-          35.6858,
-          139.7009
-        ],
-        [
-          35.6896,
-          139.7006
-        ]
-      ]
-    },
-    {
-      "id": "seg-d5-1",
-      "day": 5,
-      "scope": "intercity",
-      "fromSpotId": "d5-s0",
-      "toSpotId": "d5-t1",
-      "transportType": "bus",
-      "label": "高速巴士",
-      "duration": "约 1 小时 45 分",
-      "note": "按你的计划直接从巴士新宿去河口湖。",
-      "path": [
-        [
-          35.6938,
-          139.6956
-        ],
-        [
-          35.677,
-          139.6995
-        ],
-        [
-          35.6615,
-          139.629
-        ],
-        [
-          35.6605,
-          139.48
-        ],
-        [
-          35.6465,
-          139.329
-        ],
-        [
-          35.63,
-          139.191
-        ],
-        [
-          35.614,
-          139.053
-        ],
-        [
-          35.586,
-          138.933
-        ],
-        [
-          35.549,
-          138.822
-        ],
-        [
-          35.5041,
-          138.7569
-        ]
-      ]
-    },
-    {
-      "id": "seg-d5-2",
-      "day": 5,
-      "scope": "city",
-      "fromSpotId": "d5-t1",
-      "toSpotId": "d5-s1",
-      "transportType": "metro",
-      "label": "富士急行线 + 步行",
-      "duration": "约 25 分",
-      "note": "河口湖站到忠灵塔先坐富士急行，再步行爬上去。",
-      "path": [
-        [
-          35.5041,
-          138.7569
-        ],
-        [
-          35.503,
-          138.7658
-        ],
-        [
-          35.5022,
-          138.7748
-        ],
-        [
-          35.5009,
-          138.7838
-        ],
-        [
-          35.4995,
-          138.7925
-        ],
-        [
-          35.4991,
-          138.8002
-        ],
-        [
-          35.5015,
-          138.8077
-        ]
-      ]
-    },
-    {
       "id": "seg-d5-3",
       "day": 5,
       "scope": "city",
@@ -1878,175 +1235,6 @@
       ]
     },
     {
-      "id": "seg-d5-5",
-      "day": 5,
-      "scope": "city",
-      "fromSpotId": "d5-s3",
-      "toSpotId": "d5-s4",
-      "transportType": "walk",
-      "label": "步行",
-      "duration": "约 10 分",
-      "note": "湖边慢慢走回温泉旅馆。",
-      "path": [
-        [
-          35.5091,
-          138.7518
-        ],
-        [
-          35.506,
-          138.7548
-        ],
-        [
-          35.5032,
-          138.7595
-        ]
-      ]
-    },
-    {
-      "id": "seg-d6-1",
-      "day": 6,
-      "scope": "city",
-      "fromSpotId": "d6-s1",
-      "toSpotId": "d6-s2",
-      "transportType": "walk",
-      "label": "步行",
-      "duration": "约 18 分",
-      "note": "上午慢逛结束后把节奏收回到河口湖站。",
-      "path": [
-        [
-          35.5091,
-          138.7518
-        ],
-        [
-          35.507,
-          138.7538
-        ],
-        [
-          35.5041,
-          138.7569
-        ]
-      ]
-    },
-    {
-      "id": "seg-d6-2",
-      "day": 6,
-      "scope": "intercity",
-      "fromSpotId": "d6-s2",
-      "toSpotId": "d6-t1",
-      "transportType": "bus",
-      "label": "河口湖 → 三岛巴士",
-      "duration": "约 1 小时 30 分",
-      "note": "这是你定下来的换乘方案。",
-      "path": [
-        [
-          35.5041,
-          138.7569
-        ],
-        [
-          35.463,
-          138.778
-        ],
-        [
-          35.414,
-          138.822
-        ],
-        [
-          35.36,
-          138.861
-        ],
-        [
-          35.294,
-          138.891
-        ],
-        [
-          35.212,
-          138.903
-        ],
-        [
-          35.1265,
-          138.9107
-        ]
-      ]
-    },
-    {
-      "id": "seg-d6-3",
-      "day": 6,
-      "scope": "intercity",
-      "fromSpotId": "d6-t1",
-      "toSpotId": "d6-t2",
-      "transportType": "shinkansen",
-      "label": "Hikari 新干线",
-      "duration": "约 2 小时",
-      "note": "三岛上车一路到京都。",
-      "path": [
-        [
-          35.1265,
-          138.9107
-        ],
-        [
-          35.102,
-          138.781
-        ],
-        [
-          34.975,
-          138.383
-        ],
-        [
-          34.955,
-          137.73
-        ],
-        [
-          35.17,
-          136.883
-        ],
-        [
-          35.31,
-          136.273
-        ],
-        [
-          34.9858,
-          135.7585
-        ]
-      ]
-    },
-    {
-      "id": "seg-d7-1",
-      "day": 7,
-      "scope": "city",
-      "fromSpotId": "d6-t2",
-      "toSpotId": "d7-s1",
-      "transportType": "metro",
-      "label": "JR 奈良线",
-      "duration": "约 10 分",
-      "note": "京都第一天从京都站直接去伏见稻荷最顺。",
-      "path": [
-        [
-          34.9858,
-          135.7585
-        ],
-        [
-          34.9818,
-          135.7625
-        ],
-        [
-          34.9778,
-          135.7662
-        ],
-        [
-          34.9738,
-          135.7693
-        ],
-        [
-          34.9704,
-          135.7716
-        ],
-        [
-          34.9671,
-          135.7727
-        ]
-      ]
-    },
-    {
       "id": "seg-d7-2",
       "day": 7,
       "scope": "city",
@@ -2088,55 +1276,6 @@
         [
           35.0037,
           135.7786
-        ]
-      ]
-    },
-    {
-      "id": "seg-d8-1",
-      "day": 8,
-      "scope": "city",
-      "fromSpotId": "d6-t2",
-      "toSpotId": "d8-s1",
-      "transportType": "metro",
-      "label": "JR 嵯峨野线",
-      "duration": "约 20 分",
-      "note": "第 8 天整天都给岚山。",
-      "path": [
-        [
-          34.9858,
-          135.7585
-        ],
-        [
-          34.9861,
-          135.7488
-        ],
-        [
-          34.9868,
-          135.739
-        ],
-        [
-          34.9878,
-          135.7288
-        ],
-        [
-          34.9895,
-          135.7175
-        ],
-        [
-          34.9926,
-          135.7055
-        ],
-        [
-          34.9972,
-          135.6932
-        ],
-        [
-          35.003,
-          135.6812
-        ],
-        [
-          35.0094,
-          135.6722
         ]
       ]
     },
@@ -2191,35 +1330,6 @@
       ]
     },
     {
-      "id": "seg-d9-1",
-      "day": 9,
-      "scope": "city",
-      "fromSpotId": "d6-t2",
-      "toSpotId": "d9-s1",
-      "transportType": "bus",
-      "label": "京都市巴士 + 步行",
-      "duration": "约 25 分",
-      "note": "京都站去清水寺坐巴士最顺。",
-      "path": [
-        [
-          34.9858,
-          135.7585
-        ],
-        [
-          34.989,
-          135.769
-        ],
-        [
-          34.9925,
-          135.7795
-        ],
-        [
-          34.9949,
-          135.785
-        ]
-      ]
-    },
-    {
       "id": "seg-d9-2",
       "day": 9,
       "scope": "city",
@@ -2270,51 +1380,6 @@
       ]
     },
     {
-      "id": "seg-d10-1",
-      "day": 10,
-      "scope": "city",
-      "fromSpotId": "d6-t2",
-      "toSpotId": "d10-s1",
-      "transportType": "metro",
-      "label": "JR 奈良线 + 步行",
-      "duration": "约 25 分",
-      "note": "京都站出发做宇治日。",
-      "path": [
-        [
-          34.9858,
-          135.7585
-        ],
-        [
-          34.9792,
-          135.7642
-        ],
-        [
-          34.9725,
-          135.7702
-        ],
-        [
-          34.9655,
-          135.7765
-        ],
-        [
-          34.9582,
-          135.783
-        ],
-        [
-          34.9508,
-          135.7898
-        ],
-        [
-          34.9442,
-          135.7975
-        ],
-        [
-          34.9389,
-          135.8037
-        ]
-      ]
-    },
-    {
       "id": "seg-d10-2",
       "day": 10,
       "scope": "city",
@@ -2361,235 +1426,6 @@
         [
           34.9466,
           135.8071
-        ]
-      ]
-    },
-    {
-      "id": "seg-d10-4",
-      "day": 10,
-      "scope": "city",
-      "fromSpotId": "d10-s3",
-      "toSpotId": "d10-s4",
-      "transportType": "metro",
-      "label": "JR 奈良线",
-      "duration": "约 25 分",
-      "note": "任天堂博物馆版本的返程线。",
-      "path": [
-        [
-          34.9466,
-          135.8071
-        ],
-        [
-          34.9478,
-          135.8018
-        ],
-        [
-          34.9505,
-          135.7948
-        ],
-        [
-          34.9552,
-          135.7879
-        ],
-        [
-          34.9615,
-          135.7815
-        ],
-        [
-          34.9684,
-          135.7751
-        ],
-        [
-          34.9745,
-          135.7694
-        ],
-        [
-          34.9804,
-          135.7638
-        ],
-        [
-          34.9858,
-          135.7585
-        ]
-      ]
-    },
-    {
-      "id": "seg-d11-1",
-      "day": 11,
-      "scope": "intercity",
-      "fromSpotId": "d11-s0",
-      "toSpotId": "d11-t1",
-      "transportType": "jrrapid",
-      "label": "JR 新快速",
-      "duration": "约 30 分",
-      "note": "按计划从京都直去大阪站。",
-      "path": [
-        [
-          34.9858,
-          135.7585
-        ],
-        [
-          34.9715,
-          135.733
-        ],
-        [
-          34.9478,
-          135.704
-        ],
-        [
-          34.9308,
-          135.6772
-        ],
-        [
-          34.9098,
-          135.6488
-        ],
-        [
-          34.8848,
-          135.6118
-        ],
-        [
-          34.8538,
-          135.5808
-        ],
-        [
-          34.8135,
-          135.561
-        ],
-        [
-          34.7785,
-          135.546
-        ],
-        [
-          34.7445,
-          135.5188
-        ],
-        [
-          34.7195,
-          135.5008
-        ],
-        [
-          34.7025,
-          135.4959
-        ]
-      ]
-    },
-    {
-      "id": "seg-d11-2",
-      "day": 11,
-      "scope": "city",
-      "fromSpotId": "d11-t1",
-      "toSpotId": "d11-s1",
-      "transportType": "metro",
-      "label": "大阪 Metro 御堂筋线",
-      "duration": "约 10 分",
-      "note": "大阪站再转去难波入住。",
-      "path": [
-        [
-          34.7025,
-          135.4959
-        ],
-        [
-          34.6978,
-          135.4966
-        ],
-        [
-          34.6928,
-          135.4975
-        ],
-        [
-          34.6875,
-          135.4982
-        ],
-        [
-          34.6822,
-          135.499
-        ],
-        [
-          34.6772,
-          135.4997
-        ],
-        [
-          34.6728,
-          135.5004
-        ],
-        [
-          34.6687,
-          135.5013
-        ]
-      ]
-    },
-    {
-      "id": "seg-d11-3",
-      "day": 11,
-      "scope": "city",
-      "fromSpotId": "d11-s1",
-      "toSpotId": "d11-s2",
-      "transportType": "walk",
-      "label": "步行",
-      "duration": "约 5 分",
-      "note": "难波和道顿堀就是一条轻松步行线。",
-      "path": [
-        [
-          34.6687,
-          135.5013
-        ],
-        [
-          34.6689,
-          135.5009
-        ],
-        [
-          34.6692,
-          135.5003
-        ]
-      ]
-    },
-    {
-      "id": "seg-d12-1",
-      "day": 12,
-      "scope": "city",
-      "fromSpotId": "d11-s1",
-      "toSpotId": "d12-s1",
-      "transportType": "metro",
-      "label": "大阪 Metro 御堂筋线 → 谷町线",
-      "duration": "约 25 分",
-      "note": "从难波去大阪城最顺。",
-      "path": [
-        [
-          34.6687,
-          135.5013
-        ],
-        [
-          34.6732,
-          135.5007
-        ],
-        [
-          34.6782,
-          135.5
-        ],
-        [
-          34.6832,
-          135.4992
-        ],
-        [
-          34.6872,
-          135.499
-        ],
-        [
-          34.6894,
-          135.5035
-        ],
-        [
-          34.6895,
-          135.5102
-        ],
-        [
-          34.6888,
-          135.5185
-        ],
-        [
-          34.6873,
-          135.5262
         ]
       ]
     },
@@ -2660,197 +1496,15 @@
       ]
     },
     {
-      "id": "seg-d13-0a",
-      "day": 13,
-      "scope": "city",
-      "fromSpotId": "d13-s0",
-      "toSpotId": "d13-s1",
-      "transportType": "walk",
-      "label": "步行",
-      "duration": "约 10 分",
-      "note": "从难波出发后，你先去电电城补模型、游戏和二次元内容。",
-      "path": [
-        [
-          34.6678,
-          135.5008
-        ],
-        [
-          34.6668,
-          135.503
-        ],
-        [
-          34.6648,
-          135.5069
-        ]
-      ]
-    },
-    {
-      "id": "seg-d13-0b",
-      "day": 13,
-      "scope": "city",
-      "fromSpotId": "d13-s0",
-      "toSpotId": "d13-s2",
-      "transportType": "walk",
-      "label": "步行",
-      "duration": "约 6 分",
-      "note": "从难波出发后，她去难波 / 心斋桥一带继续轻松逛。",
-      "path": [
-        [
-          34.6678,
-          135.5008
-        ],
-        [
-          34.6694,
-          135.5018
-        ],
-        [
-          34.671,
-          135.503
-        ]
-      ]
-    },
-    {
-      "id": "seg-d13-1",
+      "id": "seg-d13-s1-s2",
       "day": 13,
       "scope": "city",
       "fromSpotId": "d13-s1",
-      "toSpotId": "d13-s3",
+      "toSpotId": "d13-s2",
       "transportType": "walk",
       "label": "步行",
-      "duration": "约 8 分",
-      "note": "你的电电城线最后回南海难波集合。",
-      "path": [
-        [
-          34.6648,
-          135.5069
-        ],
-        [
-          34.666,
-          135.505
-        ],
-        [
-          34.668,
-          135.501
-        ]
-      ]
-    },
-    {
-      "id": "seg-d13-2",
-      "day": 13,
-      "scope": "city",
-      "fromSpotId": "d13-s2",
-      "toSpotId": "d13-s3",
-      "transportType": "walk",
-      "label": "步行",
-      "duration": "约 6 分",
-      "note": "她的难波 / 心斋桥线最后也收在南海难波。",
-      "path": [
-        [
-          34.671,
-          135.503
-        ],
-        [
-          34.6694,
-          135.502
-        ],
-        [
-          34.668,
-          135.501
-        ]
-      ]
-    },
-    {
-      "id": "seg-d14-1",
-      "day": 14,
-      "scope": "intercity",
-      "fromSpotId": "d13-s3",
-      "toSpotId": "d14-s1",
-      "transportType": "nankai",
-      "label": "南海线 / Rapi:t",
-      "duration": "约 38-45 分",
-      "note": "从南海难波直去 KIX。",
-      "path": [
-        [
-          34.668,
-          135.501
-        ],
-        [
-          34.6602,
-          135.4978
-        ],
-        [
-          34.651,
-          135.4928
-        ],
-        [
-          34.6408,
-          135.486
-        ],
-        [
-          34.6288,
-          135.4782
-        ],
-        [
-          34.6158,
-          135.4692
-        ],
-        [
-          34.6015,
-          135.4598
-        ],
-        [
-          34.586,
-          135.4498
-        ],
-        [
-          34.5695,
-          135.4388
-        ],
-        [
-          34.5515,
-          135.4275
-        ],
-        [
-          34.5315,
-          135.4145
-        ],
-        [
-          34.5115,
-          135.401
-        ],
-        [
-          34.492,
-          135.3855
-        ],
-        [
-          34.4748,
-          135.367
-        ],
-        [
-          34.4602,
-          135.346
-        ],
-        [
-          34.4482,
-          135.319
-        ],
-        [
-          34.439,
-          135.299
-        ],
-        [
-          34.436,
-          135.286
-        ],
-        [
-          34.4358,
-          135.308
-        ],
-        [
-          34.4347,
-          135.244
-        ]
-      ]
+      "duration": "约 10 分",
+      "note": "电电城 → 心斋桥慢逛，顺路可经道顿堀、OIOI、大丸。"
     }
   ]
 }

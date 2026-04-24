@@ -1,5 +1,5 @@
 /**
- * 对齐旧版 `legacy/old-frontend/admin.js` 的 makeBlankSpot。
+ * 创建一个可直接进入编辑器的新空白 spot。
  * 返回一个字段齐全的新景点,保证后续 normalize 不会补全出意外字段。
  */
 export function makeBlankSpot(params) {

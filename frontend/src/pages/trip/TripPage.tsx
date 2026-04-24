@@ -11,6 +11,7 @@ import { TripHeader } from './TripHeader';
 import { TripMapCanvas } from './TripMapCanvas';
 import { SpotList } from './SpotList';
 import { MobileFilterSheet } from './components/MobileFilterSheet';
+import { MobileDrawer } from './components/MobileDrawer';
 import { SummaryBar } from './components/SummaryBar';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MobileTripHeaderCard } from './components/MobileTripHeaderCard';
@@ -82,6 +83,34 @@ export function TripPage() {
     filter.mustOnly ||
     filter.nextOnly;
 
+  const hasSpotsForDayAndCity = useCallback((day: number, city: string) => {
+    if (!normalized) return false;
+    return normalized.spots.some((spot) => spot.day === day && spot.city === city);
+  }, [normalized]);
+
+  const normalizeFilter = useCallback((nextFilter: FilterState): FilterState => {
+    let day = nextFilter.day;
+    let city = nextFilter.city;
+
+    if (day !== null && city !== null && !hasSpotsForDayAndCity(day, city)) {
+      const dayChanged = day !== filter.day;
+      const cityChanged = city !== filter.city;
+      if (dayChanged && !cityChanged) {
+        city = null;
+      } else if (cityChanged && !dayChanged) {
+        day = null;
+      } else {
+        city = null;
+      }
+    }
+
+    return {
+      ...nextFilter,
+      day,
+      city,
+    };
+  }, [filter.day, filter.city, hasSpotsForDayAndCity]);
+
   const closeAllPopups = useCallback(() => {
     // 桌面默认展开列表,手机点空白处会收起所有 sheet(list / filter / summary)
     setIsListVisible(!isMobile);
@@ -99,7 +128,9 @@ export function TripPage() {
         mustOnly: prev.get('mustVisit') === 'true',
         nextOnly: prev.get('nextOnly') === 'true',
       };
-      const nextFilter = typeof updater === 'function' ? updater(current) : updater;
+      const nextFilter = normalizeFilter(
+        typeof updater === 'function' ? updater(current) : updater,
+      );
 
       if (nextFilter.day !== null) next.set('day', String(nextFilter.day));
       else next.delete('day');
@@ -118,7 +149,7 @@ export function TripPage() {
 
       return next;
     }, { replace: true });
-  }, [setParams]);
+  }, [normalizeFilter, setParams]);
 
   const handleSelectSpot = useCallback((id: string) => {
     setParams((prev) => {
@@ -126,15 +157,9 @@ export function TripPage() {
       if (prev.get('spot') === id) return prev;
 
       next.set('spot', id);
-
-      // 点击景点后自动切换到对应天数的过滤视图
-      const spot = normalized?.spotById.get(id);
-      if (spot) {
-        next.set('day', String(spot.day));
-      }
       return next;
     }, { replace: true });
-  }, [normalized, setParams]);
+  }, [setParams]);
 
   const handleMapClick = useCallback(() => {
     setParams((prev) => {
@@ -173,7 +198,7 @@ export function TripPage() {
               {isFetching ? '重试中…' : '重试'}
             </button>
             <a href={`/trip?id=${encodeURIComponent(tripId)}`} target="_blank" rel="noreferrer">
-              打开 Express 原生页(回滚入口)
+              新标签页打开当前 Trip 页面
             </a>
           </div>
         </div>
@@ -207,7 +232,7 @@ export function TripPage() {
           config={data.config}
           spots={normalized.spots}
           segments={normalized.routeSegments}
-          spotById={normalized.spotById}
+          spotById={normalized.allEntriesById}
           cityNames={normalized.cityNames}
           filter={filter}
           onFilterChange={setFilter}
@@ -224,11 +249,9 @@ export function TripPage() {
         />
         {isListVisible && (
           <>
-            {isMobile && (
-              <div className="sheet-backdrop" onClick={closeAllPopups} />
-            )}
-            <div className="spot-list-wrapper">
-              <SpotList
+            {isMobile ? (
+              <MobileDrawer
+                isOpen={isListVisible}
                 spotsByDay={normalized.spotsByDay}
                 dayNumbers={normalized.dayNumbers}
                 dayColors={data.config.dayColors}
@@ -238,8 +261,23 @@ export function TripPage() {
                 onDayClick={(day) =>
                   setFilter((prev) => ({ ...prev, day }))
                 }
+                onClose={() => setIsListVisible(false)}
               />
-            </div>
+            ) : (
+              <div className="spot-list-wrapper">
+                <SpotList
+                  spotsByDay={normalized.spotsByDay}
+                  dayNumbers={normalized.dayNumbers}
+                  dayColors={data.config.dayColors}
+                  filter={filter}
+                  selectedSpotId={selectedSpotId}
+                  onSelect={handleSelectSpot}
+                  onDayClick={(day) =>
+                    setFilter((prev) => ({ ...prev, day }))
+                  }
+                />
+              </div>
+            )}
           </>
         )}
       </div>

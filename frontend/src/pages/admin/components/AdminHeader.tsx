@@ -1,8 +1,11 @@
+import type { TripMeta } from '../../../types/trip';
 import { Link } from 'react-router-dom';
 
 interface AdminHeaderProps {
   title: string;
   tripId: string;
+  meta: TripMeta;
+  isDefaultTrip: boolean;
   stats: {
     days: number;
     spots: number;
@@ -10,7 +13,15 @@ interface AdminHeaderProps {
   };
 }
 
-export function AdminHeader({ title, tripId, stats }: AdminHeaderProps) {
+function buildHeaderCopy(meta: TripMeta): string {
+  const hints: string[] = [];
+  if (meta.destination) hints.push(meta.destination);
+  if (meta.startDate && meta.endDate) hints.push(`${meta.startDate} → ${meta.endDate}`);
+  else if (meta.startDate) hints.push(meta.startDate);
+  return hints.join(' · ') || meta.description || '直接改标题、景点、路线和顺序，保存后前端地图会自动读取最新行程。';
+}
+
+export function AdminHeader({ title, tripId, meta, isDefaultTrip, stats }: AdminHeaderProps) {
   return (
     <>
       <header className="admin-header">
@@ -18,11 +29,11 @@ export function AdminHeader({ title, tripId, stats }: AdminHeaderProps) {
           <p className="eyebrow">
             <Link className="admin-back" to="/dashboard">← 全部行程</Link>
             <span className="admin-eyebrow-divider">·</span>
-            <span className="admin-trip-badge">后台编辑</span>
+            <span className="admin-trip-badge">{isDefaultTrip ? '默认行程' : '行程编辑'}</span>
           </p>
           <h1 className="admin-header-title">{title || '未命名行程'}</h1>
           <p className="admin-header-desc">
-            在这里编辑行程的基础信息、景点和交通路线。保存后前台地图将同步更新。
+            {buildHeaderCopy(meta)}
           </p>
         </div>
         <div className="header-actions">

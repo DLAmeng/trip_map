@@ -10,7 +10,7 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [
     react(),
-    // PWA:对齐 `legacy/old-frontend/sw.js` 的缓存策略。
+    // PWA:沿用当前 Trip 站点需要的缓存策略。
     // - App shell: precache(vite-plugin-pwa 自动生成)
     // - 地图瓦片(OSM) / 上传的 photos:cacheFirst + expiration
     // - 行程数据 /api/trips/:id/full:staleWhileRevalidate

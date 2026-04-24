@@ -3,6 +3,7 @@ import type { MutableRefObject } from 'react';
 import type { MapController } from '../map-adapter/types';
 import type { RouteSegment, SpotItem } from '../types/trip';
 import {
+  getVisibleRouteContext,
   getVisibleSpotIds,
   type FilterState,
 } from '../selectors/filterState';
@@ -31,6 +32,16 @@ export function useTripMap(
 ): void {
   const { spots, segments, spotById, filter, selectedSpotId } = params;
 
+  function buildRouteFilter() {
+    const routeContext = getVisibleRouteContext(spots, filter);
+    return {
+      day: filter.day,
+      city: filter.city,
+      visibleDays: routeContext.visibleDays,
+      visibleCities: routeContext.visibleCities,
+    };
+  }
+
   // 1. spots 变化 → 重建 marker
   useEffect(() => {
     const controller = controllerRef.current;
@@ -40,6 +51,7 @@ export function useTripMap(
     controller.markers.setVisibleSpots(getVisibleSpotIds(spots, filter));
     if (selectedSpotId) {
       controller.markers.setSelected(selectedSpotId, { pan: false });
+      controller.markers.openPopup(selectedSpotId);
     }
     // filter/selectedSpotId 有各自的 effect 再跑一次,这里只做首帧 sync
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -50,7 +62,7 @@ export function useTripMap(
     const controller = controllerRef.current;
     if (!controller) return;
     controller.routes.render(segments, spotById);
-    controller.routes.setActiveFilter({ day: filter.day });
+    controller.routes.setActiveFilter(buildRouteFilter());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segments, spotById]);
 
@@ -59,7 +71,7 @@ export function useTripMap(
     const controller = controllerRef.current;
     if (!controller) return;
     controller.markers.setVisibleSpots(getVisibleSpotIds(spots, filter));
-    controller.routes.setActiveFilter({ day: filter.day });
+    controller.routes.setActiveFilter(buildRouteFilter());
 
     // "只看下一段"模式下,把所有 nextStopId 非空的 spot 标记为 next;
     // 关闭时传空集,adapter 清除强调样式。
@@ -76,5 +88,8 @@ export function useTripMap(
     const controller = controllerRef.current;
     if (!controller) return;
     controller.markers.setSelected(selectedSpotId, { pan: true });
+    if (selectedSpotId) {
+      controller.markers.openPopup(selectedSpotId);
+    }
   }, [controllerRef, selectedSpotId]);
 }

@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('node:fs');
 const path = require('node:path');
 const repository = require('./trip-repository');
+const rapidApiRouting = require('./rapidapi-routing');
 const tripService = require('./trip-service');
 
 
@@ -14,6 +15,24 @@ const PHOTOS_DIR = path.join(DATA_DIR, 'photos');
 const PORT = Number(process.env.PORT || 8080);
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY || GOOGLE_MAPS_API_KEY;
+const RAPIDAPI_ROUTER_KEY = process.env.RAPIDAPI_ROUTER_KEY || '';
+const RAPIDAPI_ROUTER_HOST =
+  process.env.RAPIDAPI_ROUTER_HOST || rapidApiRouting.DEFAULT_RAPIDAPI_HOST;
+const RAPIDAPI_ROUTER_BASE_URL =
+  process.env.RAPIDAPI_ROUTER_BASE_URL || rapidApiRouting.DEFAULT_RAPIDAPI_BASE_URL;
+const RAPIDAPI_ROUTER_TIMEOUT_MS = Number(
+  process.env.RAPIDAPI_ROUTER_TIMEOUT_MS || rapidApiRouting.DEFAULT_RAPIDAPI_TIMEOUT_MS,
+);
+
+function getRapidApiRuntimeConfig() {
+  return {
+    enabled: Boolean(RAPIDAPI_ROUTER_KEY),
+    endpoint: '/api/routing/rapidapi/rail-segment',
+    timeoutMs: Number.isFinite(RAPIDAPI_ROUTER_TIMEOUT_MS)
+      ? RAPIDAPI_ROUTER_TIMEOUT_MS
+      : rapidApiRouting.DEFAULT_RAPIDAPI_TIMEOUT_MS,
+  };
+}
 
 async function searchPlaces({ query, lat, lng }) {
   if (!GOOGLE_PLACES_API_KEY) throw new Error('未配置 Google Places API Key');
@@ -61,6 +80,11 @@ function createServer() {
       ok: true,
       databasePath: DB_PATH,
       tripCount: tripService.listTripsWithSummary().length,
+      rapidApi: {
+        enabled: Boolean(RAPIDAPI_ROUTER_KEY),
+        host: RAPIDAPI_ROUTER_HOST,
+        baseUrl: RAPIDAPI_ROUTER_BASE_URL,
+      },
     });
   });
 
@@ -111,7 +135,13 @@ function createServer() {
       response.status(404).json({ error: '未找到该行程。' });
       return;
     }
-    response.json(tripService.applyRuntimeConfig(trip.payload, { googleMapsApiKey: GOOGLE_MAPS_API_KEY }));
+    const runtimePayload = tripService.applyRuntimeConfig(trip.payload, {
+      googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+      rapidApiRail: getRapidApiRuntimeConfig(),
+    });
+    const cachedSegmentIds = rapidApiRouting.hydrateTripPayloadWithCache(runtimePayload);
+    runtimePayload.config.routing.rapidApi.cachedSegmentIds = cachedSegmentIds;
+    response.json(runtimePayload);
   });
 
   app.put('/api/trips/:id/full', (request, response) => {
@@ -208,6 +238,44 @@ function createServer() {
       response.json({ ok: true, place });
     } catch (error) {
       response.status(500).json({ ok: false, error: error.message });
+    }
+  });
+
+  app.post('/api/routing/rapidapi/rail-segment', async (request, response) => {
+    if (!RAPIDAPI_ROUTER_KEY) {
+      response.status(503).json({ ok: false, error: '未配置 RAPIDAPI_ROUTER_KEY。' });
+      return;
+    }
+
+    try {
+      const resolved = await rapidApiRouting.fetchRapidApiRailSegment({
+        apiKey: RAPIDAPI_ROUTER_KEY,
+        host: RAPIDAPI_ROUTER_HOST,
+        baseUrl: RAPIDAPI_ROUTER_BASE_URL,
+        requestBody: request.body,
+        timeoutMs: Number.isFinite(RAPIDAPI_ROUTER_TIMEOUT_MS)
+          ? RAPIDAPI_ROUTER_TIMEOUT_MS
+          : rapidApiRouting.DEFAULT_RAPIDAPI_TIMEOUT_MS,
+      }).catch((error) => {
+        if (error?.statusCode === 403) {
+          error.statusCode = 403;
+          error.message = error.message || 'RapidAPI key 未订阅目标路由服务。';
+        }
+        throw error;
+      });
+
+      if (!resolved) {
+        response.status(404).json({ ok: false, error: 'RapidAPI 未返回可用的铁路路线。' });
+        return;
+      }
+
+      response.json({ ok: true, ...resolved });
+    } catch (error) {
+      const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 502;
+      response.status(statusCode).json({
+        ok: false,
+        error: error.message || 'RapidAPI 路由查询失败。',
+      });
     }
   });
 

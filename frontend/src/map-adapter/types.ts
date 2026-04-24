@@ -15,6 +15,13 @@ export interface LatLng {
   lng: number;
 }
 
+export interface RouteClickAnchor {
+  clientX: number;
+  clientY: number;
+  lat?: number;
+  lng?: number;
+}
+
 export interface MapControllerConfig {
   center: LatLng;
   zoom: number;
@@ -26,6 +33,8 @@ export interface MapControllerConfig {
   onMapClick?: () => void;
   /** marker click → React 更新 selectedSpotId */
   onSpotClick?: (id: string) => void;
+  /** route click → React 打开路线说明 */
+  onRouteClick?: (id: string, anchor: RouteClickAnchor) => void;
 }
 
 export interface MapController {
@@ -57,6 +66,9 @@ export interface MarkerLayer {
 
 export interface RouteFilter {
   day: number | null;
+  city: string | null;
+  visibleDays?: Set<number>;
+  visibleCities?: Set<string>;
 }
 
 export interface RouteLayer {

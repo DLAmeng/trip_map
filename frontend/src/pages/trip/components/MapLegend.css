@@ -1,32 +1,32 @@
 .map-legend {
   position: absolute;
-  bottom: 24px;
-  left: 24px;
+  bottom: 18px;
+  left: 18px;
   /* z-index, border, border-radius, background, box-shadow are handled by .tool-panel */
-  padding: 10px 14px;
+  padding: 8px 12px;
   width: auto;
-  max-width: 560px;
+  max-width: 360px;
   overflow: hidden;
 }
 
 .map-legend.is-collapsed {
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
+  width: 38px;
+  min-width: 38px;
+  height: 38px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   /* 统一控件按钮风格圆角 */
-  border-radius: var(--radius-md, 12px);
+  border-radius: 14px;
 }
 
 .legend-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .is-collapsed .legend-header {
@@ -37,7 +37,7 @@
 }
 
 .legend-title {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   color: var(--text-soft, #94a3b8);
   text-transform: uppercase;
@@ -52,16 +52,15 @@
   background: transparent;
   border: none;
   color: var(--text-muted, #475569);
-  font-size: 1.2rem;
+  font-size: 1rem;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 10px;
   transition: all 150ms ease;
-  margin-right: -4px;
 }
 
 .legend-toggle:hover {
@@ -81,13 +80,13 @@
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 20px;
+  gap: 8px 16px;
 }
 
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .legend-line-wrap {
@@ -102,7 +101,7 @@
 }
 
 .legend-label {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: var(--text, #1e293b);
 }
@@ -117,19 +116,19 @@
 .legend-note {
   width: 100%;
   margin-top: 2px;
-  padding: 6px 10px;
-  background: rgba(234, 179, 8, 0.1);
-  border: 1px solid rgba(234, 179, 8, 0.2);
+  padding: 5px 8px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.16);
   border-radius: var(--radius-sm, 8px);
-  font-size: 0.7rem;
-  color: #854d0e;
-  line-height: 1.4;
+  font-size: 0.66rem;
+  color: #8a5a12;
+  line-height: 1.35;
 }
 
 .legend-note-warning {
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.15);
-  color: #991b1b;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(245, 158, 11, 0.16);
+  color: #8a5610;
 }
 
 .legend-dots {
@@ -145,17 +144,6 @@
   height: 8px;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-/* 方向动画效果 */
-@keyframes dash-flow {
-  to {
-    stroke-dashoffset: -20;
-  }
-}
-
-.animated-dash {
-  animation: dash-flow 10s linear infinite;
 }
 
 /* 移动端适配已由 trip.css 接管，此处移除重复定义避免冲突 */

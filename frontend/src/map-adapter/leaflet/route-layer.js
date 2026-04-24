@@ -14,7 +14,9 @@ const TRANSPORT_COLOR = {
     subway: '#f97316',
     metro: '#f97316',
     train: '#7c3aed',
+    jrrapid: '#7c3aed',
     shinkansen: '#dc2626',
+    nankai: '#0f766e',
     bus: '#10b981',
     drive: '#475569',
 };
@@ -35,23 +37,40 @@ function pointsFromSegment(segment, spotById) {
     }
     return [];
 }
-export function createLeafletRouteLayer({ map, }) {
+export function createLeafletRouteLayer({ map, onRouteClick, }) {
     const entries = new Map();
     function removeAll() {
-        entries.forEach((entry) => entry.polyline.remove());
+        entries.forEach((entry) => {
+            entry.detachDomListener?.();
+            entry.bodyLine.remove();
+            entry.casingLine.remove();
+        });
         entries.clear();
     }
     function styleFor(segment, active) {
         const isIntercity = segment.scope === 'intercity';
-        const transportType = segment.transportType?.toLowerCase() || '';
-        const isAnimated = transportType === 'walk' || transportType === 'bus';
         return {
             color: getRouteColor(segment.transportType),
             opacity: active ? (isIntercity ? 0.88 : 0.72) : (isIntercity ? 0.2 : 0.12),
             weight: active ? (isIntercity ? 3.8 : 3.4) : (isIntercity ? 2.8 : 2.2),
             lineJoin: 'round',
             lineCap: 'round',
-            className: isAnimated ? 'route-path-animated' : '',
+        };
+    }
+    /**
+     * 底层 casing 样式(描边):深色、更粗、半透明,interactive:false 不拦截事件。
+     * 与 body 同步激活 / 淡化,维持视觉层次但不改变用户交互。
+     */
+    function casingStyleFor(segment, active) {
+        const body = styleFor(segment, active);
+        const bodyWeight = typeof body.weight === 'number' ? body.weight : 3;
+        return {
+            color: '#1a1a1a',
+            opacity: active ? 0.5 : 0.15,
+            weight: bodyWeight + 4,
+            lineJoin: 'round',
+            lineCap: 'round',
+            interactive: false,
         };
     }
     function render(segments, spotById) {
@@ -60,23 +79,73 @@ export function createLeafletRouteLayer({ map, }) {
             const points = pointsFromSegment(segment, spotById);
             if (points.length < 2)
                 continue;
-            const polyline = L.polyline(points, styleFor(segment, true));
-            polyline.bindTooltip(buildRouteTooltipHtml(segment), {
+            // 先画底层 casing(描边),后画顶层 body;Leaflet 的 DOM 叠加顺序按 addTo 顺序,
+            // 后加的在上层,这样 body 的颜色会盖在深色描边之上,形成"双色"效果。
+            const casingLine = L.polyline(points, casingStyleFor(segment, true)).addTo(map);
+            const bodyLine = L.polyline(points, styleFor(segment, true));
+            const emitRouteClick = (clientX, clientY, lat, lng) => {
+                onRouteClick?.(segment.id, {
+                    clientX,
+                    clientY,
+                    lat,
+                    lng,
+                });
+            };
+            bodyLine.bindTooltip(buildRouteTooltipHtml(segment), {
                 sticky: true,
                 direction: 'top',
                 opacity: 0.9,
             });
-            polyline.addTo(map);
-            entries.set(segment.id, { segment, polyline, active: true });
+            bodyLine.on('click', (event) => {
+                const originalEvent = event.originalEvent;
+                originalEvent?.stopPropagation?.();
+                originalEvent?.preventDefault?.();
+                emitRouteClick(originalEvent?.clientX ?? 0, originalEvent?.clientY ?? 0, event.latlng?.lat, event.latlng?.lng);
+            });
+            let detachDomListener;
+            const attachDomListener = () => {
+                const polylineElement = bodyLine.getElement();
+                if (!polylineElement)
+                    return;
+                const handleDomClick = (event) => {
+                    const mouseEvent = event;
+                    mouseEvent.stopPropagation();
+                    mouseEvent.preventDefault();
+                    const latLng = map.mouseEventToLatLng(mouseEvent);
+                    emitRouteClick(mouseEvent.clientX, mouseEvent.clientY, latLng?.lat, latLng?.lng);
+                };
+                polylineElement.addEventListener('click', handleDomClick);
+                detachDomListener = () => {
+                    bodyLine.off('add', attachDomListener);
+                    polylineElement.removeEventListener('click', handleDomClick);
+                };
+            };
+            bodyLine.once('add', attachDomListener);
+            bodyLine.addTo(map);
+            const cities = new Set();
+            const from = spotById.get(segment.fromSpotId);
+            const to = spotById.get(segment.toSpotId);
+            if (from?.city)
+                cities.add(from.city);
+            if (to?.city)
+                cities.add(to.city);
+            entries.set(segment.id, { segment, bodyLine, casingLine, active: true, cities, detachDomListener });
         }
     }
     function setActiveFilter(filter) {
         entries.forEach((entry) => {
-            const matchesDay = filter.day === null || entry.segment.day === filter.day;
-            const active = matchesDay;
+            const matchesDay = !filter.visibleDays ||
+                filter.visibleDays.size === 0 ||
+                filter.visibleDays.has(entry.segment.day);
+            const matchesCity = filter.city === null ||
+                !filter.visibleCities ||
+                filter.visibleCities.size === 0 ||
+                [...entry.cities].some((city) => filter.visibleCities?.has(city));
+            const active = matchesDay && matchesCity;
             if (active === entry.active)
                 return;
-            entry.polyline.setStyle(styleFor(entry.segment, active));
+            entry.bodyLine.setStyle(styleFor(entry.segment, active));
+            entry.casingLine.setStyle(casingStyleFor(entry.segment, active));
             entry.active = active;
         });
     }

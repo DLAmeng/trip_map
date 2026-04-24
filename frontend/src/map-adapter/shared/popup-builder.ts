@@ -1,14 +1,5 @@
 import type { SpotItem } from '../../types/trip';
 
-/**
- * 纯函数:根据 spot 生成 popup 的 HTML 字符串。
- * 从原生 app.js L1774-1828 的 getPopupHtml 精简搬来。
- * 第一版去掉了:
- *   - 下一站导航按钮(第一版没有 nextSpotById map)
- *   - 移动端 "展开抽屉" 按钮(抽屉逻辑放 Phase 3.x)
- * 需要时 Phase 3.x / Phase 4 再补。
- */
-
 export interface PopupBuilderOptions {
   dayColors: string[];
   fallbackColor?: string;
@@ -28,7 +19,24 @@ function formatTimeSlot(raw?: string): string {
   return raw;
 }
 
-export function buildSpotPopupHtml(spot: SpotItem, options: PopupBuilderOptions): string {
+function buildNavigationUrl(spot: SpotItem): string | null {
+  if (
+    !spot.prevStopName ||
+    !Number.isFinite(spot.prevStopLat) ||
+    !Number.isFinite(spot.prevStopLng)
+  ) {
+    return null;
+  }
+
+  const params = new URLSearchParams({
+    api: '1',
+    origin: `${spot.prevStopLat},${spot.prevStopLng}`,
+    destination: `${spot.lat},${spot.lng}`,
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function getPopupMarkup(spot: SpotItem, options: PopupBuilderOptions): string {
   const { dayColors, fallbackColor = '#888' } = options;
   const color = dayColors[spot.day - 1] ?? fallbackColor;
   const subLabel = spot.nameEn
@@ -47,6 +55,13 @@ export function buildSpotPopupHtml(spot: SpotItem, options: PopupBuilderOptions)
     : '';
   const transport = spot.transportNote
     ? `<div class="popup-transport">${escapeHtml(spot.transportNote)}</div>`
+    : '';
+  const navUrl = buildNavigationUrl(spot);
+  const navLabel = spot.prevStopName
+    ? `从 ${escapeHtml(spot.prevStopName)} 到这里`
+    : '';
+  const navLine = navLabel || navUrl
+    ? `<div class="popup-nav-row"><span>${navLabel}</span>${navUrl ? `<a class="popup-nav-btn" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener noreferrer">导航</a>` : ''}</div>`
     : '';
 
   const photo =
@@ -67,8 +82,19 @@ export function buildSpotPopupHtml(spot: SpotItem, options: PopupBuilderOptions)
       ${desc}
       ${whyGo}
       ${transport}
+      ${navLine}
     </div>
   `.trim();
+}
+
+export function buildSpotPopupElement(spot: SpotItem, options: PopupBuilderOptions): HTMLDivElement {
+  const shell = document.createElement('div');
+  shell.innerHTML = getPopupMarkup(spot, options);
+  return (shell.firstElementChild as HTMLDivElement | null) ?? shell;
+}
+
+export function buildSpotPopupHtml(spot: SpotItem, options: PopupBuilderOptions): string {
+  return getPopupMarkup(spot, options);
 }
 
 /**

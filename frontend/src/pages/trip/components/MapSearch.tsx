@@ -37,48 +37,98 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
   // Google Places 外部搜索逻辑
   useEffect(() => {
     const normalized = normalizeText(query);
-    if (!apiKey || normalized.length < 2) {
+    if (normalized.length < 2) {
       setExternalResults([]);
       return;
     }
 
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       setIsSearchingExternal(true);
       try {
-        const { Place } = (await importLibrary('places')) as any;
-        const { SearchByTextRankPreference } = (await importLibrary('places')) as any;
+        if (apiKey) {
+          try {
+            const { Place } = (await importLibrary('places')) as any;
+            const { SearchByTextRankPreference } = (await importLibrary('places')) as any;
 
-        const request = {
-          textQuery: query,
-          fields: ['displayName', 'location', 'formattedAddress'],
-          maxResultCount: 5,
-          rankPreference: SearchByTextRankPreference.RELEVANCE,
-        };
+            const request = {
+              textQuery: query,
+              fields: ['displayName', 'location', 'formattedAddress'],
+              maxResultCount: 5,
+              rankPreference: SearchByTextRankPreference.RELEVANCE,
+            };
 
-        const { places } = await Place.searchByText(request);
-        if (places && Array.isArray(places)) {
-          const mapped: SearchEntry[] = places.map((p: any) => ({
-            id: p.id || Math.random().toString(36),
-            type: 'external',
-            day: 0,
-            title: p.displayName || '未知地点',
-            subtitle: p.formattedAddress || '',
-            searchText: '',
-            data: {
-              lat: p.location?.lat?.(),
-              lng: p.location?.lng?.(),
-            },
-          }));
-          setExternalResults(mapped);
+            const { places } = await Place.searchByText(request);
+            if (places && Array.isArray(places)) {
+              const mapped: SearchEntry[] = places.map((p: any) => ({
+                id: p.id || Math.random().toString(36),
+                type: 'external',
+                day: 0,
+                title: p.displayName || '未知地点',
+                subtitle: p.formattedAddress || '',
+                searchText: '',
+                data: {
+                  lat: p.location?.lat?.(),
+                  lng: p.location?.lng?.(),
+                },
+              }));
+              setExternalResults(mapped);
+              return;
+            }
+          } catch (googleErr) {
+            console.warn('[MapSearch] Google Places search failed, falling back to Nominatim:', googleErr);
+          }
         }
+
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('q', query);
+        url.searchParams.set('format', 'json');
+        url.searchParams.set('limit', '5');
+        url.searchParams.set('addressdetails', '0');
+        url.searchParams.set('accept-language', 'zh-CN,zh,en');
+
+        const response = await fetch(url.toString(), {
+          signal: controller.signal,
+          headers: { 'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8' },
+        });
+        if (!response.ok) {
+          setExternalResults([]);
+          return;
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data)) {
+          setExternalResults([]);
+          return;
+        }
+
+        const mapped: SearchEntry[] = data.map((item: any) => ({
+          id: `nominatim-${item.place_id ?? item.osm_id ?? Math.random().toString(36)}`,
+          type: 'external',
+          day: 0,
+          title: item.name || String(item.display_name || '').split(',')[0] || '未知地点',
+          subtitle: item.display_name || '',
+          searchText: '',
+          data: {
+            lat: Number(item.lat),
+            lng: Number(item.lon),
+          },
+        }));
+        setExternalResults(mapped);
       } catch (err) {
-        console.error('[MapSearch] External search failed:', err);
+        if ((err as Error).name !== 'AbortError') {
+          console.error('[MapSearch] External search failed:', err);
+          setExternalResults([]);
+        }
       } finally {
         setIsSearchingExternal(false);
       }
     }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
   }, [query, apiKey]);
 
   // 重置选中项

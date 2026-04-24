@@ -1,6 +1,6 @@
 import L from 'leaflet';
 import 'leaflet.markercluster';
-import { buildSpotPopupHtml } from '../shared/popup-builder';
+import { buildSpotPopupElement } from '../shared/popup-builder';
 /**
  * Leaflet 实现的 MarkerLayer。对齐原生 app.js createLeafletMarker L1860-1913 的
  * 行为(divIcon + popup + 点击 stopPropagation),把 marker 生命周期从全局 markerCache
@@ -13,7 +13,28 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
         spiderfyOnMaxZoom: true,
         disableClusteringAtZoom: 16,
     });
+    const normalMarkerGroup = L.layerGroup();
     map.addLayer(clusterGroup);
+    function syncMarkerMode() {
+        const useClusters = map.getZoom() < 9;
+        if (useClusters) {
+            if (map.hasLayer(normalMarkerGroup)) {
+                map.removeLayer(normalMarkerGroup);
+            }
+            if (!map.hasLayer(clusterGroup)) {
+                map.addLayer(clusterGroup);
+            }
+            return;
+        }
+        if (map.hasLayer(clusterGroup)) {
+            map.removeLayer(clusterGroup);
+        }
+        if (!map.hasLayer(normalMarkerGroup)) {
+            map.addLayer(normalMarkerGroup);
+        }
+    }
+    map.on('zoomend', syncMarkerMode);
+    syncMarkerMode();
     const entries = new Map();
     const fallbackColor = '#888';
     function getColor(day) {
@@ -35,6 +56,7 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
     }
     function removeAll() {
         clusterGroup.clearLayers();
+        normalMarkerGroup.clearLayers();
         entries.clear();
     }
     function render(spots) {
@@ -45,7 +67,10 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
                 riseOnHover: true,
                 keyboard: true,
             });
-            marker.bindPopup(buildSpotPopupHtml(spot, { dayColors, fallbackColor }), {
+            marker.bindPopup(buildSpotPopupElement(spot, {
+                dayColors,
+                fallbackColor,
+            }), {
                 maxWidth: 240,
                 closeButton: false,
                 offset: L.point(0, -6),
@@ -56,8 +81,10 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
                 onSpotClick?.(spot.id);
             });
             clusterGroup.addLayer(marker);
+            normalMarkerGroup.addLayer(marker);
             entries.set(spot.id, { spot, marker, visible: true, isNext: false });
         }
+        syncMarkerMode();
     }
     function setVisibleSpots(visibleIds) {
         entries.forEach((entry, id) => {
@@ -66,9 +93,11 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
                 return;
             if (shouldShow) {
                 clusterGroup.addLayer(entry.marker);
+                normalMarkerGroup.addLayer(entry.marker);
             }
             else {
                 clusterGroup.removeLayer(entry.marker);
+                normalMarkerGroup.removeLayer(entry.marker);
             }
             entry.visible = shouldShow;
         });
@@ -98,7 +127,7 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
             });
         }
         if (entry.visible) {
-            entry.marker.openPopup();
+            openPopup(id);
         }
     }
     function setNextHighlight(ids) {
@@ -116,11 +145,19 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, }) {
         const entry = entries.get(id);
         if (!entry || !entry.visible)
             return;
+        if (map.hasLayer(clusterGroup)) {
+            clusterGroup.zoomToShowLayer(entry.marker, () => {
+                entry.marker.openPopup();
+            });
+            return;
+        }
         entry.marker.openPopup();
     }
     function destroy() {
         removeAll();
+        map.off('zoomend', syncMarkerMode);
         map.removeLayer(clusterGroup);
+        map.removeLayer(normalMarkerGroup);
     }
     return { render, setVisibleSpots, setSelected, openPopup, setNextHighlight, destroy };
 }

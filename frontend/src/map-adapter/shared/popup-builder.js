@@ -11,7 +11,20 @@ function formatTimeSlot(raw) {
         return '时段未排';
     return raw;
 }
-export function buildSpotPopupHtml(spot, options) {
+function buildNavigationUrl(spot) {
+    if (!spot.prevStopName ||
+        !Number.isFinite(spot.prevStopLat) ||
+        !Number.isFinite(spot.prevStopLng)) {
+        return null;
+    }
+    const params = new URLSearchParams({
+        api: '1',
+        origin: `${spot.prevStopLat},${spot.prevStopLng}`,
+        destination: `${spot.lat},${spot.lng}`,
+    });
+    return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+function getPopupMarkup(spot, options) {
     const { dayColors, fallbackColor = '#888' } = options;
     const color = dayColors[spot.day - 1] ?? fallbackColor;
     const subLabel = spot.nameEn
@@ -30,6 +43,13 @@ export function buildSpotPopupHtml(spot, options) {
     const transport = spot.transportNote
         ? `<div class="popup-transport">${escapeHtml(spot.transportNote)}</div>`
         : '';
+    const navUrl = buildNavigationUrl(spot);
+    const navLabel = spot.prevStopName
+        ? `从 ${escapeHtml(spot.prevStopName)} 到这里`
+        : '';
+    const navLine = navLabel || navUrl
+        ? `<div class="popup-nav-row"><span>${navLabel}</span>${navUrl ? `<a class="popup-nav-btn" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener noreferrer">导航</a>` : ''}</div>`
+        : '';
     const photo = Array.isArray(spot.photos) && spot.photos.length > 0
         ? `<div class="popup-photo"><img src="${escapeHtml(spot.photos[0])}" alt="" /></div>`
         : '';
@@ -46,8 +66,17 @@ export function buildSpotPopupHtml(spot, options) {
       ${desc}
       ${whyGo}
       ${transport}
+      ${navLine}
     </div>
   `.trim();
+}
+export function buildSpotPopupElement(spot, options) {
+    const shell = document.createElement('div');
+    shell.innerHTML = getPopupMarkup(spot, options);
+    return shell.firstElementChild ?? shell;
+}
+export function buildSpotPopupHtml(spot, options) {
+    return getPopupMarkup(spot, options);
 }
 /**
  * 简单 tooltip,用于鼠标悬停在 polyline 上。

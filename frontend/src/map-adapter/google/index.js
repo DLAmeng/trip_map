@@ -43,7 +43,9 @@ export const createGoogleController = (container, config) => {
         dayColors: config.dayColors,
         onSpotClick: config.onSpotClick,
     });
-    routes = createGoogleRouteLayer();
+    routes = createGoogleRouteLayer({
+        onRouteClick: config.onRouteClick,
+    });
     const controller = {
         markers,
         routes,

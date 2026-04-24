@@ -56,7 +56,6 @@ trip_map/
 │   ├── src/              # 组件、Hooks、API 客户端
 │   └── dist/             # 编译后的生产产物
 ├── data/                 # SQLite 数据库与用户照片
-├── legacy/               # 归档的旧版原生前端文件 (V1)
 ├── server.js             # 后端 Express 入口
 ├── trip-service.js       # 核心业务逻辑
 └── trip-repository.js    # 数据库访问层
@@ -66,8 +65,19 @@ trip_map/
 创建 `.env` 文件：
 ```env
 GOOGLE_MAPS_API_KEY=你的Key
+RAPIDAPI_ROUTER_KEY=你的RapidAPIKey
+RAPIDAPI_ROUTER_HOST=navitime-route-totalnavi.p.rapidapi.com
+RAPIDAPI_ROUTER_BASE_URL=https://navitime-route-totalnavi.p.rapidapi.com
+RAPIDAPI_ROUTER_TIMEOUT_MS=5000
 PORT=8080
 ```
 
+## 铁路路线补线策略
+
+- Google Maps 仍然是首选路线提供方。
+- 当 Google Maps 对铁路段返回空路线时，前端才会回退到后端的 `POST /api/routing/rapidapi/rail-segment`。
+- RapidAPI 回退当前接的是 NAVITIME Route Totalnavi。后端优先调用 `shape_transit` 拿真实铁路 GeoJSON；如果路由存在但没有可用 shape，则再退回 `route_transit` 的 section 坐标做兜底。
+- 如果 RapidAPI key 未订阅目标服务，页面仍会安全显示示意线，不会影响 Trip 页主体功能。
+
 ## 迁移状态总结
-目前项目已完成从原生 JS 到 React 的 100% 路由接管。所有核心编辑（CRUD）、地图渲染、行程分析均已迁移。原有的 `.html` 页面已停用并移入 `legacy` 目录。
+目前项目已完成从原生 JS 到 React 的 100% 功能迁移。所有核心编辑（CRUD）、地图渲染、行程分析、PWA 缓存与铁路补线都已在 React 架构内收口；旧版原生页面与 `*.legacy.js` 归档文件也已移除。

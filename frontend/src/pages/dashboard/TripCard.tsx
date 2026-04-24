@@ -58,33 +58,37 @@ export function TripCard({ trip, onDuplicate, onDelete, duplicating, deleting }:
       </div>
       <div className="trip-meta-line">{updatedLabel}</div>
       <div className="trip-actions">
-        <Link className="open-btn" to={`/trip?id=${encodeURIComponent(trip.id)}`}>
-          打开地图
-        </Link>
-        <Link className="edit-btn" to={`/admin?id=${encodeURIComponent(trip.id)}`}>
-          编辑
-        </Link>
-        <button
-          type="button"
-          className="duplicate-btn"
-          aria-label="复制行程"
-          title="复制此行程"
-          disabled={duplicating}
-          onClick={() => onDuplicate(trip)}
-        >
-          {duplicating ? '...' : '⎘'}
-        </button>
-        {isCurrent ? null : (
+        <div className="trip-actions-main">
+          <Link className="open-btn" to={`/trip?id=${encodeURIComponent(trip.id)}`}>
+            打开地图
+          </Link>
+          <Link className="edit-btn" to={`/admin?id=${encodeURIComponent(trip.id)}`}>
+            编辑
+          </Link>
+        </div>
+        <div className="trip-actions-side">
           <button
             type="button"
-            className="delete-btn"
-            aria-label="删除行程"
-            disabled={deleting}
-            onClick={() => onDelete(trip)}
+            className="duplicate-btn"
+            aria-label="复制行程"
+            title="复制此行程"
+            disabled={duplicating}
+            onClick={() => onDuplicate(trip)}
           >
-            ✕
+            {duplicating ? '...' : '⎘'}
           </button>
-        )}
+          {isCurrent ? null : (
+            <button
+              type="button"
+              className="delete-btn"
+              aria-label="删除行程"
+              disabled={deleting}
+              onClick={() => onDelete(trip)}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );

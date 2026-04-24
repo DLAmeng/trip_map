@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RouteSegment, SpotItem, TripConfig } from '../../types/trip';
 import type { FilterState } from '../../selectors/filterState';
-import { getVisibleSpots, getVisibleSpotIds } from '../../selectors/filterState';
-import type { MapController } from '../../map-adapter/types';
+import {
+  getVisibleRouteContext,
+  getVisibleSpots,
+  getVisibleSpotIds,
+} from '../../selectors/filterState';
+import type { MapController, RouteClickAnchor } from '../../map-adapter/types';
 import { createLeafletController } from '../../map-adapter/leaflet';
 import { createGoogleController } from '../../map-adapter/google';
 import { useTripMap } from '../../hooks/useTripMap';
-import { fetchOSRMRoute } from '../../api/routing-api';
+import {
+  hydrateRealRouteGeometries,
+  shouldAwaitInitialRailHydration,
+} from '../../api/routing-api';
 import { MapLegend } from './components/MapLegend';
 import { SummaryBar } from './components/SummaryBar';
 import { FiltersCard } from './components/FiltersCard';
@@ -14,7 +21,19 @@ import { MapToolbar } from './components/MapToolbar';
 import { MapSearch } from './components/MapSearch';
 import { MapNotice } from './components/MapNotice';
 import { MobileMapFloatingActions } from './components/MobileMapFloatingActions';
+import { RouteDetailContent } from './components/RouteDetailContent';
+import { MobileRouteDetailSheet } from './components/MobileRouteDetailSheet';
 import type { TripStats } from '../../selectors/tripSelectors';
+
+type CachedRouteGeometry = {
+  path: Array<[number, number]>;
+  distanceMeters: number | null;
+  durationSec: number | null;
+  warnings: string[] | null;
+  source?: RouteSegment['runtimeSource'] | null;
+  transitSummary?: RouteSegment['runtimeTransitSummary'] | null;
+  transitLegs?: RouteSegment['runtimeTransitLegs'] | null;
+};
 
 interface TripMapCanvasProps {
   config: TripConfig;
@@ -67,19 +86,51 @@ export function TripMapCanvas({
   isOnline = true,
   isMobile = false,
 }: TripMapCanvasProps) {
+  const stageRef = useRef<HTMLElement>(null);
+  const toolOverlayRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MapController | null>(null);
   const [useFallback, setUseFallback] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
-  const [geometryCache, setGeometryCache] = useState<Record<string, Array<[number, number]>>>({});
+  const [geometryCache, setGeometryCache] = useState<Record<string, CachedRouteGeometry>>({});
+  const [isInitialRailHydrationPending, setIsInitialRailHydrationPending] = useState(() =>
+    segments.some((segment) => shouldAwaitInitialRailHydration(segment, config)),
+  );
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [routeAnchor, setRouteAnchor] = useState<RouteClickAnchor | null>(null);
 
   const fallbackToLeaflet = config.googleMaps?.fallbackToLeaflet !== false;
 
+  const handleSelectSpotFromCanvas = (id: string) => {
+    setSelectedRouteId(null);
+    setRouteAnchor(null);
+    onSelectSpot(id);
+  };
+
+  const handleMapClickFromCanvas = () => {
+    setSelectedRouteId(null);
+    setRouteAnchor(null);
+    onMapClick();
+  };
+
+  const handleRouteClick = (id: string, anchor: RouteClickAnchor) => {
+    setSelectedRouteId(id);
+    setRouteAnchor(anchor);
+  };
+
   // 事件回调用 ref 包一层,避免 onSpotClick / onMapClick 改了就让 controller 重 init
-  const callbacksRef = useRef({ onSelectSpot, onMapClick });
+  const callbacksRef = useRef({
+    onSelectSpot: handleSelectSpotFromCanvas,
+    onMapClick: handleMapClickFromCanvas,
+    onRouteClick: handleRouteClick,
+  });
   useEffect(() => {
-    callbacksRef.current = { onSelectSpot, onMapClick };
-  }, [onSelectSpot, onMapClick]);
+    callbacksRef.current = {
+      onSelectSpot: handleSelectSpotFromCanvas,
+      onMapClick: handleMapClickFromCanvas,
+      onRouteClick: handleRouteClick,
+    };
+  }, [onMapClick, onSelectSpot]);
 
   // 一次性 init(依赖 config 的稳定字段)。
   // 注意:config 对象引用每次 useQuery 重取可能都变,所以把它的原始字段拆出来做依赖。
@@ -88,6 +139,20 @@ export function TripMapCanvas({
   const defaultZoom = config.defaultZoom;
   const mapProvider = config.mapProvider;
   const dayColorsKey = config.dayColors.join('|');
+  const routingEngine = mapProvider === 'googleMaps' && !useFallback ? 'google' : 'leaflet';
+  const initialRailHydrationIds = useMemo(
+    () =>
+      new Set(
+        segments
+          .filter((segment) => shouldAwaitInitialRailHydration(segment, config))
+          .map((segment) => segment.id),
+      ),
+    [config, segments],
+  );
+  const initialRailHydrationKey = useMemo(
+    () => Array.from(initialRailHydrationIds).sort().join('|'),
+    [initialRailHydrationIds],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -106,6 +171,7 @@ export function TripMapCanvas({
         dayColors: config.dayColors,
         onSpotClick: (id) => callbacksRef.current.onSelectSpot(id),
         onMapClick: () => callbacksRef.current.onMapClick(),
+        onRouteClick: (id, anchor) => callbacksRef.current.onRouteClick(id, anchor),
         onError: (err) => {
           console.error('[GoogleMapsAdapter] Initialization failed:', err);
           if (isGoogle) {
@@ -121,9 +187,14 @@ export function TripMapCanvas({
 
       // 引擎重建后立即同步初始数据
       controller.markers.render(spots);
-      controller.routes.render(segments, spotById);
+      controller.routes.render(renderSegments, spotById);
       controller.markers.setVisibleSpots(getVisibleSpotIds(spots, filter));
-      controller.routes.setActiveFilter({ day: filter.day });
+      controller.routes.setActiveFilter({
+        day: filter.day,
+        city: filter.city,
+        visibleDays: routeContext.visibleDays,
+        visibleCities: routeContext.visibleCities,
+      });
       if (selectedSpotId) {
         controller.markers.setSelected(selectedSpotId, { pan: false });
       }
@@ -148,46 +219,127 @@ export function TripMapCanvas({
 
   // 注入缓存后的轨迹数据到 segments
   const hydratedSegments = useMemo(() => {
-    return segments.map(seg => ({
-      ...seg,
-      path: geometryCache[seg.id] || seg.path,
-    }));
+    return segments.map((seg) => {
+      const geometry = geometryCache[seg.id];
+      return {
+        ...seg,
+        path: geometry?.path || seg.path,
+        realDistanceMeters: geometry?.distanceMeters ?? seg.realDistanceMeters ?? null,
+        realDurationSec: geometry?.durationSec ?? seg.realDurationSec ?? null,
+        realWarnings: geometry?.warnings ?? seg.realWarnings ?? null,
+        runtimeSource: geometry?.source ?? seg.runtimeSource ?? null,
+        runtimeTransitSummary: geometry?.transitSummary ?? seg.runtimeTransitSummary ?? null,
+        runtimeTransitLegs: geometry?.transitLegs ?? seg.runtimeTransitLegs ?? null,
+      };
+    });
   }, [segments, geometryCache]);
+  const renderSegments = useMemo(() => {
+    if (!isInitialRailHydrationPending) {
+      return hydratedSegments;
+    }
+    return hydratedSegments.filter((segment) => !initialRailHydrationIds.has(segment.id));
+  }, [hydratedSegments, initialRailHydrationIds, isInitialRailHydrationPending]);
+
+  const routeGeometryKey = useMemo(
+    () =>
+      segments
+        .map(
+          (segment) =>
+            `${segment.id}:${segment.transportType}:${segment.path?.length ?? 0}`,
+        )
+        .join('|'),
+    [segments],
+  );
+
+  useEffect(() => {
+    setGeometryCache({});
+  }, [routeGeometryKey, routingEngine]);
+
+  useEffect(() => {
+    setIsInitialRailHydrationPending(initialRailHydrationIds.size > 0);
+  }, [initialRailHydrationKey, initialRailHydrationIds.size]);
 
   // 同步 spots / segments / filter / selection 到 controller
   useTripMap(controllerRef, {
     spots,
-    segments: hydratedSegments,
+    segments: renderSegments,
     spotById,
     filter,
     selectedSpotId,
   });
 
-  // 异步加载缺失的真实路网轨迹 (P0)
+  // 异步补齐真实路网轨迹，对齐旧版 hydrateRealRouteGeometries 的主流程。
   useEffect(() => {
-    const missing = segments.filter(
-      (s) => !s.path && !geometryCache[s.id] && (s.transportType === 'walk' || s.transportType === 'bus' || s.transportType === 'drive')
-    );
-    if (missing.length === 0) return;
+    const abortController = new AbortController();
+    const pendingRailIds = new Set(initialRailHydrationIds);
 
-    missing.forEach(async (seg) => {
-      const from = spotById.get(seg.fromSpotId);
-      const to = spotById.get(seg.toSpotId);
-      if (!from || !to) return;
-
-      const profile = seg.transportType === 'walk' ? 'foot' : 'car';
-      const coords = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-      const path = await fetchOSRMRoute(profile, coords);
-      if (path) {
-        setGeometryCache(prev => ({ ...prev, [seg.id]: path }));
+    hydrateRealRouteGeometries({
+      segments,
+      spotById,
+      config,
+      routingEngine,
+      signal: abortController.signal,
+      onResolved: (segmentId, geometry) => {
+        setGeometryCache((prev) => ({
+          ...prev,
+          [segmentId]: geometry,
+        }));
+        pendingRailIds.delete(segmentId);
+        if (pendingRailIds.size === 0) {
+          setIsInitialRailHydrationPending(false);
+        }
+      },
+    }).finally(() => {
+      if (!abortController.signal.aborted) {
+        setIsInitialRailHydrationPending(false);
       }
     });
-  }, [segments, spotById, geometryCache]);
+
+    return () => {
+      abortController.abort();
+    };
+  }, [config, initialRailHydrationIds, routingEngine, segments, spotById]);
 
   // 当天 spots(给"适配当天"用)
   const currentDaySpots = useMemo(() => {
     return getVisibleSpots(spots, filter);
   }, [spots, filter]);
+  const routeContext = useMemo(() => getVisibleRouteContext(spots, filter), [spots, filter]);
+  const selectedRoute = useMemo(
+    () => hydratedSegments.find((segment) => segment.id === selectedRouteId) ?? null,
+    [hydratedSegments, selectedRouteId],
+  );
+  const desktopRoutePopoverStyle = useMemo(() => {
+    if (isMobile || !selectedRoute) return null;
+    const stageRect = stageRef.current?.getBoundingClientRect();
+    if (!stageRect) return { top: '20px', right: '20px' };
+    if (!routeAnchor) return { top: '20px', right: '20px' };
+    const maxWidth = 360;
+    const verticalOffset = 12;
+    const horizontalOffset = 12;
+    const padding = 16;
+    const left = routeAnchor.clientX - stageRect.left + horizontalOffset;
+    const top = routeAnchor.clientY - stageRect.top + verticalOffset;
+    return {
+      left: `${Math.max(padding, Math.min(left, stageRect.width - maxWidth - padding))}px`,
+      top: `${Math.max(padding, Math.min(top, stageRect.height - 260))}px`,
+    };
+  }, [isMobile, routeAnchor, selectedRoute]);
+
+  useEffect(() => {
+    if (!selectedSpotId) return;
+    setSelectedRouteId(null);
+    setRouteAnchor(null);
+  }, [selectedSpotId]);
+
+  useEffect(() => {
+    if (!selectedRouteId) return;
+    const routeStillVisible = renderSegments.some((segment) => segment.id === selectedRouteId);
+    if (!routeStillVisible) {
+      setSelectedRouteId(null);
+      setRouteAnchor(null);
+    }
+  }, [renderSegments, selectedRouteId]);
 
   // 监听过滤条件变化：当手动切换天数或城市（且未选中具体景点）时，自动缩放以适配可见景点
   const lastFilter = useRef({ day: filter.day, city: filter.city });
@@ -198,8 +350,11 @@ export function TripMapCanvas({
     if (dayChanged || cityChanged) {
       lastFilter.current = { day: filter.day, city: filter.city };
       const controller = controllerRef.current;
-      if (controller && !selectedSpotId && currentDaySpots.length > 0) {
+      if (!controller || selectedSpotId) return;
+      if (currentDaySpots.length > 0) {
         controller.fitToSpots(currentDaySpots);
+      } else if (filter.day === null && filter.city === null) {
+        controller.resetView();
       }
     }
   }, [filter.day, filter.city, selectedSpotId, currentDaySpots]);
@@ -219,6 +374,30 @@ export function TripMapCanvas({
     setActiveTool(activeTool === tool ? null : tool);
   };
 
+  useEffect(() => {
+    if (!activeTool || isMobile) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (toolOverlayRef.current?.contains(target)) return;
+      setActiveTool(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveTool(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeTool, isMobile, setActiveTool]);
+
   const dayNumbers = useMemo(() => {
     const days = new Set<number>();
     spots.forEach(s => days.add(s.day));
@@ -226,7 +405,7 @@ export function TripMapCanvas({
   }, [spots]);
 
   return (
-    <section className="map-stage" aria-label="地图">
+    <section ref={stageRef} className="map-stage" aria-label="地图">
       <div className="map-notice-stack" aria-live="polite">
         {!isOnline ? (
           <MapNotice
@@ -250,70 +429,87 @@ export function TripMapCanvas({
           role="application"
           aria-label="交互地图"
         />
-
-        {/* 左侧工具栏:仅桌面显示;手机靠底部浮动按钮的搜索/概况/筛选入口 */}
-        <div className="desktop-only">
-          <MapToolbar activeTool={activeTool} onToggleTool={handleToggleTool} />
-        </div>
-
-        {/* 过滤面板:仅桌面 */}
-        {activeTool === 'filter' && (
-          <div className="desktop-only">
-            <FiltersCard
-              dayNumbers={dayNumbers}
-              cityNames={cityNames}
-              filter={filter}
-              onChange={onFilterChange}
-            />
+        {isInitialRailHydrationPending ? (
+          <div className="map-loading-overlay" role="status" aria-live="polite">
+            <div className="map-loading-card">
+              <span className="map-loading-eyebrow">正在匹配铁路路线</span>
+              <strong className="map-loading-title">先把首屏线路对齐</strong>
+              <p className="map-loading-message">
+                日本铁路段会先等补线完成，再展示地图，避免先看到示意线再跳变。
+              </p>
+            </div>
           </div>
-        )}
-        {activeTool === 'summary' && window.innerWidth > 1024 && (
-          <SummaryBar
-            stats={stats}
-            isFiltered={
-              filter.day !== null ||
-              filter.city !== null ||
-              filter.mustOnly ||
-              filter.nextOnly
-            }
-          />
-        )}
-        {(activeTool === 'search' || isMobile) && (
-          <MapSearch
-            spots={spots}
-            segments={segments}
-            apiKey={config.googleMaps?.apiKey}
-            onSelectSpot={onSelectSpot}
-            onFocus={() => {
-              if (isMobile) {
-                // 当移动端聚焦时，关闭底部的列表和筛选器弹窗
-                if (isListVisible) onToggleList();
-                setActiveTool('search');
+        ) : null}
+
+        <div ref={toolOverlayRef}>
+          {/* 左侧工具栏:仅桌面显示;手机靠底部浮动按钮的搜索/概况/筛选入口 */}
+          <div className="desktop-only">
+            <MapToolbar activeTool={activeTool} onToggleTool={handleToggleTool} />
+          </div>
+          {/* 过滤面板:仅桌面 */}
+          {activeTool === 'filter' && (
+            <div className="desktop-only">
+              <FiltersCard
+                dayNumbers={dayNumbers}
+                cityNames={cityNames}
+                filter={filter}
+                onChange={onFilterChange}
+              />
+            </div>
+          )}
+          {activeTool === 'summary' && window.innerWidth > 1024 && (
+            <SummaryBar
+              stats={stats}
+              isFiltered={
+                filter.day !== null ||
+                filter.city !== null ||
+                filter.mustOnly ||
+                filter.nextOnly
               }
-            }}
-            onSelectRoute={(id) => {
-              const seg = segments.find((s) => s.id === id);
-              if (seg) {
-                const from = spotById.get(seg.fromSpotId);
-                const to = spotById.get(seg.toSpotId);
-                if (from && to) {
-                  controllerRef.current?.fitToSpots([from, to]);
-                } else if (from || to) {
-                  const s = (from || to)!;
-                  controllerRef.current?.setView({ lat: s.lat, lng: s.lng }, 15);
+            />
+          )}
+          {(activeTool === 'search' || isMobile) && (
+            <MapSearch
+              spots={spots}
+              segments={hydratedSegments}
+              apiKey={config.googleMaps?.apiKey}
+              onSelectSpot={handleSelectSpotFromCanvas}
+              onFocus={() => {
+                if (isMobile) {
+                  // 当移动端聚焦时，关闭底部的列表和筛选器弹窗
+                  if (isListVisible) onToggleList();
+                  setActiveTool('search');
                 }
-              }
-            }}
-            onSelectLocation={(lat, lng) => {
-              controllerRef.current?.setView({ lat, lng }, 15);
-            }}
-            onClose={() => setActiveTool(null)}
-          />
-        )}
+              }}
+              onSelectRoute={(id) => {
+                const seg = hydratedSegments.find((s) => s.id === id);
+                if (seg) {
+                  const from = spotById.get(seg.fromSpotId);
+                  const to = spotById.get(seg.toSpotId);
+                  if (from && to) {
+                    controllerRef.current?.fitToSpots([from, to]);
+                  } else if (from || to) {
+                    const s = (from || to)!;
+                    controllerRef.current?.setView({ lat: s.lat, lng: s.lng }, 15);
+                  }
+                }
+              }}
+              onSelectLocation={(lat, lng) => {
+                controllerRef.current?.setView({ lat, lng }, 15);
+              }}
+              onClose={() => setActiveTool(null)}
+            />
+          )}
+        </div>
 
         <MapLegend
           dayColors={config.dayColors}
-          isRouteBroken={filter.day !== null}
+          isRouteBroken={
+            filter.day !== null ||
+            filter.city !== null ||
+            filter.mustOnly ||
+            filter.nextOnly
+          }
           isGoogleMap={mapProvider === 'googleMaps' && !useFallback}
           hasWalkSegment={segments.some(
             (s) => s.transportType?.toLowerCase?.() === 'walk',
@@ -369,6 +565,35 @@ export function TripMapCanvas({
             }}
           />
         ) : null}
+        {!isMobile && selectedRoute ? (
+          <div
+            className="route-detail-popover"
+            style={desktopRoutePopoverStyle ?? undefined}
+            role="dialog"
+            aria-label="路线说明"
+          >
+            <button
+              type="button"
+              className="route-detail-dismiss"
+              onClick={() => {
+                setSelectedRouteId(null);
+                setRouteAnchor(null);
+              }}
+              aria-label="关闭路线说明"
+            >
+              ×
+            </button>
+            <RouteDetailContent segment={selectedRoute} />
+          </div>
+        ) : null}
+        <MobileRouteDetailSheet
+          isOpen={Boolean(isMobile && selectedRoute)}
+          segment={selectedRoute}
+          onClose={() => {
+            setSelectedRouteId(null);
+            setRouteAnchor(null);
+          }}
+        />
     </section>
   );
 }

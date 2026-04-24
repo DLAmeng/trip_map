@@ -10,6 +10,7 @@ import { TripHeader } from './TripHeader';
 import { TripMapCanvas } from './TripMapCanvas';
 import { SpotList } from './SpotList';
 import { MobileFilterSheet } from './components/MobileFilterSheet';
+import { MobileDrawer } from './components/MobileDrawer';
 import { SummaryBar } from './components/SummaryBar';
 import { LoadingScreen } from './components/LoadingScreen';
 import { MobileTripHeaderCard } from './components/MobileTripHeaderCard';
@@ -70,6 +71,33 @@ export function TripPage() {
         filter.city !== null ||
         filter.mustOnly ||
         filter.nextOnly;
+    const hasSpotsForDayAndCity = useCallback((day, city) => {
+        if (!normalized)
+            return false;
+        return normalized.spots.some((spot) => spot.day === day && spot.city === city);
+    }, [normalized]);
+    const normalizeFilter = useCallback((nextFilter) => {
+        let day = nextFilter.day;
+        let city = nextFilter.city;
+        if (day !== null && city !== null && !hasSpotsForDayAndCity(day, city)) {
+            const dayChanged = day !== filter.day;
+            const cityChanged = city !== filter.city;
+            if (dayChanged && !cityChanged) {
+                city = null;
+            }
+            else if (cityChanged && !dayChanged) {
+                day = null;
+            }
+            else {
+                city = null;
+            }
+        }
+        return {
+            ...nextFilter,
+            day,
+            city,
+        };
+    }, [filter.day, filter.city, hasSpotsForDayAndCity]);
     const closeAllPopups = useCallback(() => {
         // 桌面默认展开列表,手机点空白处会收起所有 sheet(list / filter / summary)
         setIsListVisible(!isMobile);
@@ -86,7 +114,7 @@ export function TripPage() {
                 mustOnly: prev.get('mustVisit') === 'true',
                 nextOnly: prev.get('nextOnly') === 'true',
             };
-            const nextFilter = typeof updater === 'function' ? updater(current) : updater;
+            const nextFilter = normalizeFilter(typeof updater === 'function' ? updater(current) : updater);
             if (nextFilter.day !== null)
                 next.set('day', String(nextFilter.day));
             else
@@ -107,21 +135,16 @@ export function TripPage() {
             next.delete('spot');
             return next;
         }, { replace: true });
-    }, [setParams]);
+    }, [normalizeFilter, setParams]);
     const handleSelectSpot = useCallback((id) => {
         setParams((prev) => {
             const next = new URLSearchParams(prev);
             if (prev.get('spot') === id)
                 return prev;
             next.set('spot', id);
-            // 点击景点后自动切换到对应天数的过滤视图
-            const spot = normalized?.spotById.get(id);
-            if (spot) {
-                next.set('day', String(spot.day));
-            }
             return next;
         }, { replace: true });
-    }, [normalized, setParams]);
+    }, [setParams]);
     const handleMapClick = useCallback(() => {
         setParams((prev) => {
             if (!prev.has('spot'))
@@ -140,9 +163,9 @@ export function TripPage() {
         const message = isError
             ? error?.message || '未知错误'
             : '这个行程没有返回有效数据。';
-        return (_jsx("div", { className: "trip-shell", children: _jsxs("div", { className: "trip-status", role: "alert", children: [_jsx("h2", { children: "\u65E0\u6CD5\u52A0\u8F7D\u884C\u7A0B" }), _jsx("p", { children: message }), _jsxs("div", { className: "trip-status-actions", children: [_jsx("button", { type: "button", onClick: () => refetch(), disabled: isFetching, children: isFetching ? '重试中…' : '重试' }), _jsx("a", { href: `/trip?id=${encodeURIComponent(tripId)}`, target: "_blank", rel: "noreferrer", children: "\u6253\u5F00 Express \u539F\u751F\u9875(\u56DE\u6EDA\u5165\u53E3)" })] })] }) }));
+        return (_jsx("div", { className: "trip-shell", children: _jsxs("div", { className: "trip-status", role: "alert", children: [_jsx("h2", { children: "\u65E0\u6CD5\u52A0\u8F7D\u884C\u7A0B" }), _jsx("p", { children: message }), _jsxs("div", { className: "trip-status-actions", children: [_jsx("button", { type: "button", onClick: () => refetch(), disabled: isFetching, children: isFetching ? '重试中…' : '重试' }), _jsx("a", { href: `/trip?id=${encodeURIComponent(tripId)}`, target: "_blank", rel: "noreferrer", children: "\u65B0\u6807\u7B7E\u9875\u6253\u5F00\u5F53\u524D Trip \u9875\u9762" })] })] }) }));
     }
-    return (_jsxs("div", { className: `trip-shell${isMobile ? ' trip-shell-mobile' : ''}`, children: [isMobile ? (_jsx(MobileTripHeaderCard, { meta: data.meta, tripId: tripId, cityNames: normalized.cityNames })) : (_jsx(TripHeader, { meta: data.meta, tripId: tripId, stats: stats, dayNumbers: normalized.dayNumbers, cityNames: normalized.cityNames, filter: filter, onDaySelect: (day) => setFilter((prev) => ({ ...prev, day })) })), _jsxs("div", { className: `main-content ${!isListVisible ? 'list-hidden' : ''}`, children: [_jsx(TripMapCanvas, { config: data.config, spots: normalized.spots, segments: normalized.routeSegments, spotById: normalized.spotById, cityNames: normalized.cityNames, filter: filter, onFilterChange: setFilter, selectedSpotId: selectedSpotId, onSelectSpot: handleSelectSpot, onMapClick: handleMapClick, stats: stats, onToggleList: () => setIsListVisible(!isListVisible), isListVisible: isListVisible, activeTool: activeTool, setActiveTool: setActiveTool, isOnline: isOnline, isMobile: isMobile }), isListVisible && (_jsxs(_Fragment, { children: [isMobile && (_jsx("div", { className: "sheet-backdrop", onClick: closeAllPopups })), _jsx("div", { className: "spot-list-wrapper", children: _jsx(SpotList, { spotsByDay: normalized.spotsByDay, dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, filter: filter, selectedSpotId: selectedSpotId, onSelect: handleSelectSpot, onDayClick: (day) => setFilter((prev) => ({ ...prev, day })) }) })] }))] }), isMobile ? (_jsx(MobileTripBottomSwitcher, { activeMode: activeMobileMode, hasActiveFilter: hasActiveFilter, onSelectSummary: () => {
+    return (_jsxs("div", { className: `trip-shell${isMobile ? ' trip-shell-mobile' : ''}`, children: [isMobile ? (_jsx(MobileTripHeaderCard, { meta: data.meta, tripId: tripId, cityNames: normalized.cityNames })) : (_jsx(TripHeader, { meta: data.meta, tripId: tripId, stats: stats, dayNumbers: normalized.dayNumbers, cityNames: normalized.cityNames, filter: filter, onDaySelect: (day) => setFilter((prev) => ({ ...prev, day })) })), _jsxs("div", { className: `main-content ${!isListVisible ? 'list-hidden' : ''}`, children: [_jsx(TripMapCanvas, { config: data.config, spots: normalized.spots, segments: normalized.routeSegments, spotById: normalized.allEntriesById, cityNames: normalized.cityNames, filter: filter, onFilterChange: setFilter, selectedSpotId: selectedSpotId, onSelectSpot: handleSelectSpot, onMapClick: handleMapClick, stats: stats, onToggleList: () => setIsListVisible(!isListVisible), isListVisible: isListVisible, activeTool: activeTool, setActiveTool: setActiveTool, isOnline: isOnline, isMobile: isMobile }), isListVisible && (_jsx(_Fragment, { children: isMobile ? (_jsx(MobileDrawer, { isOpen: isListVisible, spotsByDay: normalized.spotsByDay, dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, filter: filter, selectedSpotId: selectedSpotId, onSelect: handleSelectSpot, onDayClick: (day) => setFilter((prev) => ({ ...prev, day })), onClose: () => setIsListVisible(false) })) : (_jsx("div", { className: "spot-list-wrapper", children: _jsx(SpotList, { spotsByDay: normalized.spotsByDay, dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, filter: filter, selectedSpotId: selectedSpotId, onSelect: handleSelectSpot, onDayClick: (day) => setFilter((prev) => ({ ...prev, day })) }) })) }))] }), isMobile ? (_jsx(MobileTripBottomSwitcher, { activeMode: activeMobileMode, hasActiveFilter: hasActiveFilter, onSelectSummary: () => {
                     setActiveTool(activeTool === 'summary' ? null : 'summary');
                     setIsListVisible(false);
                     setIsFilterSheetOpen(false);

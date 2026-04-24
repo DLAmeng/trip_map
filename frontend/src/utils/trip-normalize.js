@@ -1,5 +1,5 @@
 /**
- * 与旧版 `legacy/old-frontend/admin.js` 的 normalizeTripForSave 对齐:
+ * 保存前的 trip payload 归一化:
  * - 字符串字段 trim,空值统一
  * - 数字字段 Number 解析,NaN 回退到合理默认值
  * - 布尔字段 Boolean() 包一层

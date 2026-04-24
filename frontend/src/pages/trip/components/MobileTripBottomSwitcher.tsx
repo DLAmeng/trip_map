@@ -56,12 +56,9 @@ export function MobileTripBottomSwitcher({
       >
         <span className="mobile-switcher-icon" aria-hidden="true">
           <svg viewBox="0 0 20 20" width="20" height="20" fill="none">
-            <path
-              d="M6 5h11M6 10h11M6 15h11M3 5h.5M3 10h.5M3 15h.5"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-            />
+            <rect x="3" y="4" width="14" height="2.4" rx="1.2" fill="currentColor" />
+            <rect x="3" y="8.8" width="14" height="2.4" rx="1.2" fill="currentColor" />
+            <rect x="3" y="13.6" width="14" height="2.4" rx="1.2" fill="currentColor" />
           </svg>
         </span>
         <span className="mobile-switcher-label">列表</span>
