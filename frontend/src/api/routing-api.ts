@@ -7,18 +7,6 @@ import type {
   TripConfig,
 } from '../types/trip';
 
-export interface RouteGeometryResponse {
-  code: string;
-  routes: Array<{
-    geometry: {
-      coordinates: Array<[number, number]>;
-      type: string;
-    };
-    duration: number;
-    distance: number;
-  }>;
-}
-
 export interface ResolvedRouteGeometry {
   path: Array<[number, number]>;
   distanceMeters: number | null;
@@ -61,21 +49,8 @@ export interface HydrateRealRouteGeometriesOptions {
   onResolved?: (segmentId: string, geometry: ResolvedRouteGeometry) => void;
 }
 
-interface FetchOSRMRouteOptions {
-  baseUrl?: string;
-  signal?: AbortSignal;
-  timeoutMs?: number;
-}
-
 const LEAFLET_ROUTING_DEFAULTS = {
-  baseUrl: 'https://router.project-osrm.org/route/v1',
-  timeoutMs: 8_000,
   concurrency: 4,
-  profiles: {
-    walk: 'foot',
-    bus: 'driving',
-    drive: 'driving',
-  } as Record<string, string>,
 };
 
 const RAPIDAPI_RAIL_DEFAULTS = {
@@ -304,15 +279,6 @@ function canUseRapidApiRailFallback(
   );
 }
 
-function getLeafletRoutingBaseUrl(config: Pick<TripConfig, 'routing'>): string {
-  return config.routing?.baseUrl || LEAFLET_ROUTING_DEFAULTS.baseUrl;
-}
-
-function getLeafletRoutingProfile(transportType?: string | null): string | null {
-  if (!transportType) return null;
-  return LEAFLET_ROUTING_DEFAULTS.profiles[transportType.toLowerCase()] || null;
-}
-
 function getGoogleTravelMode(transportType?: string | null): string | null {
   if (!transportType) return null;
   return GOOGLE_ROUTING_DEFAULTS.travelModes[transportType.toLowerCase()] || null;
@@ -433,10 +399,6 @@ function getGoogleRoutingPoints(
     ];
   }
 
-  if (Array.isArray(segment.path) && segment.path.length >= 2) {
-    return segment.path;
-  }
-
   return resolveRouteEndpoints(segment, spotById);
 }
 
@@ -461,17 +423,11 @@ function shouldHydrateRoute(
     return false;
   }
 
-  if (canUseRapidApiRailFallback(segment, options.config)) {
+  if (getGoogleTravelMode(segment.transportType) && options.config.googleMaps?.apiKey) {
     return true;
   }
 
-  if (options.routingEngine === 'leaflet') {
-    return Boolean(getLeafletRoutingProfile(segment.transportType));
-  }
-
-  return Boolean(
-    getGoogleTravelMode(segment.transportType) || getLeafletRoutingProfile(segment.transportType),
-  );
+  return canUseRapidApiRailFallback(segment, options.config);
 }
 
 function getTokyoDateParts(): { year: string; month: string; day: string } {
@@ -514,82 +470,6 @@ function buildRapidApiRailRequest(
     transportType: segment.transportType,
     label: segment.label,
   };
-}
-
-async function fetchOSRMResolvedRoute(
-  profile: string,
-  coordinates: string,
-  options: FetchOSRMRouteOptions = {},
-): Promise<ResolvedRouteGeometry | null> {
-  const controller = new AbortController();
-  const timeoutMs = options.timeoutMs ?? LEAFLET_ROUTING_DEFAULTS.timeoutMs;
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-  const handleAbort = () => controller.abort();
-  options.signal?.addEventListener('abort', handleAbort, { once: true });
-
-  const urlBase = (options.baseUrl || LEAFLET_ROUTING_DEFAULTS.baseUrl).replace(/\/$/, '');
-  const url = `${urlBase}/${profile}/${coordinates}?overview=full&geometries=geojson&steps=false`;
-
-  try {
-    const response = await fetch(url, { signal: controller.signal });
-    if (!response.ok) return null;
-
-    const data: RouteGeometryResponse = await response.json();
-    if (data.code !== 'Ok' || data.routes.length === 0) {
-      return null;
-    }
-
-    const route = data.routes[0];
-    return {
-      path: route.geometry.coordinates.map(([lng, lat]) => [lat, lng]),
-      distanceMeters: route.distance || null,
-      durationSec: route.duration || null,
-      warnings: null,
-      source: 'osrm',
-      transitSummary: null,
-      transitLegs: null,
-    };
-  } catch (error) {
-    if (!isAbortError(error)) {
-      console.warn('[routing-api] OSRM fetch failed:', error);
-    }
-    return null;
-  } finally {
-    window.clearTimeout(timeoutId);
-    options.signal?.removeEventListener('abort', handleAbort);
-  }
-}
-
-export async function fetchOSRMRoute(
-  profile: string,
-  coordinates: string,
-  options: FetchOSRMRouteOptions = {},
-): Promise<Array<[number, number]> | null> {
-  const geometry = await fetchOSRMResolvedRoute(profile, coordinates, options);
-  return geometry?.path ?? null;
-}
-
-async function fetchLeafletResolvedRouteGeometry(
-  segment: RouteSegment,
-  spotById: Map<string, SpotItem>,
-  config: Pick<TripConfig, 'routing'>,
-  signal?: AbortSignal,
-): Promise<ResolvedRouteGeometry | null> {
-  const profile = getLeafletRoutingProfile(segment.transportType);
-  if (!profile) return null;
-
-  const points =
-    Array.isArray(segment.path) && segment.path.length >= 2
-      ? segment.path
-      : resolveRouteEndpoints(segment, spotById);
-  if (points.length < 2) return null;
-
-  const coordinates = points.map(([lat, lng]) => `${lng},${lat}`).join(';');
-  return fetchOSRMResolvedRoute(profile, coordinates, {
-    baseUrl: getLeafletRoutingBaseUrl(config),
-    signal,
-    timeoutMs: LEAFLET_ROUTING_DEFAULTS.timeoutMs,
-  });
 }
 
 async function fetchRapidApiRailRouteGeometry(
@@ -769,13 +649,10 @@ async function resolveRouteGeometry(
   const googlePoints = canAttemptGoogle
     ? getGoogleRoutingPoints(segment, spotById, googleTravelMode)
     : [];
-  const leafletPoints =
-    Array.isArray(segment.path) && segment.path.length >= 2
-      ? segment.path
-      : resolveRouteEndpoints(segment, spotById);
+  const fallbackPoints = resolveRouteEndpoints(segment, spotById);
   const cacheKey = buildRoutingCacheKey(
     segment,
-    googlePoints.length > 0 ? googlePoints : leafletPoints,
+    googlePoints.length > 0 ? googlePoints : fallbackPoints,
     options.routingEngine,
     options.config,
   );
@@ -793,10 +670,6 @@ async function resolveRouteGeometry(
 
   if (!resolved && canUseRapidApiRailFallback(segment, options.config)) {
     resolved = await fetchRapidApiRailRouteGeometry(segment, spotById, options.config, options.signal);
-  }
-
-  if (!resolved) {
-    resolved = await fetchLeafletResolvedRouteGeometry(segment, spotById, options.config, options.signal);
   }
 
   routeGeometryCache.set(cacheKey, resolved);

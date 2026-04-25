@@ -118,19 +118,26 @@ export function TripMapCanvas({
     setRouteAnchor(anchor);
   };
 
+  const handleSpotPopupClose = (id: string) => {
+    if (selectedSpotId !== id) return;
+    handleMapClickFromCanvas();
+  };
+
   // 事件回调用 ref 包一层,避免 onSpotClick / onMapClick 改了就让 controller 重 init
   const callbacksRef = useRef({
     onSelectSpot: handleSelectSpotFromCanvas,
     onMapClick: handleMapClickFromCanvas,
+    onSpotPopupClose: handleSpotPopupClose,
     onRouteClick: handleRouteClick,
   });
   useEffect(() => {
     callbacksRef.current = {
       onSelectSpot: handleSelectSpotFromCanvas,
       onMapClick: handleMapClickFromCanvas,
+      onSpotPopupClose: handleSpotPopupClose,
       onRouteClick: handleRouteClick,
     };
-  }, [onMapClick, onSelectSpot]);
+  }, [onMapClick, onSelectSpot, selectedSpotId]);
 
   // 一次性 init(依赖 config 的稳定字段)。
   // 注意:config 对象引用每次 useQuery 重取可能都变,所以把它的原始字段拆出来做依赖。
@@ -170,6 +177,7 @@ export function TripMapCanvas({
         mapId: config.googleMaps?.mapId,
         dayColors: config.dayColors,
         onSpotClick: (id) => callbacksRef.current.onSelectSpot(id),
+        onSpotPopupClose: (id) => callbacksRef.current.onSpotPopupClose(id),
         onMapClick: () => callbacksRef.current.onMapClick(),
         onRouteClick: (id, anchor) => callbacksRef.current.onRouteClick(id, anchor),
         onError: (err) => {

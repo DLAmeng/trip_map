@@ -1,6 +1,7 @@
 import { loadGoogleMapsLibrary, importLibrary } from './loader';
 import { createGoogleMarkerLayer } from './marker-layer';
 import { createGoogleRouteLayer } from './route-layer';
+import { debugTripMapEvent } from '../debug';
 export const createGoogleController = (container, config) => {
     const initialCenter = config.center;
     const initialZoom = config.zoom;
@@ -27,6 +28,7 @@ export const createGoogleController = (container, config) => {
         googleMap = new Map(container, mapOptions);
         if (config.onMapClick) {
             googleMap.addListener('click', () => {
+                debugTripMapEvent('google map click');
                 config.onMapClick?.();
             });
         }
@@ -42,6 +44,7 @@ export const createGoogleController = (container, config) => {
     markers = createGoogleMarkerLayer({
         dayColors: config.dayColors,
         onSpotClick: config.onSpotClick,
+        onSpotPopupClose: config.onSpotPopupClose,
     });
     routes = createGoogleRouteLayer({
         onRouteClick: config.onRouteClick,

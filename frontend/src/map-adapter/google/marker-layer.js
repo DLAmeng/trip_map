@@ -1,5 +1,6 @@
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { buildSpotPopupElement } from '../shared/popup-builder';
+import { debugTripMapEvent } from '../debug';
 export function createGoogleMarkerLayer(config) {
     let map = null;
     let markerRefs = [];
@@ -34,6 +35,28 @@ export function createGoogleMarkerLayer(config) {
     function updateAllMarkerAppearances() {
         markerRefs.forEach(updateMarkerAppearance);
     }
+    function handleInfoWindowClosed(ref) {
+        debugTripMapEvent('google infoWindow close', {
+            spotId: ref.spotId,
+            selectedId,
+            isActiveInfoWindow: activeInfoWindow === ref.infoWindow,
+        });
+        if (activeInfoWindow === ref.infoWindow) {
+            activeInfoWindow = null;
+        }
+    }
+    function handleInfoWindowCloseClick(ref) {
+        debugTripMapEvent('google infoWindow closeclick', { spotId: ref.spotId, selectedId });
+        if (activeInfoWindow === ref.infoWindow) {
+            activeInfoWindow = null;
+        }
+        if (selectedId === ref.spotId) {
+            selectedId = null;
+            updateAllMarkerAppearances();
+            debugTripMapEvent('selected cleared by google infoWindow closeclick', { spotId: ref.spotId });
+            config.onSpotPopupClose?.(ref.spotId);
+        }
+    }
     function destroy() {
         if (markerCluster) {
             markerCluster.clearMarkers();
@@ -47,10 +70,28 @@ export function createGoogleMarkerLayer(config) {
         });
         markerRefs = [];
     }
+    function createClusterer() {
+        return new MarkerClusterer({
+            map,
+            onClusterClick: (event, cluster, clusterMap) => {
+                const domEvent = event.domEvent;
+                domEvent?.stopPropagation?.();
+                domEvent?.preventDefault?.();
+                const bounds = cluster.bounds;
+                if (bounds && !bounds.isEmpty()) {
+                    clusterMap.fitBounds(bounds, 64);
+                    return;
+                }
+                const zoom = clusterMap.getZoom() ?? 8;
+                clusterMap.setCenter(cluster.position);
+                clusterMap.setZoom(Math.min(zoom + 2, 15));
+            },
+        });
+    }
     const layer = {
         init(m) {
             map = m;
-            markerCluster = new MarkerClusterer({ map });
+            markerCluster = createClusterer();
             // 初始化完成后，立刻恢复之前缓冲的数据
             if (pendingSpots)
                 layer.render(pendingSpots);
@@ -64,7 +105,7 @@ export function createGoogleMarkerLayer(config) {
             if (!map)
                 return;
             destroy();
-            markerCluster = new MarkerClusterer({ map });
+            markerCluster = createClusterer();
             markerRefs = spots.map((spot) => {
                 const marker = new google.maps.marker.AdvancedMarkerElement({
                     position: { lat: spot.lat, lng: spot.lng },
@@ -72,15 +113,23 @@ export function createGoogleMarkerLayer(config) {
                 });
                 const popupContent = buildSpotPopupElement(spot, {
                     dayColors: config.dayColors,
+                    onNextSpotClick: config.onSpotClick,
                 });
                 const infoWindow = new google.maps.InfoWindow({
                     content: popupContent,
                     maxWidth: 260,
                 });
                 marker.addListener('gmp-click', () => {
+                    debugTripMapEvent('google marker click', { spotId: spot.id });
                     config.onSpotClick?.(spot.id);
                 });
                 const ref = { marker, infoWindow, spotId: spot.id, spot, popupContent };
+                infoWindow.addListener('closeclick', () => {
+                    handleInfoWindowCloseClick(ref);
+                });
+                infoWindow.addListener('close', () => {
+                    handleInfoWindowClosed(ref);
+                });
                 updateMarkerAppearance(ref);
                 return ref;
             });
@@ -98,6 +147,7 @@ export function createGoogleMarkerLayer(config) {
                     visibleMarkers.push(ref.marker);
                 }
                 if (!isVisible && activeInfoWindow === ref.infoWindow) {
+                    debugTripMapEvent('google infoWindow close by hidden marker', { spotId: ref.spotId });
                     activeInfoWindow.close();
                     activeInfoWindow = null;
                 }
@@ -113,6 +163,7 @@ export function createGoogleMarkerLayer(config) {
             updateAllMarkerAppearances();
             if (id === null) {
                 if (activeInfoWindow) {
+                    debugTripMapEvent('google infoWindow close by selected null');
                     activeInfoWindow.close();
                     activeInfoWindow = null;
                 }
@@ -140,8 +191,10 @@ export function createGoogleMarkerLayer(config) {
         openPopup(id) {
             const ref = markerRefs.find((r) => r.spotId === id);
             if (ref && map) {
-                if (activeInfoWindow)
+                if (activeInfoWindow && activeInfoWindow !== ref.infoWindow) {
+                    debugTripMapEvent('google infoWindow close before opening another', { nextSpotId: id });
                     activeInfoWindow.close();
+                }
                 if (ref.marker.position) {
                     ref.infoWindow.setPosition(ref.marker.position);
                 }

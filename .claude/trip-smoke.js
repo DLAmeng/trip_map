@@ -28,12 +28,29 @@ async function assertSearchParamPresent(page, name, message) {
   }
 }
 
-async function openLeafletFallbackPage(browser, mode = 'desktop') {
+function assertDestinationOnlyNavHref(rawHref, label) {
+  if (!rawHref) {
+    throw new Error(`${label} navigation button is missing href`);
+  }
+  const navUrl = new URL(rawHref);
+  const origin = navUrl.searchParams.get('origin');
+  const destination = navUrl.searchParams.get('destination');
+  if (origin || !destination) {
+    throw new Error(`${label} navigation link should rely on current location and destination only: ${rawHref}`);
+  }
+}
+
+async function openLeafletFallbackPage(browser, mode = 'desktop', osrmRequests = []) {
   const context = mode === 'mobile'
     ? await browser.newContext({ ...devices['iPhone 13'] })
     : await browser.newContext({ viewport: { width: 1365, height: 768 } });
   await context.route('**/*', (route) => {
-    if (shouldAbortGoogleMaps(route.request().url())) {
+    const url = route.request().url();
+    if (url.includes('router.project-osrm.org')) {
+      osrmRequests.push(url);
+      return route.abort();
+    }
+    if (shouldAbortGoogleMaps(url)) {
       return route.abort();
     }
     return route.continue();
@@ -71,17 +88,65 @@ async function openLeafletRouteDetail(page, detailSelector) {
 async function clickMarkerWithNavigation(page) {
   const markers = page.locator('.spot-marker');
   const markerCount = await markers.count();
-  for (let index = 1; index < Math.min(markerCount, 8); index += 1) {
+  for (let index = 1; index < Math.min(markerCount, 12); index += 1) {
     await markers.nth(index).dispatchEvent('click');
-    const navButton = page.locator('.leaflet-popup-content .popup-nav-btn').first();
+    const navButton = page.locator('.leaflet-popup-content .popup-current-btn[href]').first();
+    const nextButton = page.locator('.leaflet-popup-content .popup-next-btn:not(.is-disabled):not(:disabled)').first();
     try {
       await navButton.waitFor({ state: 'visible', timeout: 1000 });
-      return navButton;
+      await nextButton.waitFor({ state: 'visible', timeout: 1000 });
+      await page.waitForTimeout(800);
+      if (!(await page.locator('.leaflet-popup-content .popup-shell').first().isVisible())) {
+        throw new Error('spot popup disappeared after marker click');
+      }
+      await assertSearchParamPresent(page, 'spot', 'marker click did not keep spot query');
+      return { navButton, nextButton };
     } catch {
-      // keep trying later markers until we find one with an incoming route
+      // keep trying later markers until we find one with both popup actions enabled
     }
   }
   throw new Error('failed to find a marker popup with navigation details');
+}
+
+async function assertNextStopButtonSelectsNextSpot(page, nextButton) {
+  const beforeSpot = new URL(page.url()).searchParams.get('spot');
+  if (!beforeSpot) {
+    throw new Error('next stop test requires an active spot before clicking');
+  }
+  const href = await nextButton.getAttribute('href');
+  if (href) {
+    throw new Error(`next stop button should select the next spot in-app, not open Google Maps: ${href}`);
+  }
+  await nextButton.click();
+  await page.waitForFunction(
+    (previousSpot) => {
+      const nextSpot = new URL(window.location.href).searchParams.get('spot');
+      return Boolean(nextSpot && nextSpot !== previousSpot);
+    },
+    beforeSpot,
+    { timeout: 5000 },
+  );
+  await page.locator('.leaflet-popup-content .popup-shell').first().waitFor({
+    state: 'visible',
+    timeout: 5000,
+  });
+}
+
+async function assertMarkerPopupPersistsAfterRealClick(page) {
+  const marker = page.locator('.spot-marker').first();
+  await marker.click({ force: true, timeout: 3000 });
+  await page.locator('.leaflet-popup-content .popup-shell').waitFor({ state: 'visible', timeout: 1500 });
+  await assertSearchParamPresent(page, 'spot', 'real marker click did not sync spot query');
+  await page.waitForTimeout(900);
+  if (!(await page.locator('.leaflet-popup-content .popup-shell').first().isVisible())) {
+    throw new Error('spot popup disappeared after a real marker click');
+  }
+  await page.locator('.leaflet-popup-close-button').click();
+  await page.waitForFunction(
+    () => !new URL(window.location.href).searchParams.has('spot'),
+    null,
+    { timeout: 5000 },
+  );
 }
 
 async function ensureLeafletSpotMarkers(page) {
@@ -99,16 +164,67 @@ async function ensureLeafletSpotMarkers(page) {
   throw new Error('failed to expand marker clusters into spot markers');
 }
 
+async function assertClusterClickDoesNotSelectSpot(page) {
+  const clusters = page.locator('.marker-cluster');
+  if (!(await clusters.count())) return;
+  await clusters.first().click({ force: true });
+  await page.waitForTimeout(700);
+  const spotParam = new URL(page.url()).searchParams.get('spot');
+  if (spotParam) {
+    throw new Error(`cluster click should not select a spot, got spot=${spotParam}`);
+  }
+  if (await page.locator('.leaflet-popup-content .popup-shell, .spot-marker.is-active').count()) {
+    throw new Error('cluster click unexpectedly opened a spot popup or active marker');
+  }
+}
+
+async function assertGoogleMarkerPopupPersists(page) {
+  if (!(await page.locator('.gm-style').count())) return;
+  await page.goto('http://127.0.0.1:5173/trip?id=current&day=1', { waitUntil: 'networkidle' });
+  await page.waitForSelector('.gm-style', { timeout: 20000 });
+  await page.waitForTimeout(1500);
+
+  const clusters = page.locator('gmp-advanced-marker[title^="Cluster"]');
+  if (await clusters.count()) {
+    await clusters.first().click({ force: true, timeout: 5000 });
+    await page.waitForTimeout(1200);
+  }
+
+  const marker = page.locator('gmp-advanced-marker:not([title^="Cluster"])').first();
+  if (!(await marker.count())) return;
+  await marker.click({ force: true, timeout: 5000 });
+  await page.waitForURL((url) => url.searchParams.has('spot'), { timeout: 5000 });
+  await page.locator('.gm-style-iw .popup-shell, .popup-shell').first().waitFor({
+    state: 'visible',
+    timeout: 5000,
+  });
+  await page.waitForTimeout(1200);
+  if (!(await page.locator('.gm-style-iw .popup-shell, .popup-shell').first().isVisible())) {
+    throw new Error('Google marker popup disappeared after marker click');
+  }
+
+  await page.mouse.click(900, 650);
+  await page.waitForFunction(
+    () => !new URL(window.location.href).searchParams.has('spot'),
+    null,
+    { timeout: 5000 },
+  );
+}
+
 async function run() {
   const desktopBrowser = await chromium.launch({ headless: true });
   const desktopPage = await desktopBrowser.newPage({ viewport: { width: 1365, height: 768 } });
+  const osrmRequests = [];
   const routingRequests = [];
   desktopPage.on('request', (request) => {
     const url = request.url();
+    if (url.includes('router.project-osrm.org')) {
+      osrmRequests.push(url);
+    }
     if (
-      url.includes('router.project-osrm.org') ||
       url.includes('routes.googleapis.com') ||
-      url.includes('computeRoutes')
+      url.includes('computeRoutes') ||
+      url.includes('rapidapi.com')
     ) {
       routingRequests.push(url);
     }
@@ -131,18 +247,22 @@ async function run() {
     desktopPage.getByRole('button', { name: /重置视角/ }),
     'desktop map controls missing',
   );
+  const firstDayOption = desktopPage.locator('#header-day-select option').nth(1);
+  const firstDayValue = await firstDayOption.getAttribute('value');
+  if (firstDayValue !== '1') {
+    throw new Error(`day selector should start at Day 1, got value=${firstDayValue}`);
+  }
   await desktopPage.locator('#header-day-select').selectOption({ index: 1 });
   await desktopPage.waitForURL((url) => url.searchParams.has('day'), { timeout: 15000 });
-  await assertSearchParamPresent(desktopPage, 'day', 'desktop day query did not sync');
+  await assertSearchParam(desktopPage, 'day', '1', 'desktop day query did not sync from Day 1');
   await desktopPage.locator('#header-day-select').selectOption('all');
   await desktopPage.waitForFunction(() => !new URL(window.location.href).searchParams.has('day'));
-  if (routingRequests.length === 0) {
-    throw new Error('route hydration requests were not observed');
-  }
+  await assertGoogleMarkerPopupPersists(desktopPage);
 
   const { context: desktopFallbackContext, page: desktopFallbackPage } = await openLeafletFallbackPage(
     desktopBrowser,
     'desktop',
+    osrmRequests,
   );
   await openLeafletRouteDetail(desktopFallbackPage, '.route-detail-popover');
   await assertVisible(
@@ -184,28 +304,37 @@ async function run() {
   const { context: mobileFallbackContext, page: mobileFallbackPage } = await openLeafletFallbackPage(
     mobileBrowser,
     'mobile',
+    osrmRequests,
   );
   await mobileFallbackPage.locator('.mobile-trip-bottom-switcher').waitFor({ state: 'visible', timeout: 15000 });
+  await assertClusterClickDoesNotSelectSpot(mobileFallbackPage);
   await ensureLeafletSpotMarkers(mobileFallbackPage);
-  const navButton = await clickMarkerWithNavigation(mobileFallbackPage);
+  await assertMarkerPopupPersistsAfterRealClick(mobileFallbackPage);
+  await mobileFallbackPage.goto('http://127.0.0.1:5173/trip?id=current', { waitUntil: 'networkidle' });
+  await mobileFallbackPage.locator('.mobile-trip-bottom-switcher').waitFor({ state: 'visible', timeout: 15000 });
+  await ensureLeafletSpotMarkers(mobileFallbackPage);
+  const { navButton, nextButton } = await clickMarkerWithNavigation(mobileFallbackPage);
   await assertSearchParamPresent(mobileFallbackPage, 'spot', 'mobile marker did not sync spot query');
   if (await mobileFallbackPage.locator('.mobile-drawer').isVisible()) {
     throw new Error('mobile marker click unexpectedly opened the list drawer');
   }
   const navHref = await navButton.getAttribute('href');
-  if (!navHref) {
-    throw new Error('spot popup navigation button is missing href');
-  }
-  const navUrl = new URL(navHref);
-  const origin = navUrl.searchParams.get('origin');
-  const destination = navUrl.searchParams.get('destination');
-  if (!origin || !destination || origin === destination) {
-    throw new Error(`spot popup navigation link is invalid: ${navHref}`);
+  assertDestinationOnlyNavHref(navHref, 'spot popup');
+  await assertNextStopButtonSelectsNextSpot(mobileFallbackPage, nextButton);
+  await mobileFallbackPage.locator('.leaflet-popup-close-button').click();
+  await mobileFallbackPage.waitForFunction(
+    () => !new URL(window.location.href).searchParams.has('spot'),
+    null,
+    { timeout: 5000 },
+  );
+  if (await mobileFallbackPage.locator('.spot-marker.is-active, .spot-item.is-active').count()) {
+    throw new Error('closing popup did not clear active marker/list state');
   }
 
   const { context: mobileRouteContext, page: mobileRoutePage } = await openLeafletFallbackPage(
     mobileBrowser,
     'mobile',
+    osrmRequests,
   );
   await openLeafletRouteDetail(mobileRoutePage, '.mobile-route-detail-sheet');
   await assertVisible(
@@ -218,6 +347,10 @@ async function run() {
   await mobileRouteContext.close();
   await mobileFallbackContext.close();
   await mobileBrowser.close();
+
+  if (osrmRequests.length > 0) {
+    throw new Error(`OSRM requests should not be emitted: ${osrmRequests.slice(0, 3).join(', ')}`);
+  }
 
   console.log('trip smoke ok');
 }

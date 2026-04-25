@@ -33,6 +33,8 @@ export interface MapControllerConfig {
   onMapClick?: () => void;
   /** marker click → React 更新 selectedSpotId */
   onSpotClick?: (id: string) => void;
+  /** popup / InfoWindow 被用户关闭 → React 清空 selectedSpotId */
+  onSpotPopupClose?: (id: string) => void;
   /** route click → React 打开路线说明 */
   onRouteClick?: (id: string, anchor: RouteClickAnchor) => void;
 }

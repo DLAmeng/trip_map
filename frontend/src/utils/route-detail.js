@@ -13,7 +13,6 @@ const TRANSPORT_LABELS = {
 };
 const ROUTE_SOURCE_LABELS = {
     google: 'Google 贴路',
-    osrm: 'OSRM 贴路',
     'rapidapi-shape': 'RapidAPI 铁路几何',
     'rapidapi-route': 'RapidAPI 乘换摘要',
 };

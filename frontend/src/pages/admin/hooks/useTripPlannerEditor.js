@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { makeBlankSpot } from '../../../utils/trip-factory';
+import { compactTripPayloadDays } from '../../../utils/trip-day-sequence';
 const STORAGE_PREFIX = 'trip-planner-editor-draft:';
 function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -69,16 +70,17 @@ function createLegDraft(segment) {
     };
 }
 function createEditorState(payload) {
-    const spots = Array.isArray(payload?.spots)
-        ? payload.spots.map((spot, index) => createEditorSpot(spot, index))
+    const compactPayload = compactTripPayloadDays(payload);
+    const spots = Array.isArray(compactPayload?.spots)
+        ? compactPayload.spots.map((spot, index) => createEditorSpot(spot, index))
         : [];
-    const legDrafts = Object.fromEntries((Array.isArray(payload?.routeSegments) ? payload.routeSegments : [])
+    const legDrafts = Object.fromEntries((Array.isArray(compactPayload?.routeSegments) ? compactPayload.routeSegments : [])
         .map((segment) => createLegDraft(segment))
         .filter((draft) => Boolean(draft))
         .map((draft) => [draft.key, draft]));
     return {
-        meta: clone(payload.meta || {}),
-        config: clone(payload.config || {}),
+        meta: clone(compactPayload.meta || {}),
+        config: clone(compactPayload.config || {}),
         spots,
         legDrafts,
     };

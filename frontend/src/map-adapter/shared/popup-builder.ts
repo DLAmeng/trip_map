@@ -3,6 +3,7 @@ import type { SpotItem } from '../../types/trip';
 export interface PopupBuilderOptions {
   dayColors: string[];
   fallbackColor?: string;
+  onNextSpotClick?: (id: string) => void;
 }
 
 function escapeHtml(value: unknown): string {
@@ -19,19 +20,19 @@ function formatTimeSlot(raw?: string): string {
   return raw;
 }
 
-function buildNavigationUrl(spot: SpotItem): string | null {
-  if (
-    !spot.prevStopName ||
-    !Number.isFinite(spot.prevStopLat) ||
-    !Number.isFinite(spot.prevStopLng)
-  ) {
+interface NavigationTarget {
+  lat?: number;
+  lng?: number;
+}
+
+function buildDestinationNavigationUrl(target: NavigationTarget): string | null {
+  if (!Number.isFinite(target.lat) || !Number.isFinite(target.lng)) {
     return null;
   }
 
   const params = new URLSearchParams({
     api: '1',
-    origin: `${spot.prevStopLat},${spot.prevStopLng}`,
-    destination: `${spot.lat},${spot.lng}`,
+    destination: `${target.lat},${target.lng}`,
   });
   return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
@@ -56,12 +57,16 @@ function getPopupMarkup(spot: SpotItem, options: PopupBuilderOptions): string {
   const transport = spot.transportNote
     ? `<div class="popup-transport">${escapeHtml(spot.transportNote)}</div>`
     : '';
-  const navUrl = buildNavigationUrl(spot);
-  const navLabel = spot.prevStopName
-    ? `从 ${escapeHtml(spot.prevStopName)} 到这里`
-    : '';
-  const navLine = navLabel || navUrl
-    ? `<div class="popup-nav-row"><span>${navLabel}</span>${navUrl ? `<a class="popup-nav-btn" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener noreferrer">导航</a>` : ''}</div>`
+  const navUrl = buildDestinationNavigationUrl(spot);
+  const navLine = navUrl
+    ? `<div class="popup-nav-row">
+        <a class="popup-nav-btn popup-current-btn" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener noreferrer">导航</a>
+        ${
+          spot.nextStopId
+            ? `<button class="popup-nav-btn popup-next-btn" type="button" data-next-spot-id="${escapeHtml(spot.nextStopId)}" aria-label="切换到下一站 ${escapeHtml(spot.nextStopName || '')}">下一站</button>`
+            : '<button class="popup-nav-btn popup-next-btn is-disabled" type="button" disabled>无下一站</button>'
+        }
+      </div>`
     : '';
 
   const photo =
@@ -90,7 +95,19 @@ function getPopupMarkup(spot: SpotItem, options: PopupBuilderOptions): string {
 export function buildSpotPopupElement(spot: SpotItem, options: PopupBuilderOptions): HTMLDivElement {
   const shell = document.createElement('div');
   shell.innerHTML = getPopupMarkup(spot, options);
-  return (shell.firstElementChild as HTMLDivElement | null) ?? shell;
+  const element = (shell.firstElementChild as HTMLDivElement | null) ?? shell;
+  const nextButton = element.querySelector<HTMLButtonElement>('.popup-next-btn[data-next-spot-id]');
+  if (nextButton && options.onNextSpotClick) {
+    nextButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const nextSpotId = nextButton.dataset.nextSpotId;
+      if (nextSpotId) {
+        options.onNextSpotClick?.(nextSpotId);
+      }
+    });
+  }
+  return element;
 }
 
 export function buildSpotPopupHtml(spot: SpotItem, options: PopupBuilderOptions): string {

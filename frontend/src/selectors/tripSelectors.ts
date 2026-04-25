@@ -1,4 +1,5 @@
 import type { RouteSegment, SpotItem, TripFullPayload } from '../types/trip';
+import { buildCompactDayMap, compactDayValue } from '../utils/trip-day-sequence';
 
 /**
  * 把 TripFullPayload 派生成前端要用的各种索引。
@@ -26,9 +27,16 @@ export interface NormalizedTrip {
 export function normalizeTripData(payload: TripFullPayload): NormalizedTrip {
   const allEntries = Array.isArray(payload.spots) ? payload.spots : [];
   const routeSegments = Array.isArray(payload.routeSegments) ? payload.routeSegments : [];
+  const displayDayMap = buildCompactDayMap(
+    allEntries.filter(isDisplayAttractionStop).map((spot) => spot.day),
+  );
+  const remapSpotDay = (spot: SpotItem): SpotItem => ({
+    ...spot,
+    day: compactDayValue(spot.day, displayDayMap),
+  });
   const allEntriesById = new Map<string, SpotItem>();
   for (const entry of allEntries) {
-    allEntriesById.set(entry.id, entry);
+    allEntriesById.set(entry.id, remapSpotDay(entry));
   }
   const incomingSegmentBySpotId = new Map<string, RouteSegment>();
   for (const segment of routeSegments) {
@@ -40,11 +48,12 @@ export function normalizeTripData(payload: TripFullPayload): NormalizedTrip {
   const spots = allEntries
     .filter(isDisplayAttractionStop)
     .map((spot) => {
+      const displaySpot = remapSpotDay(spot);
       const nextStop = spot.nextStopId ? allEntriesById.get(spot.nextStopId) : null;
       const incomingSegment = incomingSegmentBySpotId.get(spot.id) || null;
       const prevStop = incomingSegment ? allEntriesById.get(incomingSegment.fromSpotId) : null;
       return {
-        ...spot,
+        ...displaySpot,
         nextStopName: nextStop?.name,
         nextStopLat: nextStop?.lat,
         nextStopLng: nextStop?.lng,
@@ -61,7 +70,7 @@ export function normalizeTripData(payload: TripFullPayload): NormalizedTrip {
   for (const spot of spots) spotById.set(spot.id, spot);
 
   const daySet = new Set<number>();
-  for (const spot of allEntries) daySet.add(spot.day);
+  for (const spot of spots) daySet.add(spot.day);
   const dayNumbers = [...daySet].sort((a, b) => a - b);
 
   const spotsByDay = new Map<number, SpotItem[]>();
@@ -78,9 +87,20 @@ export function normalizeTripData(payload: TripFullPayload): NormalizedTrip {
 
   // 端点任一侧被隐藏(transport / accommodation / hideFromMap)的 segment 直接剔除,
   // 地图上不画也不算路线端点。Day 13 新补的 s1→s2 两端都是可见景点,会保留。
-  const visibleRouteSegments = routeSegments.filter(
-    (seg) => spotById.has(seg.fromSpotId) && spotById.has(seg.toSpotId),
-  );
+  const visibleRouteSegments = routeSegments
+    .filter((seg) => spotById.has(seg.fromSpotId) && spotById.has(seg.toSpotId))
+    .map((segment) => {
+      const fromSpot = spotById.get(segment.fromSpotId);
+      const toSpot = spotById.get(segment.toSpotId);
+      const numericSegmentDay = Number(segment.day);
+      const mappedSegmentDay = displayDayMap.has(numericSegmentDay)
+        ? compactDayValue(segment.day, displayDayMap)
+        : fromSpot?.day ?? toSpot?.day ?? compactDayValue(segment.day, displayDayMap);
+      return {
+        ...segment,
+        day: mappedSegmentDay,
+      };
+    });
 
   return {
     spots,

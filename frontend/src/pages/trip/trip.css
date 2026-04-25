@@ -898,10 +898,10 @@
 
 .popup-next,
 .popup-nav-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .popup-nav-btn,
@@ -918,11 +918,26 @@
   font-size: 0.76rem;
   font-weight: 800;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .popup-nav-btn:hover,
 .popup-detail-btn:hover {
   background: rgba(35, 111, 122, 0.12);
+}
+
+.popup-nav-btn.is-disabled,
+.popup-nav-btn:disabled {
+  border-color: rgba(83, 103, 110, 0.12);
+  background: rgba(83, 103, 110, 0.08);
+  color: var(--text-soft);
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.popup-nav-btn.is-disabled:hover,
+.popup-nav-btn:disabled:hover {
+  background: rgba(83, 103, 110, 0.08);
 }
 
 .popup-detail-btn {

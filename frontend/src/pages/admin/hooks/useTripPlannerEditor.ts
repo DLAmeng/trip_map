@@ -7,6 +7,7 @@ import type {
   TripMeta,
 } from '../../../types/trip';
 import { makeBlankSpot } from '../../../utils/trip-factory';
+import { compactTripPayloadDays } from '../../../utils/trip-day-sequence';
 
 const STORAGE_PREFIX = 'trip-planner-editor-draft:';
 
@@ -151,18 +152,19 @@ function createLegDraft(segment: Partial<RouteSegment>): LegDraft | null {
 }
 
 function createEditorState(payload: TripFullPayload): PlannerEditorState {
-  const spots = Array.isArray(payload?.spots)
-    ? payload.spots.map((spot, index) => createEditorSpot(spot, index))
+  const compactPayload = compactTripPayloadDays(payload);
+  const spots = Array.isArray(compactPayload?.spots)
+    ? compactPayload.spots.map((spot, index) => createEditorSpot(spot, index))
     : [];
   const legDrafts = Object.fromEntries(
-    (Array.isArray(payload?.routeSegments) ? payload.routeSegments : [])
+    (Array.isArray(compactPayload?.routeSegments) ? compactPayload.routeSegments : [])
       .map((segment) => createLegDraft(segment))
       .filter((draft): draft is LegDraft => Boolean(draft))
       .map((draft) => [draft.key, draft]),
   );
   return {
-    meta: clone(payload.meta || {}),
-    config: clone(payload.config || {}),
+    meta: clone(compactPayload.meta || {}),
+    config: clone(compactPayload.config || {}),
     spots,
     legDrafts,
   };

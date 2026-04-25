@@ -41,6 +41,7 @@ export const createLeafletController: MapControllerFactory = (container, config)
     map,
     dayColors: config.dayColors,
     onSpotClick: config.onSpotClick,
+    onSpotPopupClose: config.onSpotPopupClose,
   });
   const routes = createLeafletRouteLayer({
     map,

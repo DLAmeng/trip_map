@@ -11,16 +11,13 @@ function formatTimeSlot(raw) {
         return '时段未排';
     return raw;
 }
-function buildNavigationUrl(spot) {
-    if (!spot.prevStopName ||
-        !Number.isFinite(spot.prevStopLat) ||
-        !Number.isFinite(spot.prevStopLng)) {
+function buildDestinationNavigationUrl(target) {
+    if (!Number.isFinite(target.lat) || !Number.isFinite(target.lng)) {
         return null;
     }
     const params = new URLSearchParams({
         api: '1',
-        origin: `${spot.prevStopLat},${spot.prevStopLng}`,
-        destination: `${spot.lat},${spot.lng}`,
+        destination: `${target.lat},${target.lng}`,
     });
     return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
@@ -43,12 +40,14 @@ function getPopupMarkup(spot, options) {
     const transport = spot.transportNote
         ? `<div class="popup-transport">${escapeHtml(spot.transportNote)}</div>`
         : '';
-    const navUrl = buildNavigationUrl(spot);
-    const navLabel = spot.prevStopName
-        ? `从 ${escapeHtml(spot.prevStopName)} 到这里`
-        : '';
-    const navLine = navLabel || navUrl
-        ? `<div class="popup-nav-row"><span>${navLabel}</span>${navUrl ? `<a class="popup-nav-btn" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener noreferrer">导航</a>` : ''}</div>`
+    const navUrl = buildDestinationNavigationUrl(spot);
+    const navLine = navUrl
+        ? `<div class="popup-nav-row">
+        <a class="popup-nav-btn popup-current-btn" href="${escapeHtml(navUrl)}" target="_blank" rel="noopener noreferrer">导航</a>
+        ${spot.nextStopId
+            ? `<button class="popup-nav-btn popup-next-btn" type="button" data-next-spot-id="${escapeHtml(spot.nextStopId)}" aria-label="切换到下一站 ${escapeHtml(spot.nextStopName || '')}">下一站</button>`
+            : '<button class="popup-nav-btn popup-next-btn is-disabled" type="button" disabled>无下一站</button>'}
+      </div>`
         : '';
     const photo = Array.isArray(spot.photos) && spot.photos.length > 0
         ? `<div class="popup-photo"><img src="${escapeHtml(spot.photos[0])}" alt="" /></div>`
@@ -73,7 +72,19 @@ function getPopupMarkup(spot, options) {
 export function buildSpotPopupElement(spot, options) {
     const shell = document.createElement('div');
     shell.innerHTML = getPopupMarkup(spot, options);
-    return shell.firstElementChild ?? shell;
+    const element = shell.firstElementChild ?? shell;
+    const nextButton = element.querySelector('.popup-next-btn[data-next-spot-id]');
+    if (nextButton && options.onNextSpotClick) {
+        nextButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const nextSpotId = nextButton.dataset.nextSpotId;
+            if (nextSpotId) {
+                options.onNextSpotClick?.(nextSpotId);
+            }
+        });
+    }
+    return element;
 }
 export function buildSpotPopupHtml(spot, options) {
     return getPopupMarkup(spot, options);

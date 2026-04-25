@@ -3,6 +3,7 @@ import type { MapController, MapControllerFactory, LatLng } from '../types';
 import type { SpotItem } from '../../types/trip';
 import { createGoogleMarkerLayer } from './marker-layer';
 import { createGoogleRouteLayer } from './route-layer';
+import { debugTripMapEvent } from '../debug';
 
 export const createGoogleController: MapControllerFactory = (container, config) => {
   const initialCenter = config.center;
@@ -35,6 +36,7 @@ export const createGoogleController: MapControllerFactory = (container, config) 
 
       if (config.onMapClick) {
         googleMap.addListener('click', () => {
+          debugTripMapEvent('google map click');
           config.onMapClick?.();
         });
       }
@@ -53,6 +55,7 @@ export const createGoogleController: MapControllerFactory = (container, config) 
   markers = createGoogleMarkerLayer({
     dayColors: config.dayColors,
     onSpotClick: config.onSpotClick,
+    onSpotPopupClose: config.onSpotPopupClose,
   });
 
   routes = createGoogleRouteLayer({
