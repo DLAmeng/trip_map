@@ -1396,6 +1396,19 @@
     font-size: 0.95rem;
   }
 
+  /*
+   * 移动端 popover 进一步收紧:桌面 280px,移动降到 200px。
+   * 原因:手机屏空间小,popover 占中部会遮住地图主体,看不到搜索关键词的 marker 位置。
+   * 200px 能显示 ~3 项,继续滚动看更多即可,够"快速判断有没有要找的"。
+   *
+   * specificity 用 .map-search 前缀确保在文件后部的桌面规则之上 —
+   * 即使 mobile @media 块在文件前部声明,也能凭 specificity 0,2,0 vs 0,1,0 胜出。
+   */
+  .map-search .search-results-list {
+    max-height: min(200px, calc(100vh - 460px));
+    max-height: min(200px, calc(100dvh - 460px));
+  }
+
   .mobile-search-back {
     display: flex;
     align-items: center;
@@ -1913,7 +1926,17 @@
 .search-results-list {
   display: grid;
   gap: 8px;
-  max-height: min(320px, 52vh);
+  /*
+   * 限制结果列表高度 — 避免外部搜索结果多时(local 5 + external 5+)
+   * popover 整体超出地图可视区,遮住左下角 MapLegend 与 ctrl-btn 控件组。
+   *
+   * - 280px:常规上限,留出 4-5 项可见高度
+   * - calc(100dvh - 360px):动态避让 trip header(~110) + popover top offset(~150)
+   *   + legend 与 ctrl-btn 安全区(~100),保证 popover 底部不撞到 legend
+   * - dvh 兼容性 fallback 用 vh
+   */
+  max-height: min(280px, calc(100vh - 360px));
+  max-height: min(280px, calc(100dvh - 360px));
   overflow: auto;
 }
 
