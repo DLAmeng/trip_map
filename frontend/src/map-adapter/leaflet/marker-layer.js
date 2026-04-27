@@ -57,15 +57,19 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
     function getColor(day) {
         return dayColors[day - 1] ?? fallbackColor;
     }
-    function makeIcon(spot, isActive, isNext = false) {
+    function makeIcon(spot, isActive, isNext = false, dayIndex = 0) {
         const base = spot.mustVisit ? 24 : 20;
         const size = isActive ? base + 6 : base;
         const color = getColor(spot.day);
         const mustClass = spot.mustVisit ? ' is-must' : '';
         const activeClass = isActive ? ' is-active' : '';
         const nextClass = isNext ? ' is-next' : '';
+        // dayIndex 为 0(老调用点没传)时不渲染序号,保持向后兼容
+        const indexHtml = dayIndex > 0
+            ? `<span class="spot-marker-index">${dayIndex}</span>`
+            : '';
         return L.divIcon({
-            html: `<div class="spot-marker${mustClass}${activeClass}${nextClass}" style="--marker-color:${color};--marker-size:${size}px"></div>`,
+            html: `<div class="spot-marker${mustClass}${activeClass}${nextClass}" style="--marker-color:${color};--marker-size:${size}px">${indexHtml}</div>`,
             className: 'marker-shell',
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
@@ -82,9 +86,23 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
     }
     function render(spots) {
         removeAll();
+        // 按 day 分桶,基于 spot.order 排序后取 1-based 序号 → marker 内嵌数字
+        const dayCounters = new Map();
+        const dayIndexById = new Map();
+        const sortedForIndex = [...spots].sort((a, b) => {
+            if (a.day !== b.day)
+                return a.day - b.day;
+            return (a.order ?? 0) - (b.order ?? 0);
+        });
+        for (const spot of sortedForIndex) {
+            const next = (dayCounters.get(spot.day) ?? 0) + 1;
+            dayCounters.set(spot.day, next);
+            dayIndexById.set(spot.id, next);
+        }
         for (const spot of spots) {
+            const dayIndex = dayIndexById.get(spot.id) ?? 0;
             const marker = L.marker([spot.lat, spot.lng], {
-                icon: makeIcon(spot, false),
+                icon: makeIcon(spot, false, false, dayIndex),
                 riseOnHover: true,
                 keyboard: true,
             });
@@ -98,6 +116,13 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
                 offset: L.point(0, -6),
                 autoClose: false,
                 closeOnClick: false,
+                // P4-h: popup 打开时 leaflet 自动 pan,要避开移动端的浮层 toolbar
+                // 顶部:mobile-trip-context-card(~60px) + mobile-map-search-bar(~58px) + 10px buffer
+                // 底部:mobile-trip-bottom-switcher(~58px) + safe area + 10px buffer
+                // 桌面下这些 toolbar 不存在,但留点 padding 不影响 — popup 离边缘有距离更舒适
+                autoPan: true,
+                autoPanPaddingTopLeft: L.point(20, 130),
+                autoPanPaddingBottomRight: L.point(20, 110),
             });
             // 摘掉 Leaflet bindPopup 里默认注册的 { remove: this.closePopup }。
             // markercluster 在 zoomend 时会 _featureGroup.removeLayer(marker) 再 addLayer 做
@@ -141,7 +166,7 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
                 }, { once: true });
             });
             clusterGroup.addLayer(marker);
-            entries.set(spot.id, { spot, marker, visible: true, isNext: false });
+            entries.set(spot.id, { spot, marker, visible: true, isNext: false, dayIndex });
         }
     }
     function setVisibleSpots(visibleIds) {
@@ -170,7 +195,7 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
         if (prevId && prevId !== id) {
             const prev = entries.get(prevId);
             if (prev) {
-                prev.marker.setIcon(makeIcon(prev.spot, false, prev.isNext));
+                prev.marker.setIcon(makeIcon(prev.spot, false, prev.isNext, prev.dayIndex));
                 prev.marker.closePopup();
             }
         }
@@ -179,7 +204,7 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
         const entry = entries.get(id);
         if (!entry)
             return;
-        entry.marker.setIcon(makeIcon(entry.spot, true, entry.isNext));
+        entry.marker.setIcon(makeIcon(entry.spot, true, entry.isNext, entry.dayIndex));
         if (options?.pan !== false && entry.visible) {
             // 自动平移并确保缩放级别至少为 15
             map.setView([entry.spot.lat, entry.spot.lng], Math.max(map.getZoom(), 15), {
@@ -199,7 +224,7 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
             entry.isNext = shouldBeNext;
             // 用当前 selected 状态重建 icon
             const isActive = selectedId === id;
-            entry.marker.setIcon(makeIcon(entry.spot, isActive, shouldBeNext));
+            entry.marker.setIcon(makeIcon(entry.spot, isActive, shouldBeNext, entry.dayIndex));
         });
     }
     function openPopup(id) {

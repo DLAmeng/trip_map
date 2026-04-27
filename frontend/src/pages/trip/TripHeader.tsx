@@ -68,15 +68,64 @@ export function TripHeader({
         <div className="header-stats" aria-label="行程摘要">
           <div className="stat-pill">
             <span>{stats.days}</span>
-            <small>天数</small>
+            <small>
+              {/* 日历图标:细描边,12px,与 small 文字基线对齐 */}
+              <svg
+                className="stat-icon"
+                viewBox="0 0 14 14"
+                width="12"
+                height="12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <rect x="2" y="3" width="10" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M2 6h10" stroke="currentColor" strokeWidth="1.2" />
+                <path d="M5 2v2M9 2v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              天数
+            </small>
           </div>
           <div className="stat-pill">
             <span>{stats.cities}</span>
-            <small>城市</small>
+            <small>
+              {/* 建筑/城市图标 */}
+              <svg
+                className="stat-icon"
+                viewBox="0 0 14 14"
+                width="12"
+                height="12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path d="M2 12V5l3-2 3 2v7" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                <path d="M8 12V7l3-1.5V12" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+                <path d="M1 12h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              城市
+            </small>
           </div>
           <div className="stat-pill">
             <span>{stats.spots}</span>
-            <small>景点</small>
+            <small>
+              {/* 地点 pin 图标 */}
+              <svg
+                className="stat-icon"
+                viewBox="0 0 14 14"
+                width="12"
+                height="12"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M7 13c-2.5-3-4-5-4-7a4 4 0 1 1 8 0c0 2-1.5 4-4 7z"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+                <circle cx="7" cy="6" r="1.4" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+              景点
+            </small>
           </div>
         </div>
 

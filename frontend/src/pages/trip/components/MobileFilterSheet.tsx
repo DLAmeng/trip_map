@@ -4,6 +4,8 @@ interface MobileFilterSheetProps {
   isOpen: boolean;
   onClose: () => void;
   dayNumbers: number[];
+  /** 每个 day 对应的 marker 颜色,用来给 day filter 按钮做强视觉提示 */
+  dayColors?: string[];
   cityNames: string[];
   filter: FilterState;
   onChange: (filter: FilterState) => void;
@@ -13,6 +15,7 @@ export function MobileFilterSheet({
   isOpen,
   onClose,
   dayNumbers,
+  dayColors,
   cityNames,
   filter,
   onChange,
@@ -21,6 +24,7 @@ export function MobileFilterSheet({
     <>
       {isOpen && <div className="sheet-backdrop" onClick={onClose} />}
       <div className={`mobile-filter-sheet ${isOpen ? 'is-open' : ''}`}>
+        <div className="sheet-handle" aria-hidden="true" />
         <div className="modal-header">
           <h3>快速筛选</h3>
         </div>
@@ -34,15 +38,28 @@ export function MobileFilterSheet({
               >
                 全部
               </button>
-              {dayNumbers.map((d) => (
-                <button
-                  key={d}
-                  className={`filter-btn ${filter.day === d ? 'active' : ''}`}
-                  onClick={() => onChange({ ...filter, day: d })}
-                >
-                  Day {d}
-                </button>
-              ))}
+              {dayNumbers.map((d) => {
+                const color = dayColors?.[d - 1];
+                const isActive = filter.day === d;
+                // active 时用 day color 填充 + 白字,跟地图 marker / day-chip 视觉一致
+                const style = isActive && color
+                  ? {
+                      background: color,
+                      borderColor: color,
+                      color: '#fff',
+                    }
+                  : undefined;
+                return (
+                  <button
+                    key={d}
+                    className={`filter-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => onChange({ ...filter, day: d })}
+                    style={style}
+                  >
+                    Day {d}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

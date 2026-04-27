@@ -180,5 +180,5 @@ export function TripPage() {
                 } })) : null, activeTool === 'summary' && isMobile && (_jsxs(_Fragment, { children: [_jsx("div", { className: "sheet-backdrop", onClick: closeAllPopups }), _jsxs("div", { className: "mobile-summary-modal", children: [_jsx("div", { className: "modal-header", children: _jsx("h3", { children: "\u884C\u7A0B\u6982\u51B5" }) }), _jsx("div", { className: "modal-body", children: _jsx(SummaryBar, { stats: stats, isFiltered: filter.day !== null ||
                                         filter.city !== null ||
                                         filter.mustOnly ||
-                                        filter.nextOnly }) })] })] })), _jsx(MobileFilterSheet, { isOpen: isFilterSheetOpen, onClose: () => setIsFilterSheetOpen(false), dayNumbers: normalized.dayNumbers, cityNames: normalized.cityNames, filter: filter, onChange: setFilter })] }));
+                                        filter.nextOnly }) })] })] })), _jsx(MobileFilterSheet, { isOpen: isFilterSheetOpen, onClose: () => setIsFilterSheetOpen(false), dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, cityNames: normalized.cityNames, filter: filter, onChange: setFilter })] }));
 }

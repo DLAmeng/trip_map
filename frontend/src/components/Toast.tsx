@@ -32,9 +32,40 @@ export function Toast({
 
   if (!message) return null;
   const className = tone === 'error' ? 'toast is-error' : 'toast';
+  // 状态图标 — error 用 ✕,default 用 ✓,与项目已有 SVG 图标风格一致
+  const icon = tone === 'error' ? (
+    <svg
+      className="toast-icon"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  ) : (
+    <svg
+      className="toast-icon"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3.5 8.2l3 3 6-6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
   return (
     <div className={className} role="status" aria-live="polite">
-      {message}
+      {icon}
+      <span className="toast-message">{message}</span>
     </div>
   );
 }

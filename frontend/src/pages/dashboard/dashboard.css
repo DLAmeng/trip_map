@@ -7,22 +7,29 @@
  * 3. 卡片按钮引入 Flex-wrap 2x2 模式，兼顾触控面积与布局平衡。
  */
 
-:root {
-  --ocean: #0f3d5c;
-  --ocean-soft: #1f5b80;
-  --sand: #f5efe3;
-  --sand-soft: #fdf8ec;
-  --ink: #1c1207;
-  --ink-soft: #4a3928;
-  --accent: #d96a3d;
-  --danger: #aa3d1d;
-  --ok: #2f6b41;
-  --line: rgba(28, 18, 7, 0.1);
-  --line-strong: rgba(28, 18, 7, 0.18);
-  --shadow-sm: 0 4px 14px rgba(15, 61, 92, 0.08);
-  --shadow-md: 0 12px 36px rgba(15, 61, 92, 0.12);
-  --shadow-lg: 0 24px 60px rgba(15, 61, 92, 0.18);
-  --radius-lg: 22px;
+/*
+ * 局部别名挂在 .dash-shell 而非 :root,与 trip.css 的 .trip-shell 做法对称。
+ * 这样比 tokens.css 的 :root 优先级高,不依赖 vite bundle 的 source order。
+ *
+ * 注意:--radius-md (14px) / --radius-sm (10px) 是 dashboard 自有尺寸,
+ * 不复用 tokens 默认 (12 / 8),保留本地数值。
+ */
+.dash-shell {
+  --ocean: var(--color-ocean-900);
+  --ocean-soft: var(--color-ocean-700);
+  --sand: var(--color-sand-200);
+  --sand-soft: var(--color-sand-50);
+  --ink: var(--color-ink-900);
+  --ink-soft: var(--color-ink-700);
+  --accent: var(--color-accent-600);
+  --danger: var(--color-danger);
+  --ok: var(--color-success-dark);
+  --line: var(--color-border-ink);
+  --line-strong: var(--color-border-ink-strong);
+  --shadow-sm: var(--shadow-sm-ocean);
+  --shadow-md: var(--shadow-md-ocean);
+  --shadow-lg: var(--shadow-lg-ocean);
+  --radius-lg: var(--radius-card);
   --radius-md: 14px;
   --radius-sm: 10px;
 }
@@ -452,6 +459,82 @@
   cursor: not-allowed;
 }
 
+/* ============ Skeleton (loading state) ============
+ * 与 .trip-card 同 padding/radius/border,加载过场跳变最小
+ */
+
+@keyframes dash-skeleton-shimmer {
+  0% { background-position: -240px 0; }
+  100% { background-position: 240px 0; }
+}
+
+.trip-card-skeleton {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trip-card-skeleton .skeleton-line,
+.trip-card-skeleton .skeleton-chip,
+.trip-card-skeleton .skeleton-button {
+  background: linear-gradient(
+    90deg,
+    rgba(28, 18, 7, 0.05) 0%,
+    rgba(28, 18, 7, 0.10) 40%,
+    rgba(28, 18, 7, 0.05) 80%
+  );
+  background-size: 480px 100%;
+  animation: dash-skeleton-shimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+
+.trip-card-skeleton .skeleton-title {
+  width: 60%;
+  height: 18px;
+}
+
+.trip-card-skeleton .skeleton-subtitle {
+  width: 35%;
+  height: 12px;
+}
+
+.trip-card-skeleton .skeleton-text {
+  width: 100%;
+  height: 10px;
+}
+
+.trip-card-skeleton .skeleton-text-short {
+  width: 70%;
+  height: 10px;
+}
+
+.trip-card-skeleton .skeleton-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.trip-card-skeleton .skeleton-chip {
+  width: 60px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+.trip-card-skeleton .skeleton-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.trip-card-skeleton .skeleton-button {
+  height: 42px;
+  border-radius: 14px;
+}
+
 /* ============ Empty states ============ */
 
 .empty-state {
@@ -650,10 +733,29 @@
   font-size: 0.85rem;
   box-shadow: var(--shadow-md);
   z-index: 1000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .toast.is-error {
   background: var(--danger);
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  /* 默认 success 用浅绿描边,error 用白色描边(白底上更显眼) */
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.toast:not(.is-error) .toast-icon {
+  /* success: 用项目 success 绿色描边图标更具语义 */
+  color: #6ee7b7;
+}
+
+.toast-message {
+  /* 防止图标和文字之间的空白被压缩 */
+  white-space: nowrap;
 }
 
 /* ============ 响应式重构 ============ */
@@ -733,12 +835,22 @@
   .trip-grid {
     grid-template-columns: 1fr;
   }
+  /* P4-a: 移动端卡片紧凑化 — radius 22→20, padding 20→16, 字号略缩 */
+  .trip-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+  .trip-card-title h2 {
+    font-size: 1.05rem;
+  }
   .trip-actions {
     flex-direction: column;
     align-items: stretch;
   }
   .trip-actions-main {
     width: 100%;
+    /* P4-b: 移动端"打开地图"占 2/3 宽,"编辑"占 1/3,强化主操作 */
+    grid-template-columns: 2fr 1fr;
   }
   .trip-actions-side {
     width: 100%;

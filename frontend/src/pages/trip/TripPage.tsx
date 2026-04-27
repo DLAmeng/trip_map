@@ -332,6 +332,7 @@ export function TripPage() {
         isOpen={isFilterSheetOpen}
         onClose={() => setIsFilterSheetOpen(false)}
         dayNumbers={normalized.dayNumbers}
+        dayColors={data.config.dayColors}
         cityNames={normalized.cityNames}
         filter={filter}
         onChange={setFilter}

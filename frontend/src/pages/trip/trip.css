@@ -9,26 +9,32 @@
 }
 
 .trip-shell {
+  /*
+   * 局部别名 — 大部分引用 tokens.css 的原料色。
+   * 例外:
+   *   --font-sans:    保留 trip 页本地字体栈 (Avenir Next),与 tokens 的 PingFang 栈不同
+   *   --font-display / --shadow-* / --radius-*:  与 tokens 同名会自引用循环,保留字面值
+   */
   --font-sans: 'Avenir Next', 'SF Pro Text', 'Segoe UI', sans-serif;
   --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
-  --bg-top: #f8efe2;
-  --bg-bottom: #efe4d3;
-  --surface: rgba(255, 255, 255, 0.85);
-  --surface-strong: rgba(255, 255, 255, 0.98);
-  --surface-soft: rgba(255, 255, 255, 0.6);
-  --surface-deep: #ffffff;
-  --border: rgba(0, 0, 0, 0.06);
-  --border-strong: rgba(0, 0, 0, 0.12);
-  --text: #1e293b;
-  --text-muted: #475569;
-  --text-soft: #94a3b8;
-  --accent: #ea580c;
-  --accent-strong: #c2410c;
-  --accent-soft: rgba(234, 88, 12, 0.1);
-  --ocean: #0ea5e9;
-  --ocean-soft: rgba(14, 165, 233, 0.1);
-  --gold: #eab308;
-  --success: #10b981;
+  --bg-top: var(--color-sand-100);
+  --bg-bottom: var(--color-sand-300);
+  --surface: var(--color-surface);
+  --surface-strong: var(--color-surface-strong);
+  --surface-soft: var(--color-surface-soft);
+  --surface-deep: var(--color-surface-pure);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --text: var(--color-slate-900);
+  --text-muted: var(--color-slate-600);
+  --text-soft: var(--color-slate-400);
+  --accent: var(--color-accent-500);
+  --accent-strong: var(--color-accent-700);
+  --accent-soft: var(--color-accent-soft);
+  --ocean: var(--color-ocean-400);
+  --ocean-soft: var(--color-ocean-soft);
+  --gold: var(--color-gold);
+  --success: var(--color-success);
   --shadow-lg: 0 20px 40px -8px rgba(0, 0, 0, 0.1), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
   --shadow-md: 0 10px 20px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -200,6 +206,18 @@
   text-transform: uppercase;
   color: var(--text-soft);
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/*
+ * stat-pill 的 12px 描边图标 — 用 currentColor 跟 small 文字同色,
+ * 视觉权重低,只是辅助识别"这个数字代表什么"。
+ */
+.stat-icon {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .header-actions {
@@ -285,6 +303,24 @@
     box-shadow 160ms ease,
     filter 160ms ease;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/*
+ * 内嵌的 day 内序号文字 — 对齐设计稿 mobile.html L107
+ * 12px 时嫌挤,14px+ 才显示文字
+ */
+.spot-marker-index {
+  color: #fff;
+  font-weight: 800;
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0;
+  user-select: none;
+  pointer-events: none;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
 }
 
 .spot-marker.is-must {
@@ -527,14 +563,37 @@
   transform: translateY(-1px);
 }
 
-.tool-btn.active, .ctrl-btn.active {
+/*
+ * 左上 toolbar 面板开关(搜索/筛选/概览):active 用 ocean 暗填充 + glow,
+ * 让用户瞬间认知"我打开了哪个面板"。
+ * 区别于右上 ctrl-btn(视角控制) 的暖 accent active —— 不同语义不同色。
+ */
+.tool-btn.active {
+  background: linear-gradient(135deg, var(--color-ocean-900) 0%, var(--color-ocean-800) 100%);
+  color: #fff;
+  border-color: rgba(15, 61, 92, 0.40);
+  box-shadow:
+    0 0 0 3px rgba(35, 111, 122, 0.16),
+    0 12px 26px rgba(15, 61, 92, 0.24);
+}
+
+.tool-btn.active:hover {
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-ocean-800) 0%, var(--color-ocean-700) 100%);
+  border-color: rgba(15, 61, 92, 0.50);
+  /* 取消 transform: translateY(-1px),active 已经 lift 起来了再 hover lift 会过头 */
+  transform: none;
+}
+
+/* 右上 ctrl-btn(视角控制) active 保留暖 accent,与暖色系 trip 主题协调 */
+.ctrl-btn.active {
   background: rgba(255, 255, 255, 0.98);
   color: var(--accent-strong);
   border-color: rgba(234, 88, 12, 0.26);
   box-shadow: 0 10px 22px rgba(234, 88, 12, 0.14);
 }
 
-.tool-btn.active:hover, .ctrl-btn.active:hover {
+.ctrl-btn.active:hover {
   color: var(--accent-strong);
 }
 
@@ -753,6 +812,18 @@
   background: rgba(248, 250, 252, 0.95);
 }
 
+/*
+ * is-current: filter.day 命中的 day-header
+ * — 左侧 3px day 颜色边条 + 加深 surface,提示用户"我在这一天"
+ * 用 padding-left 抵消 3px 让其它 day-header 内容横向对齐(避免位移闪烁)
+ */
+.day-header.is-current {
+  background: rgba(255, 255, 255, 0.96);
+  border-left: 3px solid var(--day-color);
+  padding-left: 17px; /* 原 padding 是 16px 20px(line 738),减 3px 边条让内容不位移 */
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+}
+
 .day-header-copy {
   display: flex;
   align-items: center;
@@ -842,14 +913,29 @@
 .popup-shell {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px; /* 6px(从 8px 收紧) — 对齐设计稿 components-map-popup 紧凑感 */
   min-width: 200px;
+  /* --day-color 由 popup-builder 内联设置,fallback 防 leak */
+  --day-color: var(--ocean);
+}
+
+/*
+ * 顶部 day 颜色色带 — 4px 高,贴 popup 顶,瞬间识别属于第几天。
+ * 对齐设计稿 mobile.html L117 用 day color 的视觉关联。
+ * 利用负 margin 让色带顶到 leaflet/google popup 容器边缘。
+ */
+.popup-day-band {
+  height: 4px;
+  background: var(--day-color);
+  border-radius: 8px 8px 0 0;
+  margin: -10px -10px 4px;
+  flex-shrink: 0;
 }
 
 .popup-photo img {
   display: block;
   width: 100%;
-  max-height: 112px;
+  max-height: 90px; /* 90px (从 112px 收紧) — 对齐设计稿 mobile.html L115 photo 区高度 */
   object-fit: cover;
   border-radius: 10px;
 }
@@ -1533,9 +1619,36 @@
     border-radius: 28px 28px 0 0;
     background: #fff;
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
-    max-height: 78vh;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
     animation: slideUp 0.22s ease-out;
+    /* 高度切档过渡 — 与 transform 同步动画 */
+    transition: max-height 240ms ease;
+  }
+  .mobile-route-detail-sheet.is-full {
+    max-height: 78vh;
+  }
+  .mobile-route-detail-sheet.is-half {
+    /* 仅露顶部 handle + 标题,大约 140px(handle ~24 + header ~60 + safe-area)
+       body 部分被 max-height + overflow:hidden 隐藏 */
+    max-height: 140px;
+    overflow: hidden;
+  }
+  /* half 模式下点 handle 区或 header 区都能展开,加 cursor 提示 */
+  .mobile-route-detail-sheet .sheet-handle-wrap {
+    background: none;
+    border: none;
+    width: 100%;
+    padding: 8px 16px 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mobile-route-detail-sheet .sheet-handle-wrap:hover .sheet-handle {
+    background: rgba(110, 101, 90, 0.40);
+  }
+  .mobile-route-detail-sheet .modal-header {
+    cursor: pointer;
   }
 
   .drawer-handle-wrap {
@@ -1598,6 +1711,66 @@
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
   }
 
+  /*
+   * P4-f: 移动端 spot-item 用 26px 彩色圆数字 marker 替代桌面 ::before 小圆点 + 时间线
+   * 对照设计稿 mobile.html L372 — 视觉上跟地图 marker 颜色 + 数字一致,认知更直观。
+   * 同时取消左侧时间线轨道(只在桌面 sidebar 用),腾出宽度让 spot-copy 更舒展。
+   */
+  .drawer-content .day-spots,
+  .mobile-drawer .day-spots {
+    padding: 0 12px 12px 12px;
+  }
+
+  .drawer-content .day-spots::before,
+  .mobile-drawer .day-spots::before {
+    display: none; /* 隐藏左侧 2px 时间线轨道 */
+  }
+
+  .drawer-content .spot-item,
+  .mobile-drawer .spot-item {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+
+  .drawer-content .spot-item::before,
+  .mobile-drawer .spot-item::before {
+    display: none; /* 桌面 ::before 圆点在移动端用 .spot-index 替代 */
+  }
+
+  .drawer-content .spot-item .spot-index,
+  .mobile-drawer .spot-item .spot-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--spot-color, #888);
+    color: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    transition: transform 150ms ease;
+    /* spot-name 是 0.95rem 800 weight, 数字基线对齐其顶部 */
+    margin-top: 2px;
+  }
+
+  .drawer-content .spot-item.is-active .spot-index,
+  .mobile-drawer .spot-item.is-active .spot-index {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  }
+
+  .drawer-content .spot-copy,
+  .mobile-drawer .spot-copy {
+    flex: 1;
+    min-width: 0;
+  }
+
   .sheet-backdrop {
     display: block;
     position: fixed;
@@ -1605,6 +1778,32 @@
     background: rgba(0, 0, 0, 0.4);
     backdrop-filter: blur(4px);
     z-index: 1300;
+  }
+
+  /*
+   * P4-h: 移动端 leaflet popup 视觉对齐设计稿
+   *
+   * 注:完整的"锚定屏幕底部"(设计稿 mobile.html L113 `position: fixed; bottom: 90px`)
+   * 受 leaflet `.leaflet-pane` 容器 transform 影响 — fixed 后代会被困在 pane 内部
+   * 坐标系而非 viewport。CSS-only 改不到完全锚定,需要 JS 把 popup DOM 挪到
+   * leaflet-pane 之外(评估风险大,暂不做)。
+   *
+   * 这里只做"视觉细节对齐":隐藏底部尖角(居底浮卡不需要)、加大 radius 到 18px、
+   * 强化阴影。popup 仍跟随 marker 上方弹出,但视觉风格更接近设计稿。
+   */
+  .leaflet-popup-tip-container {
+    display: none;
+  }
+
+  .leaflet-popup-content-wrapper {
+    border-radius: 18px;
+    padding: 12px 14px;
+    box-shadow: 0 18px 46px rgba(22, 37, 48, 0.18);
+  }
+
+  .leaflet-popup-close-button {
+    top: 8px !important;
+    right: 10px !important;
   }
 
   .mobile-filter-sheet {
@@ -1626,6 +1825,22 @@
 
   .mobile-filter-sheet.is-open {
     transform: translateY(0);
+  }
+
+  /*
+   * Sheet drag handle — 顶部居中的 4×40 圆角灰条,
+   * 暗示"可下滑收起"的视觉惯例(对齐设计稿 mobile.html L188-190)。
+   * 应用于 .mobile-filter-sheet / .mobile-route-detail-sheet。
+   * .mobile-drawer 自带 .drawer-handle,样式独立保留。
+   */
+  .sheet-handle {
+    flex-shrink: 0;
+    width: 40px;
+    height: 4px;
+    margin: 8px auto 6px;
+    border-radius: 999px;
+    background: rgba(110, 101, 90, 0.24);
+    pointer-events: none;
   }
 }
 
@@ -2136,6 +2351,24 @@
     background: var(--text);
     color: #ffffff;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+  }
+
+  /*
+   * P4-e: active 按钮顶部小白条(iOS Tab Bar 风格的双指示器)。
+   * 黑底胶囊已经够强,这条横线作为辅助提示让位置感更明确。
+   * 只在 is-active 时渲染,用 ::after 避免影响 layout。
+   */
+  .mobile-switcher-btn.is-active::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 18px;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    pointer-events: none;
   }
 
   .mobile-switcher-icon {

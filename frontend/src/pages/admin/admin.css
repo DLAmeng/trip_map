@@ -21,6 +21,17 @@
   color: var(--admin-text);
 }
 
+/*
+ * 修复"漏底":当 admin 内容超过 viewport 时,滚动到下方会露出 body 默认背景
+ * (#f8fafc 冷灰),与 admin parchment 暖色不协调。让 html 在 admin 路由下
+ * 用 admin 渐变最深处的色作为底色,接住滚动到底部时的视觉。
+ * :has 选择器现代浏览器全支持(>= 2023 macOS Safari 16.4 / Chrome 105),
+ * 不需要在 React 端做副作用。
+ */
+html:has(.admin-page-bg) {
+  background: #f2ebe1;
+}
+
 .admin-shell {
   max-width: var(--container-wide, 1500px);
   width: 100%;
@@ -583,15 +594,35 @@ a.btn {
 .save-bar-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  /* 组间间距 14px(组内 6px),靠 gap 拉开"组"概念 */
+  gap: 14px;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .save-bar-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  /* 组内 6px(从 10px 收紧),让按钮黏在一起像一组 */
+  gap: 6px;
   align-items: center;
+  /* 用左侧细线作为组分隔符,第一个组无线 */
+  position: relative;
+}
+
+.save-bar-group + .save-bar-group {
+  padding-left: 14px;
+}
+
+.save-bar-group + .save-bar-group::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .save-bar-group-primary {
@@ -608,8 +639,33 @@ a.btn {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/*
+ * 重置 = 危险操作:在 ghost 基础上变红字红边,hover 实化红底白字。
+ * 视觉上跟其它 ghost 按钮区分,强调"会丢东西"。
+ */
+.save-bar .btn-ghost.btn-danger {
+  color: #ff9784;
+  border-color: rgba(255, 151, 132, 0.38);
+}
+
+.save-bar .btn-ghost.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 100, 80, 0.20);
+  border-color: rgba(255, 151, 132, 0.62);
+  color: #fff;
+}
+
+/*
+ * 保存更改 = 主操作:hover 时多 lift 一档 + 强 ocean shadow,
+ * 让用户感到"这是这一行最重要的按钮"。
+ */
 .save-bar .btn-primary {
-  box-shadow: none;
+  box-shadow: 0 4px 12px rgba(184, 92, 56, 0.32);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.save-bar .btn-primary.btn-save:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(184, 92, 56, 0.45);
 }
 
 .panel-kicker {
@@ -1304,6 +1360,14 @@ a.btn {
 
   .save-bar-group .btn {
     flex: 1 1 calc(50% - 8px);
+  }
+
+  /* 移动端垂直布局下,关掉桌面 separator 竖线和左 padding(避免内容偏移) */
+  .save-bar-group + .save-bar-group {
+    padding-left: 0;
+  }
+  .save-bar-group + .save-bar-group::before {
+    display: none;
   }
 
   .planner-toolbar-section,

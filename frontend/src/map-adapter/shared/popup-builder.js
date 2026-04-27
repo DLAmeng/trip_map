@@ -53,7 +53,8 @@ function getPopupMarkup(spot, options) {
         ? `<div class="popup-photo"><img src="${escapeHtml(spot.photos[0])}" alt="" /></div>`
         : '';
     return `
-    <div class="popup-shell">
+    <div class="popup-shell" style="--day-color:${color}">
+      <div class="popup-day-band" aria-hidden="true"></div>
       ${photo}
       <div class="popup-day" style="color:${color}">第 ${spot.day} 天 · ${escapeHtml(formatTimeSlot(spot.timeSlot))}</div>
       <div class="popup-name">${escapeHtml(spot.name)}${mustBadge}</div>

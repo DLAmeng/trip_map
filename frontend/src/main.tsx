@@ -8,6 +8,7 @@ import { router } from './router';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import './styles/tokens.css';
 import './styles/global.css';
 
 const rootElement = document.getElementById('root');

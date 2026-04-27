@@ -18,7 +18,11 @@ export function App() {
         <NavLink to="/admin" className={({ isActive }) => (isActive ? 'active' : '')}>
           Admin
         </NavLink>
-        <span className="app-nav-hint">React 迁移预览 · Phase 1</span>
+        {/* 开发期版本提示,仅 dev 模式可见;生产构建里不渲染避免占用视觉权重。
+            cast 是因 tsconfig.types 没引 vite/client,这里只读一个布尔不必扩 types */}
+        {(import.meta as { env?: { DEV?: boolean } }).env?.DEV ? (
+          <span className="app-nav-hint">React 迁移预览 · Phase 1</span>
+        ) : null}
       </nav>
       <main className="app-main">
         <Outlet />

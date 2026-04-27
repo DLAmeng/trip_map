@@ -97,14 +97,15 @@ export function SaveBar({
         </div>
         <div className="save-bar-group save-bar-group-primary">
           <button
-            className="btn btn-ghost"
+            className="btn btn-ghost btn-danger"
             onClick={onReset}
             disabled={!isDirty || isSaving || isSyncing || isReloading}
+            title="丢弃未保存的所有更改"
           >
             重置
           </button>
           <button
-            className="btn btn-primary"
+            className="btn btn-primary btn-save"
             onClick={onSave}
             disabled={!isDirty || isSaving || isSyncing || isReloading}
           >

@@ -11,14 +11,14 @@ export function createGoogleMarkerLayer(config) {
     let pendingVisibleIds = null;
     let selectedId = null;
     let nextHighlightedIds = new Set();
-    function buildPinElement(spot, isActive, isNext) {
+    function buildPinElement(spot, isActive, isNext, dayIndex) {
         const scale = isActive
             ? (spot.mustVisit ? 1.45 : 1.3)
             : isNext
                 ? (spot.mustVisit ? 1.28 : 1.12)
                 : (spot.mustVisit ? 1.15 : 1);
         return new google.maps.marker.PinElement({
-            glyphText: String(spot.order),
+            glyphText: String(dayIndex || spot.order),
             glyphColor: '#fff',
             background: config.dayColors[spot.day - 1] || '#ea4335',
             borderColor: isActive ? '#183847' : isNext ? '#236f7a' : '#fff',
@@ -28,7 +28,7 @@ export function createGoogleMarkerLayer(config) {
     function updateMarkerAppearance(ref) {
         const isActive = selectedId === ref.spotId;
         const isNext = nextHighlightedIds.has(ref.spotId) && !isActive;
-        const pin = buildPinElement(ref.spot, isActive, isNext);
+        const pin = buildPinElement(ref.spot, isActive, isNext, ref.dayIndex);
         ref.marker.content = pin.element;
         ref.marker.zIndex = isActive ? 1200 + ref.spot.day : isNext ? 900 + ref.spot.day : 100 + ref.spot.day;
     }
@@ -106,6 +106,19 @@ export function createGoogleMarkerLayer(config) {
                 return;
             destroy();
             markerCluster = createClusterer();
+            // 按 day 分桶,基于 spot.order 计算每个 spot 在当天的 1-based 序号
+            const dayCounters = new Map();
+            const dayIndexById = new Map();
+            const sortedForIndex = [...spots].sort((a, b) => {
+                if (a.day !== b.day)
+                    return a.day - b.day;
+                return (a.order ?? 0) - (b.order ?? 0);
+            });
+            for (const spot of sortedForIndex) {
+                const next = (dayCounters.get(spot.day) ?? 0) + 1;
+                dayCounters.set(spot.day, next);
+                dayIndexById.set(spot.id, next);
+            }
             markerRefs = spots.map((spot) => {
                 const marker = new google.maps.marker.AdvancedMarkerElement({
                     position: { lat: spot.lat, lng: spot.lng },
@@ -123,7 +136,8 @@ export function createGoogleMarkerLayer(config) {
                     debugTripMapEvent('google marker click', { spotId: spot.id });
                     config.onSpotClick?.(spot.id);
                 });
-                const ref = { marker, infoWindow, spotId: spot.id, spot, popupContent };
+                const dayIndex = dayIndexById.get(spot.id) ?? 0;
+                const ref = { marker, infoWindow, spotId: spot.id, spot, popupContent, dayIndex };
                 infoWindow.addListener('closeclick', () => {
                     handleInfoWindowCloseClick(ref);
                 });

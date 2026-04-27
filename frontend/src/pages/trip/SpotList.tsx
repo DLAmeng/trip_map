@@ -115,14 +115,14 @@ export function SpotList({
               aria-expanded={isExpanded}
             >
               <div
-                className="day-header"
+                className={`day-header${expandedDay === day ? ' is-current' : ''}`}
                 role="button"
                 aria-level={3}
                 style={{ ['--day-color' as string]: dayColor }}
                 onClick={() => handleHeaderClick(day)}
               >
                 <div className="day-header-copy">
-                  <span className="day-chip">Day {day}</span>
+                  <span className="day-chip">D{day}</span>
                   <span className="day-title">第 {day} 天</span>
                 </div>
                 <div className="day-header-meta">

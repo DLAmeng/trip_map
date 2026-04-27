@@ -1,47 +1,8 @@
-:root {
-  color-scheme: light;
-
-  /* 响应式间距变量 */
-  --page-px: 16px;
-  --page-py: 20px;
-  --section-gap: 20px;
-  --grid-gap: 16px;
-  --container-max: 1200px;
-  --container-wide: 1500px;
-}
-
-/* 断点策略：Mobile-first 增强 */
-@media (min-width: 640px) {
-  :root {
-    --page-px: 24px;
-    --page-py: 32px;
-  }
-}
-
-@media (min-width: 768px) {
-  :root {
-    --page-px: 32px;
-    --page-py: 40px;
-    --section-gap: 24px;
-    --grid-gap: 20px;
-  }
-}
-
-@media (min-width: 1024px) {
-  :root {
-    --page-px: 48px;
-    --page-py: 48px;
-    --section-gap: 28px;
-  }
-}
-
-@media (min-width: 1280px) {
-  :root {
-    --page-px: 64px;
-    --page-py: 56px;
-    --section-gap: 32px;
-  }
-}
+/*
+ * 全局组件样式。
+ * 设计 tokens (颜色 / 字体 / 间距 / 响应式断点) 已迁至 ./tokens.css，
+ * 由 main.tsx 在本文件之前 import,确保 var() 解析就位。
+ */
 
 * {
   box-sizing: border-box;

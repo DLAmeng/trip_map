@@ -173,8 +173,25 @@ export function DashboardPage() {
 
       <main className="dash-main">
         {isLoading ? (
-          <div className="empty-state compact">
-            <p>加载中...</p>
+          // 用 trip-card 同尺寸的 skeleton 占位,让加载过场更平滑、跳变更小
+          <div className="trip-grid" aria-busy="true" aria-live="polite">
+            {[0, 1, 2].map((i) => (
+              <article key={i} className="trip-card trip-card-skeleton" aria-hidden="true">
+                <div className="skeleton-line skeleton-title" />
+                <div className="skeleton-line skeleton-subtitle" />
+                <div className="skeleton-line skeleton-text" />
+                <div className="skeleton-line skeleton-text-short" />
+                <div className="skeleton-chips">
+                  <span className="skeleton-chip" />
+                  <span className="skeleton-chip" />
+                  <span className="skeleton-chip" />
+                </div>
+                <div className="skeleton-actions">
+                  <span className="skeleton-button" />
+                  <span className="skeleton-button" />
+                </div>
+              </article>
+            ))}
           </div>
         ) : isError ? (
           <div className="empty-state compact">
@@ -197,15 +214,16 @@ export function DashboardPage() {
             <p>收集景点、勾画路线、离线带走地图。一切从这里开始。</p>
             <div className="empty-state-actions">
               <button type="button" className="primary-btn" onClick={openCreate}>
-                创建新行程
+                ＋ 创建新行程
               </button>
               <button
                 type="button"
                 className="secondary-btn"
                 onClick={handleDuplicateCurrent}
                 disabled={duplicatingId === 'current'}
+                title="基于内置日本示例行程快速复制一份可编辑副本"
               >
-                复制默认日本行程作为模板
+                <span aria-hidden="true">⎘</span> 复制日本模板
               </button>
             </div>
           </div>
