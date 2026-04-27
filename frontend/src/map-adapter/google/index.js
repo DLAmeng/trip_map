@@ -22,6 +22,11 @@ export const createGoogleController = (container, config) => {
             zoom: initialZoom,
             // 彻底移除所有 Google Maps 原生控件 (缩放、地图类型、街景、镜头等)
             disableDefaultUI: true,
+            // 禁用 Google 自带 POI(餐厅/景点 icon)的点击行为。
+            // 默认情况下点击这些 icon 会弹出 Google 内置 InfoWindow,在移动端会盖住
+            // mobile-trip-bottom-switcher / mobile-map-fab 等浮层按钮,且我们无法控制
+            // 它的位置/尺寸/样式。用户探索"外部地点"统一走顶部搜索栏(MapSearch)。
+            clickableIcons: false,
             // 高级标记要求必须有 mapId
             mapId: config.mapId || 'DEMO_MAP_ID',
         };
