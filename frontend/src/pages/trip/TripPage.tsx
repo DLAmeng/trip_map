@@ -44,7 +44,15 @@ export function TripPage() {
    * AdminPage 在 mount 时读这个参数,自动打开新建表单并预填名称/坐标/placeId。
    */
   const handleAddPoiToTrip = useCallback(
-    (data: { placeId: string; name: string; address: string; lat: number; lng: number }) => {
+    (data: {
+      placeId: string;
+      name: string;
+      address: string;
+      lat: number;
+      lng: number;
+      day: number;
+      insertIndex?: number;
+    }) => {
       const prefill = encodeURIComponent(JSON.stringify(data));
       navigate(`/admin?id=${encodeURIComponent(tripId)}&prefillSpot=${prefill}`);
     },

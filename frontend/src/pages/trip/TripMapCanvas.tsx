@@ -55,13 +55,15 @@ interface TripMapCanvasProps {
   isOnline?: boolean;
   /** 手机模式 —— 隐藏左下 `.map-controls`,换成右侧浮动按钮组 */
   isMobile?: boolean;
-  /** ExternalPoiCard "+ 加入行程"按钮回调,由 TripPage 提供 navigate 实现 */
+  /** ExternalPoiCard "+ 加入行程" 用户选好 day+insertIndex 后的回调 */
   onAddPoiToTrip?: (data: {
     placeId: string;
     name: string;
     address: string;
     lat: number;
     lng: number;
+    day: number;
+    insertIndex?: number;
   }) => void;
 }
 
@@ -436,6 +438,19 @@ export function TripMapCanvas({
     return Array.from(days).sort((a, b) => a - b);
   }, [spots]);
 
+  /** 给 ExternalPoiCard 选 position 用的简化 day → spot summary */
+  const spotsSummaryByDay = useMemo(() => {
+    const map = new Map<number, Array<{ id: string; name: string }>>();
+    for (const day of dayNumbers) {
+      const list = spots
+        .filter((s) => s.day === day)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((s) => ({ id: s.id, name: s.name }));
+      map.set(day, list);
+    }
+    return map;
+  }, [spots, dayNumbers]);
+
   return (
     <section ref={stageRef} className="map-stage" aria-label="地图">
       <div className="map-notice-stack" aria-live="polite">
@@ -593,6 +608,9 @@ export function TripMapCanvas({
           <ExternalPoiCard
             placeId={activePoi.placeId}
             onClose={() => setActivePoi(null)}
+            dayNumbers={dayNumbers}
+            spotsByDay={spotsSummaryByDay}
+            defaultDay={filter.day ?? undefined}
             onAddToTrip={
               onAddPoiToTrip
                 ? (data) => {

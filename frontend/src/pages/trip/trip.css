@@ -1193,6 +1193,131 @@
   border-color: var(--accent-strong);
 }
 
+.external-poi-action-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============ ExternalPoiCard - select mode (选 day + position) ============ */
+
+.external-poi-select-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+  padding-right: 28px; /* 给关闭按钮留位 */
+  margin-bottom: 4px;
+}
+
+.external-poi-select-eyebrow {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.external-poi-select-eyebrow strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.external-poi-select-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.external-poi-select-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.external-poi-day-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+
+.external-poi-day-chip {
+  flex: 0 0 auto;
+  min-width: 44px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.external-poi-day-chip:hover {
+  background: #fff;
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.external-poi-day-chip.is-active {
+  background: var(--ocean);
+  border-color: var(--ocean);
+  color: #fff;
+}
+
+.external-poi-day-empty {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+.external-poi-position-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* 限高,景点多时滚动看 */
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.external-poi-position-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.external-poi-position-row:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.external-poi-position-row input[type='radio'] {
+  flex-shrink: 0;
+  accent-color: var(--ocean);
+}
+
+.external-poi-position-row strong {
+  font-weight: 700;
+}
+
+.external-poi-select-actions {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
 .external-poi-loading {
   padding: 16px 14px;
 }

@@ -328,8 +328,9 @@ function AdminEditor({
 
   /**
    * 处理 trip 页 ExternalPoiCard "+ 加入行程" 跳转过来的预填:
-   * URL 含 prefillSpot=encoded({placeId, name, address, lat, lng}) 时,
-   * 调 handleQuickAddPlace 加到 activeDay,然后清掉 URL 参数避免刷新重复加。
+   * URL 含 prefillSpot=encoded({placeId,name,address,lat,lng,day,insertIndex}) 时,
+   * 调 handleAddSpot(day, insertIndex, partial) 精确插入到用户选的位置,
+   * 然后清掉 URL 参数避免刷新重复加。
    * 用 ref 防 React.StrictMode 双 mount 时执行两次。
    */
   const prefillHandledRef = useRef(false);
@@ -344,11 +345,33 @@ function AdminEditor({
         address?: string;
         lat?: number;
         lng?: number;
+        day?: number;
+        insertIndex?: number;
       };
       if (parsed.name && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
         prefillHandledRef.current = true;
-        handleQuickAddPlace({ name: parsed.name, lat: parsed.lat, lng: parsed.lng });
-        addToast('success', '已从地图加入景点', `${parsed.name} 已添加到 Day ${activeDay},记得保存`);
+        const targetDay = typeof parsed.day === 'number' ? parsed.day : activeDay;
+        const id = createClientSpotId();
+        handleAddSpot(
+          targetDay,
+          parsed.insertIndex,
+          buildSpotFromPlace({
+            id,
+            day: targetDay,
+            name: parsed.name,
+            lat: parsed.lat,
+            lng: parsed.lng,
+          }),
+        );
+        // 切到目标 day,让用户能看到刚加的 spot
+        setActiveDay(targetDay);
+        const positionLabel =
+          typeof parsed.insertIndex === 'number' ? `第 ${parsed.insertIndex + 1} 位` : '末尾';
+        addToast(
+          'success',
+          '已从地图加入景点',
+          `${parsed.name} 已添加到 Day ${targetDay} ${positionLabel},记得保存`,
+        );
         // 清掉 URL 参数,刷新不重复加
         const next = new URLSearchParams(editorParams);
         next.delete('prefillSpot');
