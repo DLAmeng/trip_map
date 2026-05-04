@@ -23,6 +23,7 @@ import { MapNotice } from './components/MapNotice';
 import { MobileMapFloatingActions } from './components/MobileMapFloatingActions';
 import { RouteDetailContent } from './components/RouteDetailContent';
 import { MobileRouteDetailSheet } from './components/MobileRouteDetailSheet';
+import { ExternalPoiCard } from './components/ExternalPoiCard';
 import type { TripStats } from '../../selectors/tripSelectors';
 
 type CachedRouteGeometry = {
@@ -98,6 +99,10 @@ export function TripMapCanvas({
   );
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [routeAnchor, setRouteAnchor] = useState<RouteClickAnchor | null>(null);
+  // Google POI(餐厅/景点 icon)被点击时记录,React 拿 placeId 自行 fetch 详情并渲染卡片
+  const [activePoi, setActivePoi] = useState<{ placeId: string; lat: number; lng: number } | null>(
+    null,
+  );
 
   const fallbackToLeaflet = config.googleMaps?.fallbackToLeaflet !== false;
 
@@ -110,7 +115,14 @@ export function TripMapCanvas({
   const handleMapClickFromCanvas = () => {
     setSelectedRouteId(null);
     setRouteAnchor(null);
+    setActivePoi(null); // 点空白处也关 POI 卡
     onMapClick();
+  };
+
+  const handlePoiClick = (placeId: string, position: { lat: number; lng: number }) => {
+    setSelectedRouteId(null);
+    setRouteAnchor(null);
+    setActivePoi({ placeId, lat: position.lat, lng: position.lng });
   };
 
   const handleRouteClick = (id: string, anchor: RouteClickAnchor) => {
@@ -129,6 +141,7 @@ export function TripMapCanvas({
     onMapClick: handleMapClickFromCanvas,
     onSpotPopupClose: handleSpotPopupClose,
     onRouteClick: handleRouteClick,
+    onPoiClick: handlePoiClick,
   });
   useEffect(() => {
     callbacksRef.current = {
@@ -136,6 +149,7 @@ export function TripMapCanvas({
       onMapClick: handleMapClickFromCanvas,
       onSpotPopupClose: handleSpotPopupClose,
       onRouteClick: handleRouteClick,
+      onPoiClick: handlePoiClick,
     };
   }, [onMapClick, onSelectSpot, selectedSpotId]);
 
@@ -180,6 +194,7 @@ export function TripMapCanvas({
         onSpotPopupClose: (id) => callbacksRef.current.onSpotPopupClose(id),
         onMapClick: () => callbacksRef.current.onMapClick(),
         onRouteClick: (id, anchor) => callbacksRef.current.onRouteClick(id, anchor),
+        onPoiClick: (placeId, pos) => callbacksRef.current.onPoiClick(placeId, pos),
         onError: (err) => {
           console.error('[GoogleMapsAdapter] Initialization failed:', err);
           if (isGoogle) {
@@ -557,6 +572,15 @@ export function TripMapCanvas({
             </button>
           </div>
         )}
+
+        {/* Google POI 详情卡 — 用户点 Google 自带 POI icon 时显示
+            位置由 CSS 控制(桌面右上 / 移动居底),避让 mobile-trip-bottom-switcher */}
+        {activePoi ? (
+          <ExternalPoiCard
+            placeId={activePoi.placeId}
+            onClose={() => setActivePoi(null)}
+          />
+        ) : null}
 
         {/* 手机:右侧圆形浮动按钮组(重置 / 适配 / 定位) */}
         {isMobile ? (

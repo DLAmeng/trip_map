@@ -37,6 +37,13 @@ export interface MapControllerConfig {
   onSpotPopupClose?: (id: string) => void;
   /** route click → React 打开路线说明 */
   onRouteClick?: (id: string, anchor: RouteClickAnchor) => void;
+  /**
+   * Google Maps 自带 POI(餐厅/景点 icon)被点击时触发(仅 Google adapter 实装,
+   * Leaflet adapter 留 noop)。
+   * adapter 内部已经 event.stop() 阻止 Google 默认 InfoWindow,React 接到 placeId
+   * 后用 Places API 自行 fetch 详情并渲染卡片(避让 mobile toolbar)。
+   */
+  onPoiClick?: (placeId: string, position: LatLng) => void;
 }
 
 export interface MapController {

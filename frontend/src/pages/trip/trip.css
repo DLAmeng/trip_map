@@ -1044,6 +1044,175 @@
   -webkit-backdrop-filter: blur(16px);
 }
 
+/* ============ External POI Card (Google POI 自渲染卡) ============
+ * 桌面:浮在 .map-stage 内右上角(避开 site-header 和左下 legend)
+ * 移动:fixed 居底,避让 mobile-trip-bottom-switcher 与 fab
+ * 由 Google POI click 触发,替代 Google 默认 InfoWindow
+ */
+.external-poi-card {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 1100;
+  width: min(280px, calc(100% - 36px));
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(35, 111, 122, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(22, 37, 48, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+  animation: external-poi-fade-in 200ms ease-out;
+}
+
+@keyframes external-poi-fade-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.external-poi-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.external-poi-close:hover {
+  background: rgba(0, 0, 0, 0.10);
+  color: var(--text);
+}
+
+.external-poi-photo {
+  width: 100%;
+  height: 110px;
+  background-color: #e2e8f0;
+  background-size: cover;
+  background-position: center;
+}
+
+.external-poi-body {
+  padding: 12px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.external-poi-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.3;
+  padding-right: 28px; /* 让 close 按钮空间 */
+}
+
+.external-poi-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.external-poi-star {
+  color: #f59e0b;
+  font-size: 0.85rem;
+}
+
+.external-poi-rating-value {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.external-poi-rating-count {
+  color: var(--text-soft);
+}
+
+.external-poi-address {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.external-poi-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.external-poi-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(35, 111, 122, 0.08);
+  border: 1px solid rgba(35, 111, 122, 0.16);
+  color: var(--ocean);
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.external-poi-action:hover {
+  background: rgba(35, 111, 122, 0.14);
+}
+
+.external-poi-action-secondary {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--text-muted);
+}
+
+.external-poi-action-secondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.external-poi-loading {
+  padding: 16px 14px;
+}
+
+.external-poi-skeleton-line {
+  height: 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 0%,
+    rgba(0, 0, 0, 0.10) 40%,
+    rgba(0, 0, 0, 0.06) 80%
+  );
+  background-size: 320px 100%;
+  animation: external-poi-shimmer 1.4s linear infinite;
+}
+
+@keyframes external-poi-shimmer {
+  0% { background-position: -160px 0; }
+  100% { background-position: 160px 0; }
+}
+
+.external-poi-error {
+  padding: 14px 16px;
+}
+
+.external-poi-error-msg {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--accent-strong);
+}
+
 .route-detail-dismiss {
   position: absolute;
   top: 12px;
@@ -2322,6 +2491,34 @@
     background: rgba(30, 41, 59, 0.94);
     color: #fff;
     border-color: transparent;
+  }
+
+  /*
+   * 移动端 ExternalPoiCard:fixed 居底,避让 mobile-trip-bottom-switcher
+   * (~58px + safe-bottom + 16px gap) 和右侧 mobile-map-fab 组(~136px 高 + 12px gap)
+   * 用 left/right 而非桌面的 right 18px,让卡片居底全宽
+   */
+  .external-poi-card {
+    position: fixed;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+    width: auto;
+    max-width: none;
+    z-index: 1500; /* 在 bottom switcher (1500) 之下,但盖住地图浮层 */
+    border-radius: 20px;
+    animation: external-poi-slide-up 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes external-poi-slide-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* 移动端 photo 略矮,腾出更多内容显示空间 */
+  .external-poi-card .external-poi-photo {
+    height: 90px;
   }
 
   .mobile-map-fab-primary:active {

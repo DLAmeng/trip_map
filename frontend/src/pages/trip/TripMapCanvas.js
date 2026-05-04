@@ -14,6 +14,7 @@ import { MapNotice } from './components/MapNotice';
 import { MobileMapFloatingActions } from './components/MobileMapFloatingActions';
 import { RouteDetailContent } from './components/RouteDetailContent';
 import { MobileRouteDetailSheet } from './components/MobileRouteDetailSheet';
+import { ExternalPoiCard } from './components/ExternalPoiCard';
 /**
  * 地图画布组件:
  *   - 拿一个 DOM container 给 adapter
@@ -36,6 +37,8 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
     const [isInitialRailHydrationPending, setIsInitialRailHydrationPending] = useState(() => segments.some((segment) => shouldAwaitInitialRailHydration(segment, config)));
     const [selectedRouteId, setSelectedRouteId] = useState(null);
     const [routeAnchor, setRouteAnchor] = useState(null);
+    // Google POI(餐厅/景点 icon)被点击时记录,React 拿 placeId 自行 fetch 详情并渲染卡片
+    const [activePoi, setActivePoi] = useState(null);
     const fallbackToLeaflet = config.googleMaps?.fallbackToLeaflet !== false;
     const handleSelectSpotFromCanvas = (id) => {
         setSelectedRouteId(null);
@@ -45,7 +48,13 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
     const handleMapClickFromCanvas = () => {
         setSelectedRouteId(null);
         setRouteAnchor(null);
+        setActivePoi(null); // 点空白处也关 POI 卡
         onMapClick();
+    };
+    const handlePoiClick = (placeId, position) => {
+        setSelectedRouteId(null);
+        setRouteAnchor(null);
+        setActivePoi({ placeId, lat: position.lat, lng: position.lng });
     };
     const handleRouteClick = (id, anchor) => {
         setSelectedRouteId(id);
@@ -62,6 +71,7 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
         onMapClick: handleMapClickFromCanvas,
         onSpotPopupClose: handleSpotPopupClose,
         onRouteClick: handleRouteClick,
+        onPoiClick: handlePoiClick,
     });
     useEffect(() => {
         callbacksRef.current = {
@@ -69,6 +79,7 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
             onMapClick: handleMapClickFromCanvas,
             onSpotPopupClose: handleSpotPopupClose,
             onRouteClick: handleRouteClick,
+            onPoiClick: handlePoiClick,
         };
     }, [onMapClick, onSelectSpot, selectedSpotId]);
     // 一次性 init(依赖 config 的稳定字段)。
@@ -101,6 +112,7 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
                 onSpotPopupClose: (id) => callbacksRef.current.onSpotPopupClose(id),
                 onMapClick: () => callbacksRef.current.onMapClick(),
                 onRouteClick: (id, anchor) => callbacksRef.current.onRouteClick(id, anchor),
+                onPoiClick: (placeId, pos) => callbacksRef.current.onPoiClick(placeId, pos),
                 onError: (err) => {
                     console.error('[GoogleMapsAdapter] Initialization failed:', err);
                     if (isGoogle) {
@@ -341,7 +353,7 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
                         }, onClose: () => setActiveTool(null) }))] }), _jsx(MapLegend, { dayColors: config.dayColors, isRouteBroken: filter.day !== null ||
                     filter.city !== null ||
                     filter.mustOnly ||
-                    filter.nextOnly, isGoogleMap: mapProvider === 'googleMaps' && !useFallback, hasWalkSegment: segments.some((s) => s.transportType?.toLowerCase?.() === 'walk') }), isMobile ? null : (_jsxs("div", { className: "map-controls", children: [_jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleReset, title: "\u56DE\u5230\u884C\u7A0B\u521D\u59CB\u89C6\u89D2", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u21BA" }), _jsx("span", { className: "ctrl-label", children: "\u91CD\u7F6E\u89C6\u89D2" })] }), _jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleFitToDay, disabled: currentDaySpots.length === 0, title: filter.day === null ? '适配全部可见景点' : `适配第 ${filter.day} 天`, children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u25CE" }), _jsx("span", { className: "ctrl-label", children: filter.day === null ? '适配可见' : '适配当天' })] }), _jsxs("button", { type: "button", className: `ctrl-btn desktop-only ${isListVisible ? 'active' : ''}`, onClick: onToggleList, title: "\u5207\u6362\u65E5\u7A0B\u5217\u8868", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u2261" }), _jsx("span", { className: "ctrl-label", children: isListVisible ? '收起列表' : '显示列表' })] })] })), isMobile ? (_jsx(MobileMapFloatingActions, { onResetView: handleReset, onFitVisible: handleFitToDay, fitDisabled: currentDaySpots.length === 0, onLocate: (coords) => {
+                    filter.nextOnly, isGoogleMap: mapProvider === 'googleMaps' && !useFallback, hasWalkSegment: segments.some((s) => s.transportType?.toLowerCase?.() === 'walk') }), isMobile ? null : (_jsxs("div", { className: "map-controls", children: [_jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleReset, title: "\u56DE\u5230\u884C\u7A0B\u521D\u59CB\u89C6\u89D2", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u21BA" }), _jsx("span", { className: "ctrl-label", children: "\u91CD\u7F6E\u89C6\u89D2" })] }), _jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleFitToDay, disabled: currentDaySpots.length === 0, title: filter.day === null ? '适配全部可见景点' : `适配第 ${filter.day} 天`, children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u25CE" }), _jsx("span", { className: "ctrl-label", children: filter.day === null ? '适配可见' : '适配当天' })] }), _jsxs("button", { type: "button", className: `ctrl-btn desktop-only ${isListVisible ? 'active' : ''}`, onClick: onToggleList, title: "\u5207\u6362\u65E5\u7A0B\u5217\u8868", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u2261" }), _jsx("span", { className: "ctrl-label", children: isListVisible ? '收起列表' : '显示列表' })] })] })), activePoi ? (_jsx(ExternalPoiCard, { placeId: activePoi.placeId, onClose: () => setActivePoi(null) })) : null, isMobile ? (_jsx(MobileMapFloatingActions, { onResetView: handleReset, onFitVisible: handleFitToDay, fitDisabled: currentDaySpots.length === 0, onLocate: (coords) => {
                     if (!coords) {
                         console.warn('[TripMapCanvas] geolocation unavailable');
                         return;
