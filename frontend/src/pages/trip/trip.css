@@ -2660,14 +2660,13 @@
 
   /*
    * P5-E: 任意 sheet 打开时(MobileDrawer / MobileFilterSheet /
-   * MobileRouteDetailSheet),BottomSwitcher 视觉淡化 + 不可点。
-   * 利用 :has() 检查 sheet sibling 是否存在,纯 CSS 实现。
+   * MobileRouteDetailSheet),BottomSwitcher 视觉淡化 — 但保留可点!
+   * 用户再次点对应 tab 应该能切换/关闭 sheet,不能锁死 pointer-events:none。
    */
   .trip-shell-mobile:has(.mobile-drawer) .mobile-trip-bottom-switcher,
   .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .mobile-trip-bottom-switcher,
   .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-trip-bottom-switcher {
-    opacity: 0.4;
-    pointer-events: none;
+    opacity: 0.6;
   }
 
   .mobile-switcher-btn {

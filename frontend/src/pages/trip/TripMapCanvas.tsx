@@ -517,8 +517,13 @@ export function TripMapCanvas({
                   }
                 }
               }}
-              onSelectLocation={(lat, lng) => {
+              onSelectLocation={(lat, lng, _name, placeId) => {
                 controllerRef.current?.setView({ lat, lng }, 15);
+                // 复用 ExternalPoiCard 显示详情(仅 Google Places 结果有 placeId,
+                // Nominatim 没 placeId 就只 setView 飞过去 — 用户至少看到位置在地图哪)
+                if (placeId) {
+                  setActivePoi({ placeId, lat, lng });
+                }
               }}
               onClose={() => setActiveTool(null)}
             />

@@ -51,6 +51,8 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
                                 data: {
                                     lat: p.location?.lat?.(),
                                     lng: p.location?.lng?.(),
+                                    // Google Places id 即 placeId,后续 onSelectLocation 透传给 ExternalPoiCard
+                                    placeId: p.id,
                                 },
                             }));
                             setExternalResults(mapped);
@@ -143,7 +145,10 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
             else if (entry.type === 'external' && onSelectLocation) {
                 const lat = typeof entry.data.lat === 'function' ? entry.data.lat() : entry.data.lat;
                 const lng = typeof entry.data.lng === 'function' ? entry.data.lng() : entry.data.lng;
-                onSelectLocation(lat, lng, entry.title);
+                // 透传 placeId — Google Places 结果有,Nominatim 没;
+                // 上层据此决定显示 ExternalPoiCard(placeId) 还是只 setView
+                const placeId = entry.data.placeId;
+                onSelectLocation(lat, lng, entry.title, placeId);
             }
             onClose?.();
             setConfirmingId(null);
