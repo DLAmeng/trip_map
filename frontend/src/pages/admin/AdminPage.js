@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { exportCurrentToLocal, getTripFull, importLocalToCurrent, updateTripFull, } from '../../api/trip-api';
@@ -78,6 +78,7 @@ export function AdminPage() {
             }, isSyncing: importMutation.isPending || exportMutation.isPending }) }));
 }
 function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onImport, onExport, onReload, isSyncing, }) {
+    const [editorParams, setEditorParams] = useSearchParams();
     const [isReloading, setIsReloading] = useState(false);
     const [savedPayload, setSavedPayload] = useState(initialData);
     const [activeDay, setActiveDay] = useState(() => initialData.spots[0]?.day || 1);
@@ -198,6 +199,36 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
         const id = createClientSpotId();
         handleAddSpot(activeDay, undefined, buildSpotFromPlace({ ...place, id, day: activeDay }));
     };
+    /**
+     * 处理 trip 页 ExternalPoiCard "+ 加入行程" 跳转过来的预填:
+     * URL 含 prefillSpot=encoded({placeId, name, address, lat, lng}) 时,
+     * 调 handleQuickAddPlace 加到 activeDay,然后清掉 URL 参数避免刷新重复加。
+     * 用 ref 防 React.StrictMode 双 mount 时执行两次。
+     */
+    const prefillHandledRef = useRef(false);
+    useEffect(() => {
+        if (prefillHandledRef.current)
+            return;
+        const raw = editorParams.get('prefillSpot');
+        if (!raw)
+            return;
+        try {
+            const parsed = JSON.parse(decodeURIComponent(raw));
+            if (parsed.name && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+                prefillHandledRef.current = true;
+                handleQuickAddPlace({ name: parsed.name, lat: parsed.lat, lng: parsed.lng });
+                addToast('success', '已从地图加入景点', `${parsed.name} 已添加到 Day ${activeDay},记得保存`);
+                // 清掉 URL 参数,刷新不重复加
+                const next = new URLSearchParams(editorParams);
+                next.delete('prefillSpot');
+                setEditorParams(next, { replace: true });
+            }
+        }
+        catch (err) {
+            console.warn('[AdminPage] prefillSpot parse failed:', err);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [editorParams]);
     const handleDeleteSpot = (spotId) => {
         const spot = snapshot.spotById.get(spotId);
         const confirmed = window.confirm(`删除景点“${spot?.name || spotId}”后不可恢复，继续吗？`);

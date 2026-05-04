@@ -55,6 +55,14 @@ interface TripMapCanvasProps {
   isOnline?: boolean;
   /** 手机模式 —— 隐藏左下 `.map-controls`,换成右侧浮动按钮组 */
   isMobile?: boolean;
+  /** ExternalPoiCard "+ 加入行程"按钮回调,由 TripPage 提供 navigate 实现 */
+  onAddPoiToTrip?: (data: {
+    placeId: string;
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+  }) => void;
 }
 
 /**
@@ -86,6 +94,7 @@ export function TripMapCanvas({
   setActiveTool,
   isOnline = true,
   isMobile = false,
+  onAddPoiToTrip,
 }: TripMapCanvasProps) {
   const stageRef = useRef<HTMLElement>(null);
   const toolOverlayRef = useRef<HTMLDivElement>(null);
@@ -584,6 +593,19 @@ export function TripMapCanvas({
           <ExternalPoiCard
             placeId={activePoi.placeId}
             onClose={() => setActivePoi(null)}
+            onAddToTrip={
+              onAddPoiToTrip
+                ? (data) => {
+                    // 把 activePoi 已知的 lat/lng 补到 callback,跨层省再 fetch 一次
+                    onAddPoiToTrip({
+                      ...data,
+                      lat: activePoi.lat,
+                      lng: activePoi.lng,
+                    });
+                    setActivePoi(null);
+                  }
+                : undefined
+            }
           />
         ) : null}
 

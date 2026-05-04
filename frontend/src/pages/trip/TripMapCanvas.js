@@ -26,7 +26,7 @@ import { ExternalPoiCard } from './components/ExternalPoiCard';
  * StrictMode gotcha:cleanup 必须调 controller.destroy() + 置 null,
  * 否则第二次 effect 再 create 会被 Leaflet 抛 "Map container is already initialized"。
  */
-export function TripMapCanvas({ config, spots, segments, spotById, cityNames, filter, onFilterChange, selectedSpotId, onSelectSpot, onMapClick, stats, onToggleList, isListVisible, activeTool, setActiveTool, isOnline = true, isMobile = false, }) {
+export function TripMapCanvas({ config, spots, segments, spotById, cityNames, filter, onFilterChange, selectedSpotId, onSelectSpot, onMapClick, stats, onToggleList, isListVisible, activeTool, setActiveTool, isOnline = true, isMobile = false, onAddPoiToTrip, }) {
     const stageRef = useRef(null);
     const toolOverlayRef = useRef(null);
     const containerRef = useRef(null);
@@ -358,7 +358,17 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
                         }, onClose: () => setActiveTool(null) }))] }), _jsx(MapLegend, { dayColors: config.dayColors, isRouteBroken: filter.day !== null ||
                     filter.city !== null ||
                     filter.mustOnly ||
-                    filter.nextOnly, isGoogleMap: mapProvider === 'googleMaps' && !useFallback, hasWalkSegment: segments.some((s) => s.transportType?.toLowerCase?.() === 'walk') }), isMobile ? null : (_jsxs("div", { className: "map-controls", children: [_jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleReset, title: "\u56DE\u5230\u884C\u7A0B\u521D\u59CB\u89C6\u89D2", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u21BA" }), _jsx("span", { className: "ctrl-label", children: "\u91CD\u7F6E\u89C6\u89D2" })] }), _jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleFitToDay, disabled: currentDaySpots.length === 0, title: filter.day === null ? '适配全部可见景点' : `适配第 ${filter.day} 天`, children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u25CE" }), _jsx("span", { className: "ctrl-label", children: filter.day === null ? '适配可见' : '适配当天' })] }), _jsxs("button", { type: "button", className: `ctrl-btn desktop-only ${isListVisible ? 'active' : ''}`, onClick: onToggleList, title: "\u5207\u6362\u65E5\u7A0B\u5217\u8868", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u2261" }), _jsx("span", { className: "ctrl-label", children: isListVisible ? '收起列表' : '显示列表' })] })] })), activePoi ? (_jsx(ExternalPoiCard, { placeId: activePoi.placeId, onClose: () => setActivePoi(null) })) : null, isMobile ? (_jsx(MobileMapFloatingActions, { onResetView: handleReset, onFitVisible: handleFitToDay, fitDisabled: currentDaySpots.length === 0, onLocate: (coords) => {
+                    filter.nextOnly, isGoogleMap: mapProvider === 'googleMaps' && !useFallback, hasWalkSegment: segments.some((s) => s.transportType?.toLowerCase?.() === 'walk') }), isMobile ? null : (_jsxs("div", { className: "map-controls", children: [_jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleReset, title: "\u56DE\u5230\u884C\u7A0B\u521D\u59CB\u89C6\u89D2", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u21BA" }), _jsx("span", { className: "ctrl-label", children: "\u91CD\u7F6E\u89C6\u89D2" })] }), _jsxs("button", { type: "button", className: "ctrl-btn", onClick: handleFitToDay, disabled: currentDaySpots.length === 0, title: filter.day === null ? '适配全部可见景点' : `适配第 ${filter.day} 天`, children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u25CE" }), _jsx("span", { className: "ctrl-label", children: filter.day === null ? '适配可见' : '适配当天' })] }), _jsxs("button", { type: "button", className: `ctrl-btn desktop-only ${isListVisible ? 'active' : ''}`, onClick: onToggleList, title: "\u5207\u6362\u65E5\u7A0B\u5217\u8868", children: [_jsx("span", { className: "ctrl-icon", "aria-hidden": "true", children: "\u2261" }), _jsx("span", { className: "ctrl-label", children: isListVisible ? '收起列表' : '显示列表' })] })] })), activePoi ? (_jsx(ExternalPoiCard, { placeId: activePoi.placeId, onClose: () => setActivePoi(null), onAddToTrip: onAddPoiToTrip
+                    ? (data) => {
+                        // 把 activePoi 已知的 lat/lng 补到 callback,跨层省再 fetch 一次
+                        onAddPoiToTrip({
+                            ...data,
+                            lat: activePoi.lat,
+                            lng: activePoi.lng,
+                        });
+                        setActivePoi(null);
+                    }
+                    : undefined })) : null, isMobile ? (_jsx(MobileMapFloatingActions, { onResetView: handleReset, onFitVisible: handleFitToDay, fitDisabled: currentDaySpots.length === 0, onLocate: (coords) => {
                     if (!coords) {
                         console.warn('[TripMapCanvas] geolocation unavailable');
                         return;

@@ -2,7 +2,7 @@ import 'leaflet/dist/leaflet.css';
 import './trip.css';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getTripFull, DEFAULT_TRIP_ID } from '../../api/trip-api';
 import { normalizeTripData, computeStats } from '../../selectors/tripSelectors';
@@ -35,7 +35,21 @@ import { useIsMobile } from '../../hooks/useIsMobile';
  */
 export function TripPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const tripId = params.get('id') || DEFAULT_TRIP_ID;
+
+  /**
+   * ExternalPoiCard "+ 加入行程"按钮回调:
+   * 跳转到 admin 编辑器,带上 prefillSpot URL 参数(JSON encoded)。
+   * AdminPage 在 mount 时读这个参数,自动打开新建表单并预填名称/坐标/placeId。
+   */
+  const handleAddPoiToTrip = useCallback(
+    (data: { placeId: string; name: string; address: string; lat: number; lng: number }) => {
+      const prefill = encodeURIComponent(JSON.stringify(data));
+      navigate(`/admin?id=${encodeURIComponent(tripId)}&prefillSpot=${prefill}`);
+    },
+    [navigate, tripId],
+  );
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ['trip', tripId],
@@ -246,6 +260,7 @@ export function TripPage() {
           setActiveTool={setActiveTool}
           isOnline={isOnline}
           isMobile={isMobile}
+          onAddPoiToTrip={handleAddPoiToTrip}
         />
         {isListVisible && (
           <>

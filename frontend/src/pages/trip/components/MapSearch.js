@@ -150,6 +150,11 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
                 const placeId = entry.data.placeId;
                 onSelectLocation(lat, lng, entry.title, placeId);
             }
+            // 清空查询和结果,让 popover 隐藏(移动端 search bar 永远在,
+            // 仅靠 onClose 不够 —— popover 是基于 query 渲染的)
+            setQuery('');
+            setExternalResults([]);
+            inputRef.current?.blur();
             onClose?.();
             setConfirmingId(null);
         }, 150);

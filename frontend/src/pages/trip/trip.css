@@ -1180,6 +1180,19 @@
   background: rgba(0, 0, 0, 0.08);
 }
 
+/* 加入行程主按钮 — 暖色 accent 强调,提示这是主操作 */
+.external-poi-action-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 800;
+}
+
+.external-poi-action-primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
 .external-poi-loading {
   padding: 16px 14px;
 }

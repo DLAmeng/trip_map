@@ -6,6 +6,16 @@ interface ExternalPoiCardProps {
   placeId: string;
   /** 关闭卡片回调(用户点 × 或外层 setActivePoi(null)) */
   onClose: () => void;
+  /**
+   * "+ 加入行程"按钮回调,带上当前 fetch 到的地点详情。
+   * 上层(TripMapCanvas)实现:navigate 到 admin 页 + URL 预填新建 spot。
+   * 不传则不显示该按钮。
+   */
+  onAddToTrip?: (data: {
+    placeId: string;
+    name: string;
+    address: string;
+  }) => void;
 }
 
 interface PoiDetails {
@@ -35,7 +45,7 @@ interface PoiDetails {
  *           full width minus 24px,圆角 20px
  *   位置由 CSS 控制,组件内不做 layout 计算。
  */
-export function ExternalPoiCard({ placeId, onClose }: ExternalPoiCardProps) {
+export function ExternalPoiCard({ placeId, onClose, onAddToTrip }: ExternalPoiCardProps) {
   const [loading, setLoading] = useState(true);
   const [details, setDetails] = useState<PoiDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -139,16 +149,35 @@ export function ExternalPoiCard({ placeId, onClose }: ExternalPoiCardProps) {
             {details.address ? (
               <div className="external-poi-address">{details.address}</div>
             ) : null}
+            {/* 主操作:加入行程(primary) — 总是显示,跳转 admin 编辑器预填 */}
+            {onAddToTrip ? (
+              <div className="external-poi-actions">
+                <button
+                  type="button"
+                  className="external-poi-action external-poi-action-primary"
+                  onClick={() =>
+                    onAddToTrip({
+                      placeId,
+                      name: details.name,
+                      address: details.address,
+                    })
+                  }
+                >
+                  ＋ 加入行程
+                </button>
+              </div>
+            ) : null}
+            {/* 次操作:在 Google 地图打开 / 官方网站 */}
             {(details.googleMapsUri || details.websiteUri) ? (
               <div className="external-poi-actions">
                 {details.googleMapsUri ? (
                   <a
-                    className="external-poi-action"
+                    className="external-poi-action external-poi-action-secondary"
                     href={details.googleMapsUri}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    在 Google 地图打开
+                    Google 地图
                   </a>
                 ) : null}
                 {details.websiteUri ? (
