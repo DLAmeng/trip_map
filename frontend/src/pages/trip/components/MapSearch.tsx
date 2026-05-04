@@ -152,17 +152,25 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
     }
   }, [query, onClose]);
 
+  // P5-L: 用户点中结果后,先标记 confirming(列表项加 .is-confirming 高亮),
+  // 150ms 后再触发实际的 onSelect/onClose,让用户看到点击反馈而非"刚点完就消失"
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
   const handleSelect = useCallback((entry: SearchEntry) => {
-    if (entry.type === 'spot') {
-      onSelectSpot(entry.id);
-    } else if (entry.type === 'route') {
-      onSelectRoute(entry.id);
-    } else if (entry.type === 'external' && onSelectLocation) {
-      const lat = typeof entry.data.lat === 'function' ? entry.data.lat() : entry.data.lat;
-      const lng = typeof entry.data.lng === 'function' ? entry.data.lng() : entry.data.lng;
-      onSelectLocation(lat, lng, entry.title);
-    }
-    onClose?.();
+    setConfirmingId(`${entry.type}-${entry.id}`);
+    window.setTimeout(() => {
+      if (entry.type === 'spot') {
+        onSelectSpot(entry.id);
+      } else if (entry.type === 'route') {
+        onSelectRoute(entry.id);
+      } else if (entry.type === 'external' && onSelectLocation) {
+        const lat = typeof entry.data.lat === 'function' ? entry.data.lat() : entry.data.lat;
+        const lng = typeof entry.data.lng === 'function' ? entry.data.lng() : entry.data.lng;
+        onSelectLocation(lat, lng, entry.title);
+      }
+      onClose?.();
+      setConfirmingId(null);
+    }, 150);
   }, [onSelectSpot, onSelectRoute, onSelectLocation, onClose]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -239,10 +247,12 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
               const isRoute = result.type === 'route';
               const isExternal = result.type === 'external';
 
+              const itemKey = `${result.type}-${result.id}`;
+              const isConfirming = confirmingId === itemKey;
               return (
                 <button
-                  key={`${result.type}-${result.id}`}
-                  className={`search-result-item ${index === selectedIndex ? 'is-selected' : ''}`}
+                  key={itemKey}
+                  className={`search-result-item ${index === selectedIndex ? 'is-selected' : ''}${isConfirming ? ' is-confirming' : ''}`}
                   onClick={() => handleSelect(result)}
                   onMouseMove={() => setSelectedIndex(index)}
                   type="button"

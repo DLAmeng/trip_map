@@ -1839,7 +1839,24 @@
     justify-content: center;
     padding: 12px 16px 8px;
     cursor: grab;
+    /* 触屏专用:这里独占 vertical 拖拽手势,浏览器不再尝试 scroll 干预 */
     touch-action: none;
+  }
+
+  .drawer-handle-wrap:active {
+    cursor: grabbing;
+  }
+
+  /* P5-D: handle hit area 加大,让 4px 灰条变成 44px 触控目标 */
+  .drawer-handle-wrap::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 28px;
+    pointer-events: none;
   }
 
   .drawer-handle {
@@ -1847,6 +1864,12 @@
     height: 5px;
     border-radius: 999px;
     background: rgba(110, 101, 90, 0.28);
+    transition: background 150ms ease, width 150ms ease;
+  }
+
+  .drawer-handle-wrap:active .drawer-handle {
+    background: rgba(110, 101, 90, 0.55);
+    width: 56px;
   }
 
   .drawer-header {
@@ -1891,6 +1914,11 @@
     min-height: 0;
     scroll-behavior: smooth;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 92px);
+    /* P5-D: drawer 内容区只允许垂直 native scroll,不再被 sheet drag 干预,
+       避免"边缘手势模糊" — 浏览器明确知道这里 vertical pan 是 scroll content */
+    touch-action: pan-y;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   /*
@@ -2134,6 +2162,14 @@
   background: linear-gradient(180deg, rgba(238, 248, 249, 0.96), rgba(248, 252, 251, 0.92));
 }
 
+/* P5-L: 用户点中后短暂的"已确认"反馈,150ms 后 popover 关闭 */
+.search-result-item.is-confirming {
+  background: var(--ocean-soft);
+  border-color: rgba(35, 111, 122, 0.40);
+  transform: scale(0.985);
+  box-shadow: 0 6px 14px rgba(35, 111, 122, 0.16);
+}
+
 .search-result-top {
   display: flex;
   align-items: flex-start;
@@ -2301,6 +2337,24 @@
     border: var(--m-layer-border);
     border-radius: var(--m-layer-radius);
     box-shadow: var(--m-layer-shadow);
+    /* P5-J: 防 iOS Safari 滚动抖动 + P5-F1: 滑动收缩过渡 */
+    will-change: transform;
+    transition: transform 240ms cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 200ms ease;
+  }
+
+  /*
+   * P5-F1: HeaderCard 自动收缩 — 任何全屏浮层(sheet / popover / poi card)打开时,
+   * 上滑隐藏给地图腾出 ~52px,关闭后自动展开。纯 CSS :has,无需 React state。
+   */
+  .trip-shell-mobile:has(.mobile-drawer) .mobile-trip-context-card,
+  .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .mobile-trip-context-card,
+  .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-trip-context-card,
+  .trip-shell-mobile:has(.external-poi-card) .mobile-trip-context-card,
+  .trip-shell-mobile:has(.search-results-popover) .mobile-trip-context-card {
+    transform: translateY(-110%);
+    opacity: 0;
+    pointer-events: none;
   }
 
   .mobile-map-search-bar.is-active {
@@ -2391,7 +2445,40 @@
     -webkit-backdrop-filter: blur(16px);
     border: var(--m-layer-border);
     box-shadow: var(--m-layer-shadow);
-    transition: box-shadow 160ms ease, background 160ms ease;
+    transition: box-shadow 160ms ease, background 160ms ease,
+      top 240ms cubic-bezier(0.4, 0, 0.2, 1);
+    /* P5-J: 防 iOS Safari 滚动抖动 */
+    will-change: transform;
+  }
+
+  /* P5-F1: header 收起时,SearchBar 上移到原 HeaderCard 位置(顶部空出 ~52px) */
+  .trip-shell-mobile:has(.mobile-drawer) .mobile-map-search-bar,
+  .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .mobile-map-search-bar,
+  .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-map-search-bar,
+  .trip-shell-mobile:has(.external-poi-card) .mobile-map-search-bar,
+  .trip-shell-mobile:has(.search-results-popover) .mobile-map-search-bar {
+    top: calc(var(--m-top-safe) + var(--m-top-offset));
+  }
+
+  /*
+   * P5-A: 移动端搜索激活时(popover 出现时),地图加一层 dim backdrop。
+   * 视觉强化"我在搜索"状态。点 backdrop 不主动关闭(因为 .map-search 自身
+   * 已有 ✕ 按钮),只是视觉淡化。
+   * 用 :has 选择器检测 popover 是否在 DOM,纯 CSS。
+   */
+  .trip-shell-mobile:has(.search-results-popover) .map-canvas::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.32);
+    z-index: 800;
+    pointer-events: none;
+    animation: trip-search-backdrop-fade 200ms ease-out;
+  }
+
+  @keyframes trip-search-backdrop-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   .mobile-trip-ctx-btn {
@@ -2458,7 +2545,10 @@
     z-index: 1200;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    /* P5-G: gap 8 → 12,跨手指误触防护 */
+    gap: 12px;
+    /* P5-J: 防 iOS Safari 滚动时浮层抖动 */
+    will-change: transform;
   }
 
   .mobile-map-fab {
@@ -2521,6 +2611,27 @@
     height: 90px;
   }
 
+  /* P5-C: 移动端动作按钮触控区扩大到 44px,符合 iOS HIG */
+  .external-poi-card .external-poi-action {
+    min-height: 44px;
+    font-size: 0.85rem;
+  }
+
+  /* P5-H: 移动端 Spot popup × 关闭按钮触控区扩大 */
+  .leaflet-popup-close-button {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 8px !important;
+    font-size: 18px !important;
+    line-height: 16px !important;
+    border-radius: 50% !important;
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  .leaflet-popup-close-button:hover {
+    background: rgba(0, 0, 0, 0.10) !important;
+  }
+
   .mobile-map-fab-primary:active {
     background: rgba(15, 23, 42, 0.94);
   }
@@ -2542,6 +2653,21 @@
     border: var(--m-layer-border);
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -8px 22px rgba(61, 35, 19, 0.12);
+    /* P5-J: 防 iOS Safari 滚动抖动 */
+    will-change: transform;
+    transition: opacity 200ms ease;
+  }
+
+  /*
+   * P5-E: 任意 sheet 打开时(MobileDrawer / MobileFilterSheet /
+   * MobileRouteDetailSheet),BottomSwitcher 视觉淡化 + 不可点。
+   * 利用 :has() 检查 sheet sibling 是否存在,纯 CSS 实现。
+   */
+  .trip-shell-mobile:has(.mobile-drawer) .mobile-trip-bottom-switcher,
+  .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .mobile-trip-bottom-switcher,
+  .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-trip-bottom-switcher {
+    opacity: 0.4;
+    pointer-events: none;
   }
 
   .mobile-switcher-btn {

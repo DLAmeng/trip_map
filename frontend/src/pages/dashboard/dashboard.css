@@ -732,10 +732,18 @@
   border-radius: 999px;
   font-size: 0.85rem;
   box-shadow: var(--shadow-md);
-  z-index: 1000;
+  /* z-index 1600 比 mobile-trip-bottom-switcher (1500) 高,移动端 trip 页能看见 */
+  z-index: 1600;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* P5-B: 移动端 trip 页 toast 避让 mobile-trip-bottom-switcher (~78px 高 + safe area) */
+@media (max-width: 1024px) {
+  .toast {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+  }
 }
 
 .toast.is-error {

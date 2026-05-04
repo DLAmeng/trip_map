@@ -128,19 +128,26 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
             onClose?.();
         }
     }, [query, onClose]);
+    // P5-L: 用户点中结果后,先标记 confirming(列表项加 .is-confirming 高亮),
+    // 150ms 后再触发实际的 onSelect/onClose,让用户看到点击反馈而非"刚点完就消失"
+    const [confirmingId, setConfirmingId] = useState(null);
     const handleSelect = useCallback((entry) => {
-        if (entry.type === 'spot') {
-            onSelectSpot(entry.id);
-        }
-        else if (entry.type === 'route') {
-            onSelectRoute(entry.id);
-        }
-        else if (entry.type === 'external' && onSelectLocation) {
-            const lat = typeof entry.data.lat === 'function' ? entry.data.lat() : entry.data.lat;
-            const lng = typeof entry.data.lng === 'function' ? entry.data.lng() : entry.data.lng;
-            onSelectLocation(lat, lng, entry.title);
-        }
-        onClose?.();
+        setConfirmingId(`${entry.type}-${entry.id}`);
+        window.setTimeout(() => {
+            if (entry.type === 'spot') {
+                onSelectSpot(entry.id);
+            }
+            else if (entry.type === 'route') {
+                onSelectRoute(entry.id);
+            }
+            else if (entry.type === 'external' && onSelectLocation) {
+                const lat = typeof entry.data.lat === 'function' ? entry.data.lat() : entry.data.lat;
+                const lng = typeof entry.data.lng === 'function' ? entry.data.lng() : entry.data.lng;
+                onSelectLocation(lat, lng, entry.title);
+            }
+            onClose?.();
+            setConfirmingId(null);
+        }, 150);
     }, [onSelectSpot, onSelectRoute, onSelectLocation, onClose]);
     const handleKeyDown = (e) => {
         if (e.key === 'ArrowDown') {
@@ -178,6 +185,8 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
                             const isSpot = result.type === 'spot';
                             const isRoute = result.type === 'route';
                             const isExternal = result.type === 'external';
-                            return (_jsx("button", { className: `search-result-item ${index === selectedIndex ? 'is-selected' : ''}`, onClick: () => handleSelect(result), onMouseMove: () => setSelectedIndex(index), type: "button", role: "option", "aria-selected": index === selectedIndex, children: _jsxs("span", { className: "search-result-top", children: [_jsxs("span", { className: "search-result-copy", children: [_jsx("span", { className: "search-result-title", children: result.title }), result.subtitle && _jsx("span", { className: "search-result-subtitle", children: result.subtitle })] }), _jsxs("span", { className: "search-result-badges", children: [_jsx("span", { className: `search-result-badge ${isRoute ? 'search-result-badge-route' : isExternal ? 'search-result-badge-place' : ''}`, children: isSpot ? '行程内' : isRoute ? '路线' : '外部地点' }), result.day > 0 && _jsxs("span", { className: "search-result-badge", children: ["Day ", result.day] })] })] }) }, `${result.type}-${result.id}`));
+                            const itemKey = `${result.type}-${result.id}`;
+                            const isConfirming = confirmingId === itemKey;
+                            return (_jsx("button", { className: `search-result-item ${index === selectedIndex ? 'is-selected' : ''}${isConfirming ? ' is-confirming' : ''}`, onClick: () => handleSelect(result), onMouseMove: () => setSelectedIndex(index), type: "button", role: "option", "aria-selected": index === selectedIndex, children: _jsxs("span", { className: "search-result-top", children: [_jsxs("span", { className: "search-result-copy", children: [_jsx("span", { className: "search-result-title", children: result.title }), result.subtitle && _jsx("span", { className: "search-result-subtitle", children: result.subtitle })] }), _jsxs("span", { className: "search-result-badges", children: [_jsx("span", { className: `search-result-badge ${isRoute ? 'search-result-badge-route' : isExternal ? 'search-result-badge-place' : ''}`, children: isSpot ? '行程内' : isRoute ? '路线' : '外部地点' }), result.day > 0 && _jsxs("span", { className: "search-result-badge", children: ["Day ", result.day] })] })] }) }, itemKey));
                         }) })] }))] }));
 }
