@@ -685,10 +685,17 @@ a.btn {
   padding: 20px;
 }
 
+/*
+ * P6 重构 admin 布局:
+ * - 双列 grid:左 main-column(PlannerBoard 当前 day + Inspector)/ 右 map-column(sticky 地图)
+ * - 地图右列 sticky 跟随滚动,用户编辑 PlannerBoard 时地图始终可见,加 spot 立即看到 marker
+ * - PlannerBoard 内部只渲染 active day 的 lane,顶部 DayTabs 切换其他天
+ *   页面高度从 9763px → ~1500px,体验质变
+ */
 .planner-layout {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(360px, 440px);
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
   gap: 22px;
   align-items: start;
 }
@@ -697,6 +704,104 @@ a.btn {
   display: grid;
   gap: 18px;
   min-width: 0;
+}
+
+/* 右列地图 sticky — 顶部留 16px 让 SaveBar 也能透出来 */
+.planner-map-column {
+  position: sticky;
+  top: 16px;
+  /* 占满 viewport 减去顶部安全区,内部 .admin-trip-map-panel 自己控高 */
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.planner-map-column > .admin-trip-map-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+/* ============ Day Tabs (PlannerBoard 顶部切换) ============ */
+
+.planner-day-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 16px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--admin-line);
+  border-radius: 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.planner-day-tab {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 52px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, transform 150ms ease;
+  font-family: inherit;
+}
+
+.planner-day-tab:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--admin-text);
+}
+
+.planner-day-tab.is-active {
+  background: var(--planner-day-color, var(--admin-accent));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
+}
+
+.planner-day-tab-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+.planner-day-tab-count {
+  font-size: 0.65rem;
+  font-weight: 700;
+  opacity: 0.75;
+  line-height: 1;
+}
+
+.planner-day-tab.is-active .planner-day-tab-count {
+  opacity: 0.92;
+}
+
+/* ============ 移动 / 平板 (< 1024px) 单列堆叠,地图回到 main-column 下方 ============ */
+
+@media (max-width: 1024px) {
+  .planner-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .planner-map-column {
+    position: static;
+    max-height: none;
+  }
+  .planner-map-column > .admin-trip-map-panel {
+    min-height: 420px;
+  }
 }
 
 .planner-toolbar-panel {

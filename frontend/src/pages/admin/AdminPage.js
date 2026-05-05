@@ -387,11 +387,11 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
                                 }, onClearDay: handleClearDay, onAutoSortDay: (day) => {
                                     autoSortDay(day);
                                     setInlineMessage(`Day ${day} 已按地图距离重新排序`);
-                                } }), _jsx(AdminTripMap, { config: payload.config, days: snapshot.days, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, activeDay: activeDay, isAddMode: isMapAddMode, onToggleAddMode: () => setIsMapAddMode((value) => !value), onSelectSpot: selectSpot, onSelectSegment: selectSegment, onAddSpotAtPoint: handleMapAddSpot, onUpdateSpotPosition: (spotId, lat, lng) => updateSpot(spotId, { lat, lng }) })] }), _jsx(PlannerInspector, { meta: payload.meta, spots: payload.spots, selectedSpot: selectedSpot, selectedSegment: selectedSegment, spotById: snapshot.spotById, onUpdateMeta: updateMeta, onUpdateSpot: updateSpot, onDeleteSpot: handleDeleteSpot, onUpdateLeg: updateLeg, onResetLeg: resetLeg, onDeleteDetachedSegment: deleteDetachedSegment, onFocusSpot: selectSpot, onAddImportedSpots: (spots) => {
-                            addSpots(spots);
-                            if (spots[0]?.day) {
-                                setActiveDay(spots[0].day);
-                            }
-                            addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-                        } })] })] }));
+                                } }), _jsx(PlannerInspector, { meta: payload.meta, spots: payload.spots, selectedSpot: selectedSpot, selectedSegment: selectedSegment, spotById: snapshot.spotById, onUpdateMeta: updateMeta, onUpdateSpot: updateSpot, onDeleteSpot: handleDeleteSpot, onUpdateLeg: updateLeg, onResetLeg: resetLeg, onDeleteDetachedSegment: deleteDetachedSegment, onFocusSpot: selectSpot, onAddImportedSpots: (spots) => {
+                                    addSpots(spots);
+                                    if (spots[0]?.day) {
+                                        setActiveDay(spots[0].day);
+                                    }
+                                    addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
+                                } })] }), _jsx("div", { className: "planner-map-column", children: _jsx(AdminTripMap, { config: payload.config, days: snapshot.days, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, activeDay: activeDay, isAddMode: isMapAddMode, onToggleAddMode: () => setIsMapAddMode((value) => !value), onSelectSpot: selectSpot, onSelectSegment: selectSegment, onAddSpotAtPoint: handleMapAddSpot, onUpdateSpotPosition: (spotId, lat, lng) => updateSpot(spotId, { lat, lng }) }) })] })] }));
 }

@@ -647,6 +647,33 @@ function AdminEditor({
             }}
           />
 
+          {/* P6-D: Inspector 移到 main-column 底部,选中 spot/segment 时展开详情;
+              不再占独立列,让出空间给地图 */}
+          <PlannerInspector
+            meta={payload.meta}
+            spots={payload.spots}
+            selectedSpot={selectedSpot}
+            selectedSegment={selectedSegment}
+            spotById={snapshot.spotById}
+            onUpdateMeta={updateMeta}
+            onUpdateSpot={updateSpot}
+            onDeleteSpot={handleDeleteSpot}
+            onUpdateLeg={updateLeg}
+            onResetLeg={resetLeg}
+            onDeleteDetachedSegment={deleteDetachedSegment}
+            onFocusSpot={selectSpot}
+            onAddImportedSpots={(spots) => {
+              addSpots(spots);
+              if (spots[0]?.day) {
+                setActiveDay(spots[0].day);
+              }
+              addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
+            }}
+          />
+        </div>
+
+        {/* P6-C: 地图独立右列 sticky,滚 main-column 时地图始终可见 */}
+        <div className="planner-map-column">
           <AdminTripMap
             config={payload.config}
             days={snapshot.days}
@@ -661,28 +688,6 @@ function AdminEditor({
             onUpdateSpotPosition={(spotId, lat, lng) => updateSpot(spotId, { lat, lng })}
           />
         </div>
-
-        <PlannerInspector
-          meta={payload.meta}
-          spots={payload.spots}
-          selectedSpot={selectedSpot}
-          selectedSegment={selectedSegment}
-          spotById={snapshot.spotById}
-          onUpdateMeta={updateMeta}
-          onUpdateSpot={updateSpot}
-          onDeleteSpot={handleDeleteSpot}
-          onUpdateLeg={updateLeg}
-          onResetLeg={resetLeg}
-          onDeleteDetachedSegment={deleteDetachedSegment}
-          onFocusSpot={selectSpot}
-          onAddImportedSpots={(spots) => {
-            addSpots(spots);
-            if (spots[0]?.day) {
-              setActiveDay(spots[0].day);
-            }
-            addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-          }}
-        />
       </main>
     </div>
   );

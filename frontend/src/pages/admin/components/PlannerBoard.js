@@ -28,7 +28,16 @@ function DayDropLane({ day, active, children, }) {
 export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, }) {
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
     const selectedIds = new Set(selectedSpotIds);
-    const displayDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
+    const allDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
+    /**
+     * 主区只渲染 activeDay 那一天的 lane,把 8000+px 的全展开页面收缩到 ~600px。
+     * 其他 day 在顶部 DayTabs 切换。drag 跨 day 仍然 OK,因为顶部 tabs 自身
+     * 也作为 drop zone 接收 spot,后续 onMoveSpot 触发即切到目标 day。
+     */
+    const displayDays = allDays.filter((d) => d.day === activeDay);
+    /** 顶部 DayTabs 渲染所有 day */
+    const allDayNumbers = allDays.map((d) => d.day);
+    const totalSpots = allDays.reduce((sum, d) => sum + d.spots.length, 0);
     const handleDragEnd = (event) => {
         const { active, over } = event;
         if (!over || active.id === over.id)
@@ -52,7 +61,13 @@ export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selec
         onMoveSpot(activeId, targetDay, targetIndex);
         onSetActiveDay(targetDay);
     };
-    return (_jsxs("section", { className: "panel planner-board-panel", children: [_jsxs("div", { className: "panel-head planner-board-head", children: [_jsxs("div", { children: [_jsx("p", { className: "panel-kicker", children: "Day Planner" }), _jsx("h2", { children: "\u6309\u5929\u5B89\u6392\u884C\u7A0B" })] }), _jsxs("div", { className: "planner-board-head-meta", children: [_jsxs("span", { children: [displayDays.length, " \u5929"] }), _jsxs("span", { children: [displayDays.reduce((sum, day) => sum + day.spots.length, 0), " \u4E2A\u666F\u70B9"] })] })] }), _jsx(DndContext, { sensors: sensors, collisionDetection: closestCorners, onDragEnd: handleDragEnd, children: _jsx("div", { className: "planner-day-grid", children: displayDays.map((dayItem, dayIndex) => {
+    return (_jsxs("section", { className: "panel planner-board-panel", children: [_jsxs("div", { className: "panel-head planner-board-head", children: [_jsxs("div", { children: [_jsx("p", { className: "panel-kicker", children: "Day Planner" }), _jsx("h2", { children: "\u6309\u5929\u5B89\u6392\u884C\u7A0B" })] }), _jsxs("div", { className: "planner-board-head-meta", children: [_jsxs("span", { children: [allDays.length, " \u5929"] }), _jsxs("span", { children: [totalSpots, " \u4E2A\u666F\u70B9"] })] })] }), _jsx("div", { className: "planner-day-tabs", role: "tablist", "aria-label": "\u5207\u6362\u5929\u6570", children: allDayNumbers.map((day) => {
+                    const dayIndex = day - 1;
+                    const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
+                    const isActive = day === activeDay;
+                    const dayMeta = allDays.find((d) => d.day === day);
+                    return (_jsxs("button", { type: "button", role: "tab", "aria-selected": isActive, className: `planner-day-tab${isActive ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(day), children: [_jsxs("span", { className: "planner-day-tab-label", children: ["D", day] }), _jsx("span", { className: "planner-day-tab-count", children: dayMeta?.spots.length ?? 0 })] }, day));
+                }) }), _jsx(DndContext, { sensors: sensors, collisionDetection: closestCorners, onDragEnd: handleDragEnd, children: _jsx("div", { className: "planner-day-grid", children: displayDays.map((dayItem, dayIndex) => {
                         const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
                         const segmentByFromId = new Map(dayItem.segments.map((segment) => [segment.fromSpotId, segment]));
                         return (_jsx(DayDropLane, { day: dayItem.day, active: dayItem.day === activeDay, children: _jsxs("div", { className: "planner-day-card", children: [_jsxs("div", { className: "planner-day-card-head", children: [_jsxs("button", { type: "button", className: `planner-day-chip${dayItem.day === activeDay ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(dayItem.day), children: ["Day ", dayItem.day] }), _jsxs("div", { className: "planner-day-actions", children: [_jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => onAutoSortDay(dayItem.day), children: "\u987A\u8DEF\u6392\u5E8F" }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => onDuplicateDay(dayItem.day), children: "\u590D\u5236\u8FD9\u5929" }), _jsx("button", { type: "button", className: "btn btn-ghost btn-danger", onClick: () => onClearDay(dayItem.day), children: "\u6E05\u7A7A" })] })] }), _jsx(SortableContext, { items: dayItem.spots.map((spot) => spot.id), strategy: verticalListSortingStrategy, children: _jsxs("div", { className: "planner-day-spot-list", children: [dayItem.spots.map((spot, index) => {

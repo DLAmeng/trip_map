@@ -183,7 +183,16 @@ export function PlannerBoard({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const selectedIds = new Set(selectedSpotIds);
-  const displayDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
+  const allDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
+  /**
+   * 主区只渲染 activeDay 那一天的 lane,把 8000+px 的全展开页面收缩到 ~600px。
+   * 其他 day 在顶部 DayTabs 切换。drag 跨 day 仍然 OK,因为顶部 tabs 自身
+   * 也作为 drop zone 接收 spot,后续 onMoveSpot 触发即切到目标 day。
+   */
+  const displayDays = allDays.filter((d) => d.day === activeDay);
+  /** 顶部 DayTabs 渲染所有 day */
+  const allDayNumbers = allDays.map((d) => d.day);
+  const totalSpots = allDays.reduce((sum, d) => sum + d.spots.length, 0);
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -218,9 +227,33 @@ export function PlannerBoard({
           <h2>按天安排行程</h2>
         </div>
         <div className="planner-board-head-meta">
-          <span>{displayDays.length} 天</span>
-          <span>{displayDays.reduce((sum, day) => sum + day.spots.length, 0)} 个景点</span>
+          <span>{allDays.length} 天</span>
+          <span>{totalSpots} 个景点</span>
         </div>
+      </div>
+
+      {/* P6-B: Day Tabs — 横向滚动,点击切换 active day,右侧"+"加 day */}
+      <div className="planner-day-tabs" role="tablist" aria-label="切换天数">
+        {allDayNumbers.map((day) => {
+          const dayIndex = day - 1;
+          const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
+          const isActive = day === activeDay;
+          const dayMeta = allDays.find((d) => d.day === day);
+          return (
+            <button
+              key={day}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              className={`planner-day-tab${isActive ? ' is-active' : ''}`}
+              style={{ '--planner-day-color': dayColor } as CSSProperties}
+              onClick={() => onSetActiveDay(day)}
+            >
+              <span className="planner-day-tab-label">D{day}</span>
+              <span className="planner-day-tab-count">{dayMeta?.spots.length ?? 0}</span>
+            </button>
+          );
+        })}
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
