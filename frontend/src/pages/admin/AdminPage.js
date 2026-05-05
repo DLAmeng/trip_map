@@ -202,11 +202,35 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
     /**
      * 处理 trip 页 ExternalPoiCard "+ 加入行程" 跳转过来的预填:
      * URL 含 prefillSpot=encoded({placeId,name,address,lat,lng,day,insertIndex}) 时,
-     * 调 handleAddSpot(day, insertIndex, partial) 精确插入到用户选的位置,
-     * 然后清掉 URL 参数避免刷新重复加。
+     * 调 handleAddSpot 加到指定位置,然后**自动保存**(让用户切回 trip 页能立刻看到),
+     * 最后清 URL 参数防刷新重复加。
      * 用 ref 防 React.StrictMode 双 mount 时执行两次。
      */
     const prefillHandledRef = useRef(false);
+    const [autoSavePending, setAutoSavePending] = useState(false);
+    // 加 spot 后等 payload 反映新数据(isDirty=true) → 触发自动保存,
+    // 完成后让用户切回 trip 页能立即看到。失败时留在 admin 让用户手动保存。
+    useEffect(() => {
+        if (!autoSavePending)
+            return;
+        if (isSaving)
+            return;
+        if (!isDirty)
+            return; // 等 payload 真正含新 spot
+        setAutoSavePending(false);
+        (async () => {
+            try {
+                const result = await onSave(payload);
+                setSavedPayload(result.payload);
+                acknowledgeSavedPayload(result.payload);
+                addToast('success', '已加入并保存', '回到行程页查看新景点');
+            }
+            catch (err) {
+                addToast('error', '保存失败', `景点已加到 Day ${activeDay},但保存失败:${err.message}`);
+            }
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [autoSavePending, isDirty, isSaving]);
     useEffect(() => {
         if (prefillHandledRef.current)
             return;
@@ -229,7 +253,9 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
                 // 切到目标 day,让用户能看到刚加的 spot
                 setActiveDay(targetDay);
                 const positionLabel = typeof parsed.insertIndex === 'number' ? `第 ${parsed.insertIndex + 1} 位` : '末尾';
-                addToast('success', '已从地图加入景点', `${parsed.name} 已添加到 Day ${targetDay} ${positionLabel},记得保存`);
+                addToast('info', '已加入,正在保存…', `${parsed.name} → Day ${targetDay} ${positionLabel}`);
+                // 触发自动保存(让 trip 页切回后立即能看到)
+                setAutoSavePending(true);
                 // 清掉 URL 参数,刷新不重复加
                 const next = new URLSearchParams(editorParams);
                 next.delete('prefillSpot');
