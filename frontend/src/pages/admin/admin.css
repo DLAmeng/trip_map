@@ -690,44 +690,18 @@ a.btn {
 }
 
 /*
- * P6 重构 admin 布局:
- * - 双列 grid:左 main-column(PlannerBoard 当前 day + Inspector)/ 右 map-column(sticky 地图)
- * - 地图右列 sticky 跟随滚动,用户编辑 PlannerBoard 时地图始终可见,加 spot 立即看到 marker
- * - PlannerBoard 内部只渲染 active day 的 lane,顶部 DayTabs 切换其他天
- *   页面高度从 9763px → ~1500px,体验质变
+ * P-final-v2: 移除 admin 内置地图后,layout 单列即可。
+ *   PlannerBoard 主区 + SpotInspector 浮卡,无需双列网格。
  */
 .planner-layout {
   margin-top: 24px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(420px, 1fr);
-  gap: 22px;
-  align-items: start;
+  display: block;
 }
 
 .planner-main-column {
   display: grid;
   gap: 18px;
   min-width: 0;
-}
-
-/* 右列地图 sticky — 顶部留 16px 让 SaveBar 也能透出来 */
-.planner-map-column {
-  position: sticky;
-  top: 16px;
-  /* 占满 viewport 减去顶部安全区,内部 .admin-trip-map-panel 自己控高 */
-  max-height: calc(100vh - 32px);
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.planner-map-column > .admin-trip-map-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 600px;
-  max-height: 100%;
-  overflow: hidden;
 }
 
 /* ============ Day Tabs (PlannerBoard 顶部切换) ============ */
@@ -793,20 +767,6 @@ a.btn {
   opacity: 0.92;
 }
 
-/* ============ 移动 / 平板 (< 1024px) 单列堆叠,地图回到 main-column 下方 ============ */
-
-@media (max-width: 1024px) {
-  .planner-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .planner-map-column {
-    position: static;
-    max-height: none;
-  }
-  .planner-map-column > .admin-trip-map-panel {
-    min-height: 420px;
-  }
-}
 
 .planner-toolbar-panel {
   margin-top: 0;
@@ -1945,71 +1905,6 @@ a.btn {
   }
 }
 
-/* AdminMapSheet — 仅移动端,collapsed/half/full 三档 */
-.admin-map-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1100;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 24px 24px 0 0;
-  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.16);
-  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-}
-
-.admin-map-sheet-handle-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px 6px;
-  cursor: pointer;
-  touch-action: none;
-}
-
-.admin-map-sheet-handle {
-  width: 46px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(110, 101, 90, 0.32);
-}
-
-.admin-map-sheet-peek-label {
-  margin-top: 4px;
-  font-size: 0.74rem;
-  color: var(--admin-muted);
-  font-weight: 700;
-}
-
-.admin-map-sheet-content {
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.admin-map-sheet-content > .admin-trip-map-panel {
-  width: 100%;
-  height: 100%;
-}
-
-@media (min-width: 1024px) {
-  /* 桌面 AdminMapSheet 透传 children,不应用 sheet 样式 */
-  .admin-map-sheet {
-    position: static;
-    transform: none !important;
-    height: auto !important;
-    box-shadow: none;
-    border-radius: 0;
-  }
-  .admin-map-sheet-handle-wrap {
-    display: none;
-  }
-}
-
 /* PlannerBoard 内 day card 改进 */
 .planner-day-quick-add {
   margin: 8px 0 12px;
@@ -2075,28 +1970,16 @@ a.btn {
   background: rgba(184, 92, 56, 0.08);
 }
 
-/* 移动端:planner-layout 单列 + map sheet 占底 */
+/* 移动端:admin 现已无地图,planner-layout block 即单列;留 padding-bottom 给 BulkToolbar */
 @media (max-width: 1023.98px) {
   .planner-layout {
-    /* 关键:用 minmax(0, 1fr) 而非 1fr,后者等价于 minmax(auto, 1fr),
-       auto = min-content 会被子项的 min-content(input/header 长文本等)撑开,
-       导致 board-panel 宽度突破 viewport */
-    grid-template-columns: minmax(0, 1fr) !important;
-    /* 给底部 map sheet collapsed peek + bulk toolbar 留空间 */
-    padding-bottom: 200px;
+    padding-bottom: 80px;
   }
   .planner-main-column {
     min-width: 0;
   }
   .planner-board-panel {
     min-width: 0;
-    /* 进一步保险:overflow-hidden 防内部超宽 */
     overflow: hidden;
-  }
-  .planner-map-column {
-    /* 移动:容器位置不重要,内部 admin-map-sheet 是 fixed */
-    position: static !important;
-    max-height: none !important;
-    min-width: 0;
   }
 }

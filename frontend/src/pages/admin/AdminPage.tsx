@@ -11,12 +11,9 @@ import type { SpotItem, TripFullPayload, UpdateTripResult } from '../../types/tr
 import { normalizeTripForSave } from '../../utils/trip-normalize';
 import type { TripIssue } from '../../utils/trip-analysis';
 import { useBeforeUnload } from '../../hooks/useBeforeUnload';
-import { useIsMobile } from '../../hooks/useIsMobile';
 import { analyzeTripFeasibility } from '../../utils/trip-analysis';
 import { AdminHeader } from './components/AdminHeader';
 import { AdminToastStack, type AdminToast } from './components/AdminToastStack';
-import { AdminTripMap } from './components/AdminTripMap';
-import { AdminMapSheet } from './components/AdminMapSheet';
 import { AdminSettingsSheet } from './components/AdminSettingsSheet';
 import { BulkActionsToolbar } from './components/BulkActionsToolbar';
 import { ConflictsModal } from './components/ConflictsModal';
@@ -160,14 +157,12 @@ function AdminEditor({
   isSyncing,
 }: AdminEditorProps) {
   const [editorParams, setEditorParams] = useSearchParams();
-  const isMobile = useIsMobile();
   const [isReloading, setIsReloading] = useState(false);
   const [savedPayload, setSavedPayload] = useState(initialData);
   const [activeDay, setActiveDay] = useState<number>(() => initialData.spots[0]?.day || 1);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
   const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
-  const [isMapAddMode, setIsMapAddMode] = useState(false);
   const [bulkTargetDay, setBulkTargetDay] = useState<number>(() => initialData.spots[0]?.day || 1);
   const [inlineMessage, setInlineMessage] = useState<string | null>(null);
   const [toasts, setToasts] = useState<AdminToast[]>([]);
@@ -318,16 +313,6 @@ function AdminEditor({
     addSpot(day, { ...partial, id }, index);
     selectSpot(id);
     setInlineMessage(`已在 Day ${day} 新增景点`);
-  };
-
-  const handleMapAddSpot = (lat: number, lng: number) => {
-    handleAddSpot(activeDay, undefined, {
-      name: `Day ${activeDay} 新景点`,
-      lat,
-      lng,
-      day: activeDay,
-    });
-    addToast('info', '已从地图新增景点', '你可以继续拖动 marker 微调位置。');
   };
 
   const handleQuickAddPlace = (place: {
@@ -600,24 +585,6 @@ function AdminEditor({
           />
         </div>
 
-        {/* 地图:桌面 sticky 右列 / 移动 bottom sheet(由 AdminMapSheet 控制) */}
-        <div className="planner-map-column">
-          <AdminMapSheet isMobile={isMobile}>
-            <AdminTripMap
-              config={payload.config}
-              days={snapshot.days}
-              selectedSpotId={selectedSpotId}
-              selectedSegmentId={selectedSegmentId}
-              activeDay={activeDay}
-              isAddMode={isMapAddMode}
-              onToggleAddMode={() => setIsMapAddMode((value) => !value)}
-              onSelectSpot={selectSpot}
-              onSelectSegment={selectSegment}
-              onAddSpotAtPoint={handleMapAddSpot}
-              onUpdateSpotPosition={(spotId, lat, lng) => updateSpot(spotId, { lat, lng })}
-            />
-          </AdminMapSheet>
-        </div>
       </main>
 
       {/* === 浮层 / 弹层(平时不渲染) === */}
