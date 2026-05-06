@@ -37,6 +37,10 @@ html:has(.admin-page-bg) {
   width: 100%;
   margin: 0 auto;
   padding: var(--page-py, 20px) var(--page-px, 20px) 72px;
+  /* P-final-fix: 兜底防移动端 grid/flex 子项 min-content 把容器撑开,
+     超出部分在父级被裁断,而不是引起整个 body 横向滚 */
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .eyebrow {
@@ -891,6 +895,8 @@ a.btn {
   padding: 16px;
   display: grid;
   gap: 12px;
+  /* P-final-fix: 防 grid item min-content 撑开父容器 */
+  min-width: 0;
 }
 
 .planner-day-card-head {
@@ -899,6 +905,7 @@ a.btn {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .planner-day-chip {
@@ -936,11 +943,13 @@ a.btn {
 .planner-day-spot-list {
   display: grid;
   gap: 12px;
+  min-width: 0;
 }
 
 .planner-day-spot-wrap {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .planner-spot-card {
@@ -952,6 +961,7 @@ a.btn {
   gap: 10px;
   cursor: pointer;
   transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+  min-width: 0;
 }
 
 .planner-spot-card:hover {
@@ -2068,13 +2078,25 @@ a.btn {
 /* 移动端:planner-layout 单列 + map sheet 占底 */
 @media (max-width: 1023.98px) {
   .planner-layout {
-    grid-template-columns: 1fr !important;
+    /* 关键:用 minmax(0, 1fr) 而非 1fr,后者等价于 minmax(auto, 1fr),
+       auto = min-content 会被子项的 min-content(input/header 长文本等)撑开,
+       导致 board-panel 宽度突破 viewport */
+    grid-template-columns: minmax(0, 1fr) !important;
     /* 给底部 map sheet collapsed peek + bulk toolbar 留空间 */
     padding-bottom: 200px;
+  }
+  .planner-main-column {
+    min-width: 0;
+  }
+  .planner-board-panel {
+    min-width: 0;
+    /* 进一步保险:overflow-hidden 防内部超宽 */
+    overflow: hidden;
   }
   .planner-map-column {
     /* 移动:容器位置不重要,内部 admin-map-sheet 是 fixed */
     position: static !important;
     max-height: none !important;
+    min-width: 0;
   }
 }
