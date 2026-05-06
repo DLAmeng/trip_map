@@ -11,14 +11,19 @@ import type { SpotItem, TripFullPayload, UpdateTripResult } from '../../types/tr
 import { normalizeTripForSave } from '../../utils/trip-normalize';
 import type { TripIssue } from '../../utils/trip-analysis';
 import { useBeforeUnload } from '../../hooks/useBeforeUnload';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { analyzeTripFeasibility } from '../../utils/trip-analysis';
 import { AdminHeader } from './components/AdminHeader';
 import { AdminToastStack, type AdminToast } from './components/AdminToastStack';
 import { AdminTripMap } from './components/AdminTripMap';
+import { AdminMapSheet } from './components/AdminMapSheet';
+import { AdminSettingsSheet } from './components/AdminSettingsSheet';
+import { BulkActionsToolbar } from './components/BulkActionsToolbar';
+import { ConflictsModal } from './components/ConflictsModal';
 import { PlannerBoard } from './components/PlannerBoard';
-import { PlannerInspector } from './components/PlannerInspector';
-import { PlaceSearchAutocomplete } from './components/PlaceSearchAutocomplete';
 import { SaveBar } from './components/SaveBar';
-import { TripAnalysisReport } from './components/TripAnalysisReport';
+import { SegmentInspectorSheet } from './components/SegmentInspectorSheet';
+import { SpotInspectorSheet } from './components/SpotInspectorSheet';
 import { useTripPlannerEditor } from './hooks/useTripPlannerEditor';
 import './admin.css';
 
@@ -155,6 +160,7 @@ function AdminEditor({
   isSyncing,
 }: AdminEditorProps) {
   const [editorParams, setEditorParams] = useSearchParams();
+  const isMobile = useIsMobile();
   const [isReloading, setIsReloading] = useState(false);
   const [savedPayload, setSavedPayload] = useState(initialData);
   const [activeDay, setActiveDay] = useState<number>(() => initialData.spots[0]?.day || 1);
@@ -163,9 +169,11 @@ function AdminEditor({
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
   const [isMapAddMode, setIsMapAddMode] = useState(false);
   const [bulkTargetDay, setBulkTargetDay] = useState<number>(() => initialData.spots[0]?.day || 1);
-  const [bulkTag, setBulkTag] = useState('');
   const [inlineMessage, setInlineMessage] = useState<string | null>(null);
   const [toasts, setToasts] = useState<AdminToast[]>([]);
+  // P-final: 设置 sheet + 冲突 modal 开关
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [conflictsOpen, setConflictsOpen] = useState(false);
 
   const {
     snapshot,
@@ -189,7 +197,6 @@ function AdminEditor({
     moveSelectedToDay,
     copySelectedToDay,
     setSelectedMustVisit,
-    appendTagToSelected,
     deleteSelected,
     undo,
     redo,
@@ -243,6 +250,12 @@ function AdminEditor({
       segments: payload.routeSegments.length,
     };
   }, [payload.routeSegments.length, payload.spots.length, snapshot.days.length]);
+
+  // 冲突数 — SaveBar 红点显示用
+  const issueCount = useMemo(
+    () => analyzeTripFeasibility(payload).issues.length,
+    [payload],
+  );
 
   const dayOptions = useMemo(
     () => sortDays([...snapshot.dayNumbers, activeDay, bulkTargetDay]),
@@ -504,19 +517,8 @@ function AdminEditor({
     }
   };
 
-  const handleMoveSelected = () => {
-    if (!selectedSpotIds.length) return;
-    moveSelectedToDay(selectedSpotIds, bulkTargetDay);
-    setActiveDay(bulkTargetDay);
-    setInlineMessage(`已把 ${selectedSpotIds.length} 个景点移动到 Day ${bulkTargetDay}`);
-  };
-
-  const handleCopySelected = () => {
-    if (!selectedSpotIds.length) return;
-    copySelectedToDay(selectedSpotIds, bulkTargetDay);
-    setInlineMessage(`已复制 ${selectedSpotIds.length} 个景点到 Day ${bulkTargetDay}`);
-  };
-
+  // P-final: handleMoveSelected/handleCopySelected/handleAppendTag 已被
+  // BulkActionsToolbar 内嵌取代,只保留 handleDeleteSelected (含 confirm 弹窗)
   const handleDeleteSelected = () => {
     if (!selectedSpotIds.length) return;
     const confirmed = window.confirm(`删除选中的 ${selectedSpotIds.length} 个景点吗？`);
@@ -525,14 +527,6 @@ function AdminEditor({
     setSelectedSpotIds([]);
     setSelectedSpotId(null);
     addToast('warning', '已删除选中景点');
-  };
-
-  const handleAppendTag = () => {
-    const tag = bulkTag.trim();
-    if (!tag || !selectedSpotIds.length) return;
-    appendTagToSelected(selectedSpotIds, tag);
-    setBulkTag('');
-    setInlineMessage(`已为 ${selectedSpotIds.length} 个景点追加标签 ${tag}`);
   };
 
   const handleClearDay = (day: number) => {
@@ -562,92 +556,22 @@ function AdminEditor({
       <SaveBar
         onSave={handleSave}
         onReset={handleReset}
-        onReload={handleReload}
-        onImport={handleImport}
-        onExport={handleExport}
         onUndo={undo}
         onRedo={redo}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenConflicts={() => setConflictsOpen(true)}
+        issueCount={issueCount}
         isSaving={isSaving}
         isSyncing={isSyncing}
         isReloading={isReloading}
         isDirty={isDirty}
-        isDefaultTrip={isDefaultTrip}
         canUndo={canUndo}
         canRedo={canRedo}
         restoredFromLocalDraft={restoredFromLocalDraft}
         inlineMessage={inlineMessage}
       />
 
-      <TripAnalysisReport trip={payload} onSelectIssue={handleIssueSelect} />
-
-      <section className="panel planner-toolbar-panel">
-        <div className="planner-toolbar-section">
-          <div>
-            <p className="panel-kicker">Quick Add</p>
-            <h2>搜索后直接加入 Day {activeDay}</h2>
-          </div>
-          <PlaceSearchAutocomplete
-            onSelect={handleQuickAddPlace}
-            placeholder="搜索地点并追加到当前天..."
-          />
-        </div>
-
-        <div className="planner-toolbar-section planner-bulk-toolbar">
-          <div>
-            <p className="panel-kicker">Bulk Actions</p>
-            <h2>批量处理已勾选景点</h2>
-          </div>
-          <div className="planner-bulk-actions">
-            <span className="planner-bulk-count">{selectedSpotIds.length} 个已选中</span>
-            <label className="field planner-inline-field">
-              <span>目标 Day</span>
-              <select value={bulkTargetDay} onChange={(event) => setBulkTargetDay(Number(event.target.value))}>
-                {dayOptions.map((day) => (
-                  <option key={day} value={day}>
-                    Day {day}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="btn btn-ghost" onClick={handleMoveSelected} disabled={!selectedSpotIds.length}>
-              移动到目标天
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={handleCopySelected} disabled={!selectedSpotIds.length}>
-              复制到目标天
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setSelectedMustVisit(selectedSpotIds, true)}
-              disabled={!selectedSpotIds.length}
-            >
-              设为必去
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setSelectedMustVisit(selectedSpotIds, false)}
-              disabled={!selectedSpotIds.length}
-            >
-              取消必去
-            </button>
-            <input
-              className="planner-inline-input"
-              type="text"
-              value={bulkTag}
-              onChange={(event) => setBulkTag(event.target.value)}
-              placeholder="批量追加标签"
-            />
-            <button type="button" className="btn btn-ghost" onClick={handleAppendTag} disabled={!selectedSpotIds.length || !bulkTag.trim()}>
-              追加标签
-            </button>
-            <button type="button" className="btn btn-ghost btn-danger" onClick={handleDeleteSelected} disabled={!selectedSpotIds.length}>
-              删除选中
-            </button>
-          </div>
-        </div>
-      </section>
-
+      {/* P-final: PlannerBoard 主区(只显当前 day,顶部 Quick Add 搜索 + DayTabs) */}
       <main className="planner-layout">
         <div className="planner-main-column">
           <PlannerBoard
@@ -662,6 +586,7 @@ function AdminEditor({
             onToggleSpotSelection={toggleSpotSelection}
             onSelectSegment={selectSegment}
             onAddSpot={handleAddSpot}
+            onQuickAddPlace={handleQuickAddPlace}
             onMoveSpot={moveSpot}
             onDuplicateDay={(day) => {
               duplicateDay(day);
@@ -673,49 +598,115 @@ function AdminEditor({
               setInlineMessage(`Day ${day} 已按地图距离重新排序`);
             }}
           />
-
-          {/* P6-D: Inspector 移到 main-column 底部,选中 spot/segment 时展开详情;
-              不再占独立列,让出空间给地图 */}
-          <PlannerInspector
-            meta={payload.meta}
-            spots={payload.spots}
-            selectedSpot={selectedSpot}
-            selectedSegment={selectedSegment}
-            spotById={snapshot.spotById}
-            onUpdateMeta={updateMeta}
-            onUpdateSpot={updateSpot}
-            onDeleteSpot={handleDeleteSpot}
-            onUpdateLeg={updateLeg}
-            onResetLeg={resetLeg}
-            onDeleteDetachedSegment={deleteDetachedSegment}
-            onFocusSpot={selectSpot}
-            onAddImportedSpots={(spots) => {
-              addSpots(spots);
-              if (spots[0]?.day) {
-                setActiveDay(spots[0].day);
-              }
-              addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-            }}
-          />
         </div>
 
-        {/* P6-C: 地图独立右列 sticky,滚 main-column 时地图始终可见 */}
+        {/* 地图:桌面 sticky 右列 / 移动 bottom sheet(由 AdminMapSheet 控制) */}
         <div className="planner-map-column">
-          <AdminTripMap
-            config={payload.config}
-            days={snapshot.days}
-            selectedSpotId={selectedSpotId}
-            selectedSegmentId={selectedSegmentId}
-            activeDay={activeDay}
-            isAddMode={isMapAddMode}
-            onToggleAddMode={() => setIsMapAddMode((value) => !value)}
-            onSelectSpot={selectSpot}
-            onSelectSegment={selectSegment}
-            onAddSpotAtPoint={handleMapAddSpot}
-            onUpdateSpotPosition={(spotId, lat, lng) => updateSpot(spotId, { lat, lng })}
-          />
+          <AdminMapSheet isMobile={isMobile}>
+            <AdminTripMap
+              config={payload.config}
+              days={snapshot.days}
+              selectedSpotId={selectedSpotId}
+              selectedSegmentId={selectedSegmentId}
+              activeDay={activeDay}
+              isAddMode={isMapAddMode}
+              onToggleAddMode={() => setIsMapAddMode((value) => !value)}
+              onSelectSpot={selectSpot}
+              onSelectSegment={selectSegment}
+              onAddSpotAtPoint={handleMapAddSpot}
+              onUpdateSpotPosition={(spotId, lat, lng) => updateSpot(spotId, { lat, lng })}
+            />
+          </AdminMapSheet>
         </div>
       </main>
+
+      {/* === 浮层 / 弹层(平时不渲染) === */}
+
+      {/* 选中 spot → SpotInspectorSheet */}
+      <SpotInspectorSheet
+        spot={selectedSpot}
+        onClose={() => setSelectedSpotId(null)}
+        onUpdateSpot={updateSpot}
+        onDeleteSpot={handleDeleteSpot}
+      />
+
+      {/* 选中 segment → SegmentInspectorSheet */}
+      <SegmentInspectorSheet
+        segment={selectedSegment}
+        spotById={snapshot.spotById}
+        onClose={() => setSelectedSegmentId(null)}
+        onUpdateLeg={updateLeg}
+        onResetLeg={resetLeg}
+        onDeleteDetachedSegment={deleteDetachedSegment}
+        onFocusSpot={selectSpot}
+      />
+
+      {/* 多选时 → BulkActionsToolbar 浮工具栏 */}
+      <BulkActionsToolbar
+        selectedCount={selectedSpotIds.length}
+        dayOptions={dayOptions}
+        onMoveToDay={(day) => {
+          setBulkTargetDay(day);
+          moveSelectedToDay(selectedSpotIds, day);
+          setActiveDay(day);
+          setInlineMessage(`已移动 ${selectedSpotIds.length} 个景点到 Day ${day}`);
+        }}
+        onCopyToDay={(day) => {
+          copySelectedToDay(selectedSpotIds, day);
+          setInlineMessage(`已复制 ${selectedSpotIds.length} 个景点到 Day ${day}`);
+        }}
+        onSetMustVisit={(mustVisit) =>
+          setSelectedMustVisit(selectedSpotIds, mustVisit)
+        }
+        onDelete={handleDeleteSelected}
+        onClearSelection={() => setSelectedSpotIds([])}
+      />
+
+      {/* FAB 触发设置 sheet(meta + BatchImport + 本地 JSON) */}
+      <button
+        type="button"
+        className="admin-fab-settings"
+        onClick={() => setSettingsOpen(true)}
+        aria-label="打开设置"
+        title="设置"
+      >
+        <svg viewBox="0 0 20 20" width="22" height="22" fill="none" aria-hidden="true">
+          <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.6" />
+          <path
+            d="M10 1.2v2.4M10 16.4v2.4M3.5 3.5l1.7 1.7M14.8 14.8l1.7 1.7M1.2 10h2.4M16.4 10h2.4M3.5 16.5l1.7-1.7M14.8 5.2l1.7-1.7"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+
+      <AdminSettingsSheet
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        meta={payload.meta}
+        spots={payload.spots}
+        isDefaultTrip={isDefaultTrip}
+        onUpdateMeta={updateMeta}
+        onAddImportedSpots={(spots) => {
+          addSpots(spots);
+          if (spots[0]?.day) setActiveDay(spots[0].day);
+          addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
+        }}
+        onReload={handleReload}
+        onImport={handleImport}
+        onExport={handleExport}
+        isReloading={isReloading}
+        isSaving={isSaving}
+        isSyncing={isSyncing}
+      />
+
+      <ConflictsModal
+        isOpen={conflictsOpen}
+        onClose={() => setConflictsOpen(false)}
+        trip={payload}
+        onSelectIssue={handleIssueSelect}
+      />
     </div>
   );
 }

@@ -1,8 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useState } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, closestCorners, useDroppable, useSensor, useSensors, } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates, } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { buildRouteHeadline, buildRouteMetaLine } from '../../../utils/route-detail';
+import { PlaceSearchAutocomplete } from './PlaceSearchAutocomplete';
 function PlannerSpotCard({ spot, index, dayColor, selected, checked, nextSegment, onSelect, onToggleSelection, }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: spot.id,
@@ -25,7 +27,8 @@ function DayDropLane({ day, active, children, }) {
     });
     return (_jsx("div", { ref: setNodeRef, className: `planner-day-lane${active ? ' is-active' : ''}${isOver ? ' is-over' : ''}`, children: children }));
 }
-export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, }) {
+export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onQuickAddPlace, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, }) {
+    const [moreMenuDay, setMoreMenuDay] = useState(null);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
     const selectedIds = new Set(selectedSpotIds);
     const allDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
@@ -70,18 +73,24 @@ export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selec
                 }) }), _jsx(DndContext, { sensors: sensors, collisionDetection: closestCorners, onDragEnd: handleDragEnd, children: _jsx("div", { className: "planner-day-grid", children: displayDays.map((dayItem, dayIndex) => {
                         const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
                         const segmentByFromId = new Map(dayItem.segments.map((segment) => [segment.fromSpotId, segment]));
-                        return (_jsx(DayDropLane, { day: dayItem.day, active: dayItem.day === activeDay, children: _jsxs("div", { className: "planner-day-card", children: [_jsxs("div", { className: "planner-day-card-head", children: [_jsxs("button", { type: "button", className: `planner-day-chip${dayItem.day === activeDay ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(dayItem.day), children: ["Day ", dayItem.day] }), _jsxs("div", { className: "planner-day-actions", children: [_jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => onAutoSortDay(dayItem.day), children: "\u987A\u8DEF\u6392\u5E8F" }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => onDuplicateDay(dayItem.day), children: "\u590D\u5236\u8FD9\u5929" }), _jsx("button", { type: "button", className: "btn btn-ghost btn-danger", onClick: () => onClearDay(dayItem.day), children: "\u6E05\u7A7A" })] })] }), _jsx(SortableContext, { items: dayItem.spots.map((spot) => spot.id), strategy: verticalListSortingStrategy, children: _jsxs("div", { className: "planner-day-spot-list", children: [dayItem.spots.map((spot, index) => {
+                        return (_jsx(DayDropLane, { day: dayItem.day, active: dayItem.day === activeDay, children: _jsxs("div", { className: "planner-day-card", children: [_jsxs("div", { className: "planner-day-card-head", children: [_jsxs("button", { type: "button", className: `planner-day-chip${dayItem.day === activeDay ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(dayItem.day), children: ["Day ", dayItem.day, " \u00B7 ", dayItem.spots.length, " \u4E2A\u666F\u70B9"] }), _jsxs("div", { className: "planner-day-more-wrap", children: [_jsx("button", { type: "button", className: "planner-day-more-btn", onClick: () => setMoreMenuDay(moreMenuDay === dayItem.day ? null : dayItem.day), "aria-label": "\u66F4\u591A\u64CD\u4F5C", "aria-expanded": moreMenuDay === dayItem.day, children: "\u22EF" }), moreMenuDay === dayItem.day ? (_jsxs("div", { className: "planner-day-more-menu", role: "menu", children: [_jsx("button", { type: "button", role: "menuitem", onClick: () => {
+                                                                    onAutoSortDay(dayItem.day);
+                                                                    setMoreMenuDay(null);
+                                                                }, children: "\u987A\u8DEF\u6392\u5E8F" }), _jsx("button", { type: "button", role: "menuitem", onClick: () => {
+                                                                    onDuplicateDay(dayItem.day);
+                                                                    setMoreMenuDay(null);
+                                                                }, children: "\u590D\u5236\u8FD9\u5929" }), _jsx("button", { type: "button", role: "menuitem", className: "is-danger", onClick: () => {
+                                                                    onClearDay(dayItem.day);
+                                                                    setMoreMenuDay(null);
+                                                                }, children: "\u6E05\u7A7A\u8FD9\u5929" })] })) : null] })] }), dayItem.day === activeDay ? (_jsx("div", { className: "planner-day-quick-add", children: _jsx(PlaceSearchAutocomplete, { onSelect: (place) => onQuickAddPlace(place), placeholder: `搜索景点加入 Day ${dayItem.day}...` }) })) : null, _jsx(SortableContext, { items: dayItem.spots.map((spot) => spot.id), strategy: verticalListSortingStrategy, children: _jsxs("div", { className: "planner-day-spot-list", children: [dayItem.spots.map((spot, index) => {
                                                     const nextSegment = segmentByFromId.get(spot.id);
                                                     return (_jsxs("div", { className: "planner-day-spot-wrap", children: [_jsx(PlannerSpotCard, { spot: spot, index: index, dayColor: dayColor, selected: selectedSpotId === spot.id, checked: selectedIds.has(spot.id), nextSegment: nextSegment, onSelect: () => {
                                                                     onSetActiveDay(dayItem.day);
                                                                     onSelectSpot(spot.id);
-                                                                }, onToggleSelection: (checked) => onToggleSpotSelection(spot.id, checked) }), nextSegment ? (_jsxs("div", { className: `planner-leg-chip${selectedSegmentId === nextSegment.id ? ' is-selected' : ''}`, onClick: () => {
+                                                                }, onToggleSelection: (checked) => onToggleSpotSelection(spot.id, checked) }), nextSegment ? (_jsx("div", { className: `planner-leg-chip${selectedSegmentId === nextSegment.id ? ' is-selected' : ''}`, onClick: () => {
                                                                     onSetActiveDay(dayItem.day);
                                                                     onSelectSegment(nextSegment.id);
-                                                                }, children: [_jsxs("div", { className: "planner-leg-chip-main", children: [_jsx("strong", { children: buildRouteHeadline(nextSegment) }), _jsx("span", { children: buildRouteMetaLine(nextSegment).join(' · ') || '点击编辑路线说明' })] }), _jsx("button", { type: "button", className: "planner-inline-insert", onClick: (event) => {
-                                                                            event.stopPropagation();
-                                                                            onAddSpot(dayItem.day, index + 1);
-                                                                        }, children: "+ \u5728\u8FD9\u91CC\u63D2\u5165\u666F\u70B9" })] })) : null] }, spot.id));
+                                                                }, children: _jsxs("div", { className: "planner-leg-chip-main", children: [_jsx("strong", { children: buildRouteHeadline(nextSegment) }), _jsx("span", { children: buildRouteMetaLine(nextSegment).join(' · ') || '点击编辑路线说明' })] }) })) : null] }, spot.id));
                                                 }), dayItem.spots.length === 0 ? (_jsx("div", { className: "planner-empty-day", children: _jsx("p", { children: "\u8FD9\u4E00\u5929\u8FD8\u6CA1\u6709\u666F\u70B9\uFF0C\u70B9\u5730\u56FE\u6216\u4E0B\u65B9\u6309\u94AE\u5F00\u59CB\u6DFB\u52A0\u3002" }) })) : null] }) }), _jsxs("button", { type: "button", className: "planner-add-spot-btn", onClick: () => {
                                             onSetActiveDay(dayItem.day);
                                             onAddSpot(dayItem.day);

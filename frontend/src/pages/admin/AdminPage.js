@@ -5,14 +5,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { exportCurrentToLocal, getTripFull, importLocalToCurrent, updateTripFull, } from '../../api/trip-api';
 import { normalizeTripForSave } from '../../utils/trip-normalize';
 import { useBeforeUnload } from '../../hooks/useBeforeUnload';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { analyzeTripFeasibility } from '../../utils/trip-analysis';
 import { AdminHeader } from './components/AdminHeader';
 import { AdminToastStack } from './components/AdminToastStack';
 import { AdminTripMap } from './components/AdminTripMap';
+import { AdminMapSheet } from './components/AdminMapSheet';
+import { AdminSettingsSheet } from './components/AdminSettingsSheet';
+import { BulkActionsToolbar } from './components/BulkActionsToolbar';
+import { ConflictsModal } from './components/ConflictsModal';
 import { PlannerBoard } from './components/PlannerBoard';
-import { PlannerInspector } from './components/PlannerInspector';
-import { PlaceSearchAutocomplete } from './components/PlaceSearchAutocomplete';
 import { SaveBar } from './components/SaveBar';
-import { TripAnalysisReport } from './components/TripAnalysisReport';
+import { SegmentInspectorSheet } from './components/SegmentInspectorSheet';
+import { SpotInspectorSheet } from './components/SpotInspectorSheet';
 import { useTripPlannerEditor } from './hooks/useTripPlannerEditor';
 import './admin.css';
 function createClientSpotId() {
@@ -79,6 +84,7 @@ export function AdminPage() {
 }
 function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onImport, onExport, onReload, isSyncing, }) {
     const [editorParams, setEditorParams] = useSearchParams();
+    const isMobile = useIsMobile();
     const [isReloading, setIsReloading] = useState(false);
     const [savedPayload, setSavedPayload] = useState(initialData);
     const [activeDay, setActiveDay] = useState(() => initialData.spots[0]?.day || 1);
@@ -87,10 +93,12 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
     const [selectedSpotIds, setSelectedSpotIds] = useState([]);
     const [isMapAddMode, setIsMapAddMode] = useState(false);
     const [bulkTargetDay, setBulkTargetDay] = useState(() => initialData.spots[0]?.day || 1);
-    const [bulkTag, setBulkTag] = useState('');
     const [inlineMessage, setInlineMessage] = useState(null);
     const [toasts, setToasts] = useState([]);
-    const { snapshot, payload, isDirty, canUndo, canRedo, restoredFromLocalDraft, updateMeta, addSpot, addSpots, updateSpot, deleteSpot, moveSpot, duplicateDay, clearDay, autoSortDay, updateLeg, resetLeg, deleteDetachedSegment, moveSelectedToDay, copySelectedToDay, setSelectedMustVisit, appendTagToSelected, deleteSelected, undo, redo, resetFromPayload, acknowledgeSavedPayload, } = useTripPlannerEditor(initialData, tripId);
+    // P-final: 设置 sheet + 冲突 modal 开关
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [conflictsOpen, setConflictsOpen] = useState(false);
+    const { snapshot, payload, isDirty, canUndo, canRedo, restoredFromLocalDraft, updateMeta, addSpot, addSpots, updateSpot, deleteSpot, moveSpot, duplicateDay, clearDay, autoSortDay, updateLeg, resetLeg, deleteDetachedSegment, moveSelectedToDay, copySelectedToDay, setSelectedMustVisit, deleteSelected, undo, redo, resetFromPayload, acknowledgeSavedPayload, } = useTripPlannerEditor(initialData, tripId);
     useBeforeUnload(isDirty);
     const addToast = useCallback((tone, title, detail) => {
         const nextToast = {
@@ -134,6 +142,8 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
             segments: payload.routeSegments.length,
         };
     }, [payload.routeSegments.length, payload.spots.length, snapshot.days.length]);
+    // 冲突数 — SaveBar 红点显示用
+    const issueCount = useMemo(() => analyzeTripFeasibility(payload).issues.length, [payload]);
     const dayOptions = useMemo(() => sortDays([...snapshot.dayNumbers, activeDay, bulkTargetDay]), [activeDay, bulkTargetDay, snapshot.dayNumbers]);
     const selectedSpot = selectedSpotId ? snapshot.spotById.get(selectedSpotId) || null : null;
     const selectedSegment = selectedSegmentId
@@ -363,19 +373,8 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
             selectSpot(fallbackSpot.id);
         }
     };
-    const handleMoveSelected = () => {
-        if (!selectedSpotIds.length)
-            return;
-        moveSelectedToDay(selectedSpotIds, bulkTargetDay);
-        setActiveDay(bulkTargetDay);
-        setInlineMessage(`已把 ${selectedSpotIds.length} 个景点移动到 Day ${bulkTargetDay}`);
-    };
-    const handleCopySelected = () => {
-        if (!selectedSpotIds.length)
-            return;
-        copySelectedToDay(selectedSpotIds, bulkTargetDay);
-        setInlineMessage(`已复制 ${selectedSpotIds.length} 个景点到 Day ${bulkTargetDay}`);
-    };
+    // P-final: handleMoveSelected/handleCopySelected/handleAppendTag 已被
+    // BulkActionsToolbar 内嵌取代,只保留 handleDeleteSelected (含 confirm 弹窗)
     const handleDeleteSelected = () => {
         if (!selectedSpotIds.length)
             return;
@@ -386,14 +385,6 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
         setSelectedSpotIds([]);
         setSelectedSpotId(null);
         addToast('warning', '已删除选中景点');
-    };
-    const handleAppendTag = () => {
-        const tag = bulkTag.trim();
-        if (!tag || !selectedSpotIds.length)
-            return;
-        appendTagToSelected(selectedSpotIds, tag);
-        setBulkTag('');
-        setInlineMessage(`已为 ${selectedSpotIds.length} 个景点追加标签 ${tag}`);
     };
     const handleClearDay = (day) => {
         const confirmed = window.confirm(`清空 Day ${day} 的全部景点吗？`);
@@ -407,17 +398,24 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
         setSelectedSpotIds((current) => current.filter((id) => snapshot.spotById.get(id)?.day !== day));
         addToast('warning', `Day ${day} 已清空`);
     };
-    return (_jsxs("div", { className: "admin-shell", children: [_jsx(AdminToastStack, { items: toasts, onDismiss: (id) => setToasts((current) => current.filter((item) => item.id !== id)) }), _jsx(AdminHeader, { title: payload.meta.title || '', tripId: tripId, meta: payload.meta, isDefaultTrip: isDefaultTrip, stats: stats }), _jsx(SaveBar, { onSave: handleSave, onReset: handleReset, onReload: handleReload, onImport: handleImport, onExport: handleExport, onUndo: undo, onRedo: redo, isSaving: isSaving, isSyncing: isSyncing, isReloading: isReloading, isDirty: isDirty, isDefaultTrip: isDefaultTrip, canUndo: canUndo, canRedo: canRedo, restoredFromLocalDraft: restoredFromLocalDraft, inlineMessage: inlineMessage }), _jsx(TripAnalysisReport, { trip: payload, onSelectIssue: handleIssueSelect }), _jsxs("section", { className: "panel planner-toolbar-panel", children: [_jsxs("div", { className: "planner-toolbar-section", children: [_jsxs("div", { children: [_jsx("p", { className: "panel-kicker", children: "Quick Add" }), _jsxs("h2", { children: ["\u641C\u7D22\u540E\u76F4\u63A5\u52A0\u5165 Day ", activeDay] })] }), _jsx(PlaceSearchAutocomplete, { onSelect: handleQuickAddPlace, placeholder: "\u641C\u7D22\u5730\u70B9\u5E76\u8FFD\u52A0\u5230\u5F53\u524D\u5929..." })] }), _jsxs("div", { className: "planner-toolbar-section planner-bulk-toolbar", children: [_jsxs("div", { children: [_jsx("p", { className: "panel-kicker", children: "Bulk Actions" }), _jsx("h2", { children: "\u6279\u91CF\u5904\u7406\u5DF2\u52FE\u9009\u666F\u70B9" })] }), _jsxs("div", { className: "planner-bulk-actions", children: [_jsxs("span", { className: "planner-bulk-count", children: [selectedSpotIds.length, " \u4E2A\u5DF2\u9009\u4E2D"] }), _jsxs("label", { className: "field planner-inline-field", children: [_jsx("span", { children: "\u76EE\u6807 Day" }), _jsx("select", { value: bulkTargetDay, onChange: (event) => setBulkTargetDay(Number(event.target.value)), children: dayOptions.map((day) => (_jsxs("option", { value: day, children: ["Day ", day] }, day))) })] }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: handleMoveSelected, disabled: !selectedSpotIds.length, children: "\u79FB\u52A8\u5230\u76EE\u6807\u5929" }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: handleCopySelected, disabled: !selectedSpotIds.length, children: "\u590D\u5236\u5230\u76EE\u6807\u5929" }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => setSelectedMustVisit(selectedSpotIds, true), disabled: !selectedSpotIds.length, children: "\u8BBE\u4E3A\u5FC5\u53BB" }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => setSelectedMustVisit(selectedSpotIds, false), disabled: !selectedSpotIds.length, children: "\u53D6\u6D88\u5FC5\u53BB" }), _jsx("input", { className: "planner-inline-input", type: "text", value: bulkTag, onChange: (event) => setBulkTag(event.target.value), placeholder: "\u6279\u91CF\u8FFD\u52A0\u6807\u7B7E" }), _jsx("button", { type: "button", className: "btn btn-ghost", onClick: handleAppendTag, disabled: !selectedSpotIds.length || !bulkTag.trim(), children: "\u8FFD\u52A0\u6807\u7B7E" }), _jsx("button", { type: "button", className: "btn btn-ghost btn-danger", onClick: handleDeleteSelected, disabled: !selectedSpotIds.length, children: "\u5220\u9664\u9009\u4E2D" })] })] })] }), _jsxs("main", { className: "planner-layout", children: [_jsxs("div", { className: "planner-main-column", children: [_jsx(PlannerBoard, { days: snapshot.days, dayColors: payload.config.dayColors, activeDay: activeDay, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, selectedSpotIds: selectedSpotIds, onSetActiveDay: setActiveDay, onSelectSpot: selectSpot, onToggleSpotSelection: toggleSpotSelection, onSelectSegment: selectSegment, onAddSpot: handleAddSpot, onMoveSpot: moveSpot, onDuplicateDay: (day) => {
-                                    duplicateDay(day);
-                                    addToast('info', `已复制 Day ${day}`);
-                                }, onClearDay: handleClearDay, onAutoSortDay: (day) => {
-                                    autoSortDay(day);
-                                    setInlineMessage(`Day ${day} 已按地图距离重新排序`);
-                                } }), _jsx(PlannerInspector, { meta: payload.meta, spots: payload.spots, selectedSpot: selectedSpot, selectedSegment: selectedSegment, spotById: snapshot.spotById, onUpdateMeta: updateMeta, onUpdateSpot: updateSpot, onDeleteSpot: handleDeleteSpot, onUpdateLeg: updateLeg, onResetLeg: resetLeg, onDeleteDetachedSegment: deleteDetachedSegment, onFocusSpot: selectSpot, onAddImportedSpots: (spots) => {
-                                    addSpots(spots);
-                                    if (spots[0]?.day) {
-                                        setActiveDay(spots[0].day);
-                                    }
-                                    addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-                                } })] }), _jsx("div", { className: "planner-map-column", children: _jsx(AdminTripMap, { config: payload.config, days: snapshot.days, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, activeDay: activeDay, isAddMode: isMapAddMode, onToggleAddMode: () => setIsMapAddMode((value) => !value), onSelectSpot: selectSpot, onSelectSegment: selectSegment, onAddSpotAtPoint: handleMapAddSpot, onUpdateSpotPosition: (spotId, lat, lng) => updateSpot(spotId, { lat, lng }) }) })] })] }));
+    return (_jsxs("div", { className: "admin-shell", children: [_jsx(AdminToastStack, { items: toasts, onDismiss: (id) => setToasts((current) => current.filter((item) => item.id !== id)) }), _jsx(AdminHeader, { title: payload.meta.title || '', tripId: tripId, meta: payload.meta, isDefaultTrip: isDefaultTrip, stats: stats }), _jsx(SaveBar, { onSave: handleSave, onReset: handleReset, onUndo: undo, onRedo: redo, onOpenSettings: () => setSettingsOpen(true), onOpenConflicts: () => setConflictsOpen(true), issueCount: issueCount, isSaving: isSaving, isSyncing: isSyncing, isReloading: isReloading, isDirty: isDirty, canUndo: canUndo, canRedo: canRedo, restoredFromLocalDraft: restoredFromLocalDraft, inlineMessage: inlineMessage }), _jsxs("main", { className: "planner-layout", children: [_jsx("div", { className: "planner-main-column", children: _jsx(PlannerBoard, { days: snapshot.days, dayColors: payload.config.dayColors, activeDay: activeDay, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, selectedSpotIds: selectedSpotIds, onSetActiveDay: setActiveDay, onSelectSpot: selectSpot, onToggleSpotSelection: toggleSpotSelection, onSelectSegment: selectSegment, onAddSpot: handleAddSpot, onQuickAddPlace: handleQuickAddPlace, onMoveSpot: moveSpot, onDuplicateDay: (day) => {
+                                duplicateDay(day);
+                                addToast('info', `已复制 Day ${day}`);
+                            }, onClearDay: handleClearDay, onAutoSortDay: (day) => {
+                                autoSortDay(day);
+                                setInlineMessage(`Day ${day} 已按地图距离重新排序`);
+                            } }) }), _jsx("div", { className: "planner-map-column", children: _jsx(AdminMapSheet, { isMobile: isMobile, children: _jsx(AdminTripMap, { config: payload.config, days: snapshot.days, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, activeDay: activeDay, isAddMode: isMapAddMode, onToggleAddMode: () => setIsMapAddMode((value) => !value), onSelectSpot: selectSpot, onSelectSegment: selectSegment, onAddSpotAtPoint: handleMapAddSpot, onUpdateSpotPosition: (spotId, lat, lng) => updateSpot(spotId, { lat, lng }) }) }) })] }), _jsx(SpotInspectorSheet, { spot: selectedSpot, onClose: () => setSelectedSpotId(null), onUpdateSpot: updateSpot, onDeleteSpot: handleDeleteSpot }), _jsx(SegmentInspectorSheet, { segment: selectedSegment, spotById: snapshot.spotById, onClose: () => setSelectedSegmentId(null), onUpdateLeg: updateLeg, onResetLeg: resetLeg, onDeleteDetachedSegment: deleteDetachedSegment, onFocusSpot: selectSpot }), _jsx(BulkActionsToolbar, { selectedCount: selectedSpotIds.length, dayOptions: dayOptions, onMoveToDay: (day) => {
+                    setBulkTargetDay(day);
+                    moveSelectedToDay(selectedSpotIds, day);
+                    setActiveDay(day);
+                    setInlineMessage(`已移动 ${selectedSpotIds.length} 个景点到 Day ${day}`);
+                }, onCopyToDay: (day) => {
+                    copySelectedToDay(selectedSpotIds, day);
+                    setInlineMessage(`已复制 ${selectedSpotIds.length} 个景点到 Day ${day}`);
+                }, onSetMustVisit: (mustVisit) => setSelectedMustVisit(selectedSpotIds, mustVisit), onDelete: handleDeleteSelected, onClearSelection: () => setSelectedSpotIds([]) }), _jsx("button", { type: "button", className: "admin-fab-settings", onClick: () => setSettingsOpen(true), "aria-label": "\u6253\u5F00\u8BBE\u7F6E", title: "\u8BBE\u7F6E", children: _jsxs("svg", { viewBox: "0 0 20 20", width: "22", height: "22", fill: "none", "aria-hidden": "true", children: [_jsx("circle", { cx: "10", cy: "10", r: "2.5", stroke: "currentColor", strokeWidth: "1.6" }), _jsx("path", { d: "M10 1.2v2.4M10 16.4v2.4M3.5 3.5l1.7 1.7M14.8 14.8l1.7 1.7M1.2 10h2.4M16.4 10h2.4M3.5 16.5l1.7-1.7M14.8 5.2l1.7-1.7", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round" })] }) }), _jsx(AdminSettingsSheet, { isOpen: settingsOpen, onClose: () => setSettingsOpen(false), meta: payload.meta, spots: payload.spots, isDefaultTrip: isDefaultTrip, onUpdateMeta: updateMeta, onAddImportedSpots: (spots) => {
+                    addSpots(spots);
+                    if (spots[0]?.day)
+                        setActiveDay(spots[0].day);
+                    addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
+                }, onReload: handleReload, onImport: handleImport, onExport: handleExport, isReloading: isReloading, isSaving: isSaving, isSyncing: isSyncing }), _jsx(ConflictsModal, { isOpen: conflictsOpen, onClose: () => setConflictsOpen(false), trip: payload, onSelectIssue: handleIssueSelect })] }));
 }

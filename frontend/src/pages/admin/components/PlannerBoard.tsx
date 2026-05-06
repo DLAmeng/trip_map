@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -19,6 +19,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { SpotItem } from '../../../types/trip';
 import type { PlannerDay, PlannerSegment } from '../hooks/useTripPlannerEditor';
 import { buildRouteHeadline, buildRouteMetaLine } from '../../../utils/route-detail';
+import { PlaceSearchAutocomplete } from './PlaceSearchAutocomplete';
 
 interface PlannerBoardProps {
   days: PlannerDay[];
@@ -32,6 +33,8 @@ interface PlannerBoardProps {
   onToggleSpotSelection: (spotId: string, checked: boolean) => void;
   onSelectSegment: (segmentId: string) => void;
   onAddSpot: (day: number, index?: number) => void;
+  /** 顶部 Quick Add 搜索选中地点后:加到 activeDay 末尾(replaces PlannerToolbarPanel 的 Quick Add) */
+  onQuickAddPlace: (place: { name: string; lat: number; lng: number }) => void;
   onMoveSpot: (spotId: string, targetDay: number, targetIndex: number) => void;
   onDuplicateDay: (day: number) => void;
   onClearDay: (day: number) => void;
@@ -173,11 +176,13 @@ export function PlannerBoard({
   onToggleSpotSelection,
   onSelectSegment,
   onAddSpot,
+  onQuickAddPlace,
   onMoveSpot,
   onDuplicateDay,
   onClearDay,
   onAutoSortDay,
 }: PlannerBoardProps) {
+  const [moreMenuDay, setMoreMenuDay] = useState<number | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -271,20 +276,67 @@ export function PlannerBoard({
                       style={{ '--planner-day-color': dayColor } as CSSProperties}
                       onClick={() => onSetActiveDay(dayItem.day)}
                     >
-                      Day {dayItem.day}
+                      Day {dayItem.day} · {dayItem.spots.length} 个景点
                     </button>
-                    <div className="planner-day-actions">
-                      <button type="button" className="btn btn-ghost" onClick={() => onAutoSortDay(dayItem.day)}>
-                        顺路排序
+                    <div className="planner-day-more-wrap">
+                      <button
+                        type="button"
+                        className="planner-day-more-btn"
+                        onClick={() =>
+                          setMoreMenuDay(moreMenuDay === dayItem.day ? null : dayItem.day)
+                        }
+                        aria-label="更多操作"
+                        aria-expanded={moreMenuDay === dayItem.day}
+                      >
+                        ⋯
                       </button>
-                      <button type="button" className="btn btn-ghost" onClick={() => onDuplicateDay(dayItem.day)}>
-                        复制这天
-                      </button>
-                      <button type="button" className="btn btn-ghost btn-danger" onClick={() => onClearDay(dayItem.day)}>
-                        清空
-                      </button>
+                      {moreMenuDay === dayItem.day ? (
+                        <div className="planner-day-more-menu" role="menu">
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              onAutoSortDay(dayItem.day);
+                              setMoreMenuDay(null);
+                            }}
+                          >
+                            顺路排序
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              onDuplicateDay(dayItem.day);
+                              setMoreMenuDay(null);
+                            }}
+                          >
+                            复制这天
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="is-danger"
+                            onClick={() => {
+                              onClearDay(dayItem.day);
+                              setMoreMenuDay(null);
+                            }}
+                          >
+                            清空这天
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
+
+                  {/* Quick Add 搜索栏 — 替代原 PlannerToolbarPanel 的 Quick Add */}
+                  {dayItem.day === activeDay ? (
+                    <div className="planner-day-quick-add">
+                      <PlaceSearchAutocomplete
+                        onSelect={(place) => onQuickAddPlace(place)}
+                        placeholder={`搜索景点加入 Day ${dayItem.day}...`}
+                      />
+                    </div>
+                  ) : null}
 
                   <SortableContext items={dayItem.spots.map((spot) => spot.id)} strategy={verticalListSortingStrategy}>
                     <div className="planner-day-spot-list">
@@ -318,16 +370,6 @@ export function PlannerBoard({
                                   <strong>{buildRouteHeadline(nextSegment)}</strong>
                                   <span>{buildRouteMetaLine(nextSegment).join(' · ') || '点击编辑路线说明'}</span>
                                 </div>
-                                <button
-                                  type="button"
-                                  className="planner-inline-insert"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    onAddSpot(dayItem.day, index + 1);
-                                  }}
-                                >
-                                  + 在这里插入景点
-                                </button>
                               </div>
                             ) : null}
                           </div>
