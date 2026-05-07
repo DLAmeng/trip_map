@@ -249,6 +249,24 @@ export function TripPage() {
         />
       )}
 
+      {/* P0-5: 空 trip 引导卡 — 用户刚创建无任何景点时,trip 页地图灰白没引导,
+          这里覆盖一层引导浮卡指引用户去 admin 编辑器添加景点 */}
+      {normalized.spots.length === 0 ? (
+        <div className="trip-empty-onboarding" role="status" aria-live="polite">
+          <div className="trip-empty-onboarding-card">
+            <div className="trip-empty-onboarding-icon" aria-hidden="true">🗺️</div>
+            <h2>这个行程还没有景点</h2>
+            <p>去编辑器添加你的第一个景点吧。</p>
+            <a
+              className="trip-empty-onboarding-cta"
+              href={`/admin?id=${encodeURIComponent(tripId)}`}
+            >
+              ＋ 去添加景点
+            </a>
+          </div>
+        </div>
+      ) : null}
+
       <div className={`main-content ${!isListVisible ? 'list-hidden' : ''}`}>
         <TripMapCanvas
           config={data.config}

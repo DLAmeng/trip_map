@@ -27,20 +27,34 @@ function DayDropLane({ day, active, children, }) {
     });
     return (_jsx("div", { ref: setNodeRef, className: `planner-day-lane${active ? ' is-active' : ''}${isOver ? ' is-over' : ''}`, children: children }));
 }
-export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onQuickAddPlace, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, }) {
+export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onQuickAddPlace, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, expectedDayCount, }) {
     const [moreMenuDay, setMoreMenuDay] = useState(null);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
     const selectedIds = new Set(selectedSpotIds);
     const allDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
+    /**
+     * P0-2: 用户点"+ 加 day"扩展的最大 day 数。hook snapshot 是从 spots derive 的,
+     * 没 spot 的 day 不会出现。这里用本地 state 记录用户期望的 day 数,DayTabs 合并渲染。
+     * 用户在新 day 加 spot 后,hook 自然会 surface 该 day,本地 state 不再起作用。
+     */
+    const [extendedMaxDay, setExtendedMaxDay] = useState(0);
     /**
      * 主区只渲染 activeDay 那一天的 lane,把 8000+px 的全展开页面收缩到 ~600px。
      * 其他 day 在顶部 DayTabs 切换。drag 跨 day 仍然 OK,因为顶部 tabs 自身
      * 也作为 drop zone 接收 spot,后续 onMoveSpot 触发即切到目标 day。
      */
     const displayDays = allDays.filter((d) => d.day === activeDay);
-    /** 顶部 DayTabs 渲染所有 day */
-    const allDayNumbers = allDays.map((d) => d.day);
+    /** 顶部 DayTabs 渲染所有 day(合并 hook derive + 用户扩展的空 day + 创建表单期望天数) */
+    const hookMaxDay = Math.max(0, ...allDays.map((d) => d.day));
+    const effectiveMaxDay = Math.max(hookMaxDay, extendedMaxDay, expectedDayCount ?? 0, 1);
+    const allDayNumbers = Array.from({ length: effectiveMaxDay }, (_, i) => i + 1);
     const totalSpots = allDays.reduce((sum, d) => sum + d.spots.length, 0);
+    /** "+ 加 day" 按钮:递增 extendedMaxDay,自动切到新 day */
+    const handleAppendEmptyDay = () => {
+        const next = effectiveMaxDay + 1;
+        setExtendedMaxDay(next);
+        onSetActiveDay(next);
+    };
     const handleDragEnd = (event) => {
         const { active, over } = event;
         if (!over || active.id === over.id)
@@ -64,13 +78,13 @@ export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selec
         onMoveSpot(activeId, targetDay, targetIndex);
         onSetActiveDay(targetDay);
     };
-    return (_jsxs("section", { className: "panel planner-board-panel", children: [_jsxs("div", { className: "panel-head planner-board-head", children: [_jsxs("div", { children: [_jsx("p", { className: "panel-kicker", children: "Day Planner" }), _jsx("h2", { children: "\u6309\u5929\u5B89\u6392\u884C\u7A0B" })] }), _jsxs("div", { className: "planner-board-head-meta", children: [_jsxs("span", { children: [allDays.length, " \u5929"] }), _jsxs("span", { children: [totalSpots, " \u4E2A\u666F\u70B9"] })] })] }), _jsx("div", { className: "planner-day-tabs", role: "tablist", "aria-label": "\u5207\u6362\u5929\u6570", children: allDayNumbers.map((day) => {
-                    const dayIndex = day - 1;
-                    const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
-                    const isActive = day === activeDay;
-                    const dayMeta = allDays.find((d) => d.day === day);
-                    return (_jsxs("button", { type: "button", role: "tab", "aria-selected": isActive, className: `planner-day-tab${isActive ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(day), children: [_jsxs("span", { className: "planner-day-tab-label", children: ["D", day] }), _jsx("span", { className: "planner-day-tab-count", children: dayMeta?.spots.length ?? 0 })] }, day));
-                }) }), _jsx(DndContext, { sensors: sensors, collisionDetection: closestCorners, onDragEnd: handleDragEnd, children: _jsx("div", { className: "planner-day-grid", children: displayDays.map((dayItem, dayIndex) => {
+    return (_jsxs("section", { className: "panel planner-board-panel", children: [_jsxs("div", { className: "panel-head planner-board-head", children: [_jsxs("div", { children: [_jsx("p", { className: "panel-kicker", children: "Day Planner" }), _jsx("h2", { children: "\u6309\u5929\u5B89\u6392\u884C\u7A0B" })] }), _jsxs("div", { className: "planner-board-head-meta", children: [_jsxs("span", { children: [allDays.length, " \u5929"] }), _jsxs("span", { children: [totalSpots, " \u4E2A\u666F\u70B9"] })] })] }), _jsxs("div", { className: "planner-day-tabs", role: "tablist", "aria-label": "\u5207\u6362\u5929\u6570", children: [allDayNumbers.map((day) => {
+                        const dayIndex = day - 1;
+                        const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
+                        const isActive = day === activeDay;
+                        const dayMeta = allDays.find((d) => d.day === day);
+                        return (_jsxs("button", { type: "button", role: "tab", "aria-selected": isActive, className: `planner-day-tab${isActive ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(day), children: [_jsxs("span", { className: "planner-day-tab-label", children: ["D", day] }), _jsx("span", { className: "planner-day-tab-count", children: dayMeta?.spots.length ?? 0 })] }, day));
+                    }), _jsx("button", { type: "button", className: "planner-day-tab planner-day-tab-add", onClick: handleAppendEmptyDay, "aria-label": "\u6DFB\u52A0\u65B0\u7684\u4E00\u5929", title: "\u6DFB\u52A0\u65B0\u7684\u4E00\u5929", children: _jsx("span", { className: "planner-day-tab-label", children: "+" }) })] }), _jsx(DndContext, { sensors: sensors, collisionDetection: closestCorners, onDragEnd: handleDragEnd, children: _jsx("div", { className: "planner-day-grid", children: displayDays.map((dayItem, dayIndex) => {
                         const dayColor = dayColors[dayIndex % dayColors.length] || '#b85c38';
                         const segmentByFromId = new Map(dayItem.segments.map((segment) => [segment.fromSpotId, segment]));
                         return (_jsx(DayDropLane, { day: dayItem.day, active: dayItem.day === activeDay, children: _jsxs("div", { className: "planner-day-card", children: [_jsxs("div", { className: "planner-day-card-head", children: [_jsxs("button", { type: "button", className: `planner-day-chip${dayItem.day === activeDay ? ' is-active' : ''}`, style: { '--planner-day-color': dayColor }, onClick: () => onSetActiveDay(dayItem.day), children: ["Day ", dayItem.day, " \u00B7 ", dayItem.spots.length, " \u4E2A\u666F\u70B9"] }), _jsxs("div", { className: "planner-day-more-wrap", children: [_jsx("button", { type: "button", className: "planner-day-more-btn", onClick: () => setMoreMenuDay(moreMenuDay === dayItem.day ? null : dayItem.day), "aria-label": "\u66F4\u591A\u64CD\u4F5C", "aria-expanded": moreMenuDay === dayItem.day, children: "\u22EF" }), moreMenuDay === dayItem.day ? (_jsxs("div", { className: "planner-day-more-menu", role: "menu", children: [_jsx("button", { type: "button", role: "menuitem", onClick: () => {

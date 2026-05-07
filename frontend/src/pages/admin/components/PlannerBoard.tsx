@@ -28,6 +28,11 @@ interface PlannerBoardProps {
   selectedSpotId: string | null;
   selectedSegmentId: string | null;
   selectedSpotIds: string[];
+  /**
+   * P0-1: 根据 trip.meta.startDate/endDate 算出的"期望天数"。
+   * 用户填了 06-01 → 06-05 = 5 天,即使 hook spots 只有 D1 也展开 D1-D5 5 个 tab。
+   */
+  expectedDayCount?: number;
   onSetActiveDay: (day: number) => void;
   onSelectSpot: (spotId: string) => void;
   onToggleSpotSelection: (spotId: string, checked: boolean) => void;
@@ -181,6 +186,7 @@ export function PlannerBoard({
   onDuplicateDay,
   onClearDay,
   onAutoSortDay,
+  expectedDayCount,
 }: PlannerBoardProps) {
   const [moreMenuDay, setMoreMenuDay] = useState<number | null>(null);
   const sensors = useSensors(
@@ -189,15 +195,32 @@ export function PlannerBoard({
   );
   const selectedIds = new Set(selectedSpotIds);
   const allDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
+
+  /**
+   * P0-2: 用户点"+ 加 day"扩展的最大 day 数。hook snapshot 是从 spots derive 的,
+   * 没 spot 的 day 不会出现。这里用本地 state 记录用户期望的 day 数,DayTabs 合并渲染。
+   * 用户在新 day 加 spot 后,hook 自然会 surface 该 day,本地 state 不再起作用。
+   */
+  const [extendedMaxDay, setExtendedMaxDay] = useState<number>(0);
+
   /**
    * 主区只渲染 activeDay 那一天的 lane,把 8000+px 的全展开页面收缩到 ~600px。
    * 其他 day 在顶部 DayTabs 切换。drag 跨 day 仍然 OK,因为顶部 tabs 自身
    * 也作为 drop zone 接收 spot,后续 onMoveSpot 触发即切到目标 day。
    */
   const displayDays = allDays.filter((d) => d.day === activeDay);
-  /** 顶部 DayTabs 渲染所有 day */
-  const allDayNumbers = allDays.map((d) => d.day);
+  /** 顶部 DayTabs 渲染所有 day(合并 hook derive + 用户扩展的空 day + 创建表单期望天数) */
+  const hookMaxDay = Math.max(0, ...allDays.map((d) => d.day));
+  const effectiveMaxDay = Math.max(hookMaxDay, extendedMaxDay, expectedDayCount ?? 0, 1);
+  const allDayNumbers = Array.from({ length: effectiveMaxDay }, (_, i) => i + 1);
   const totalSpots = allDays.reduce((sum, d) => sum + d.spots.length, 0);
+
+  /** "+ 加 day" 按钮:递增 extendedMaxDay,自动切到新 day */
+  const handleAppendEmptyDay = () => {
+    const next = effectiveMaxDay + 1;
+    setExtendedMaxDay(next);
+    onSetActiveDay(next);
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -259,6 +282,16 @@ export function PlannerBoard({
             </button>
           );
         })}
+        {/* P0-2: 末尾"+ 加 day"按钮 — 递增 effectiveMaxDay,自动切到新 day */}
+        <button
+          type="button"
+          className="planner-day-tab planner-day-tab-add"
+          onClick={handleAppendEmptyDay}
+          aria-label="添加新的一天"
+          title="添加新的一天"
+        >
+          <span className="planner-day-tab-label">+</span>
+        </button>
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>

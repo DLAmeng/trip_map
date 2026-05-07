@@ -15,7 +15,9 @@ export function useCreateTripMutation() {
         mutationFn: (body) => createTrip(body),
         onSuccess: (result) => {
             queryClient.invalidateQueries({ queryKey: ['trips'] });
-            navigate(`/trip?id=${encodeURIComponent(result.trip.id)}`);
+            // P0-4: 创建后直接进 admin 编辑器(原跳 /trip 但用户刚创建无内容、看前台无意义),
+            // duplicate 也是跳 admin,行为统一
+            navigate(`/admin?id=${encodeURIComponent(result.trip.id)}`);
         },
     });
 }

@@ -36,7 +36,9 @@ function getRapidApiRuntimeConfig() {
 
 async function searchPlaces({ query, lat, lng }) {
   if (!GOOGLE_PLACES_API_KEY) throw new Error('未配置 Google Places API Key');
-  const body = { textQuery: query, languageCode: 'zh-CN', regionCode: 'JP', pageSize: 5 };
+  // P0-3 fix: 之前写死 regionCode: 'JP' 让非日本行程(如巴黎/伦敦)搜不到任何景点。
+  // 移除 regionCode 让 Google 全球范围匹配;有 lat/lng 时仍 locationBias 提示局部相关。
+  const body = { textQuery: query, languageCode: 'zh-CN', pageSize: 5 };
   if (lat && lng) {
     body.locationBias = { circle: { center: { latitude: lat, longitude: lng }, radius: 50000 } };
   }
@@ -45,13 +47,24 @@ async function searchPlaces({ query, lat, lng }) {
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.websiteUri,places.nationalPhoneNumber,places.regularOpeningHours,places.editorialSummary,places.googleMapsUri',
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.userRatingCount,places.websiteUri,places.nationalPhoneNumber,places.regularOpeningHours,places.editorialSummary,places.googleMapsUri,places.primaryType',
     },
     body: JSON.stringify(body),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error?.message || '搜索失败');
-  return data.places || [];
+  // P0-3 fix: 把 Google Places API 原始格式 mapping 成前端 PlaceSearchAutocomplete 期望的扁平格式。
+  // 之前直接返回 Google 原始字段(displayName 是 LocalizedString {text}, location 是 {latitude/longitude}),
+  // 前端按 r.name/r.lat/r.lng 取拿不到值,显示为空白。
+  const rawPlaces = data.places || [];
+  return rawPlaces.map((p) => ({
+    placeId: p.id || '',
+    name: typeof p.displayName === 'string' ? p.displayName : (p.displayName?.text || ''),
+    address: p.formattedAddress || '',
+    lat: typeof p.location?.latitude === 'number' ? p.location.latitude : 0,
+    lng: typeof p.location?.longitude === 'number' ? p.location.longitude : 0,
+    primaryType: p.primaryType || '',
+  }));
 }
 
 async function getPlaceDetails(placeId) {

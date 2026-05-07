@@ -252,6 +252,23 @@ function AdminEditor({
     [payload],
   );
 
+  /**
+   * P0-1: 根据 trip.meta.startDate/endDate 算出"期望天数",传给 PlannerBoard 让 DayTabs
+   * 至少展开 N 个 day。用户在创建 trip 表单填了 06-01 → 06-05(5 天),即使 hook spots
+   * 还没有任何景点(snapshot.dayNumbers 是空),DayTabs 也会显示 D1-D5 5 个 chip,
+   * 用户能直接切到任一 day 开始加 spot。
+   */
+  const expectedDayCount = useMemo(() => {
+    const start = payload.meta.startDate;
+    const end = payload.meta.endDate;
+    if (!start || !end) return undefined;
+    const startMs = Date.parse(start);
+    const endMs = Date.parse(end);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) return undefined;
+    // 含起止两端,例如 06-01 → 06-05 = 5 天
+    return Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1;
+  }, [payload.meta.startDate, payload.meta.endDate]);
+
   const dayOptions = useMemo(
     () => sortDays([...snapshot.dayNumbers, activeDay, bulkTargetDay]),
     [activeDay, bulkTargetDay, snapshot.dayNumbers],
@@ -566,6 +583,7 @@ function AdminEditor({
             selectedSpotId={selectedSpotId}
             selectedSegmentId={selectedSegmentId}
             selectedSpotIds={selectedSpotIds}
+            expectedDayCount={expectedDayCount}
             onSetActiveDay={setActiveDay}
             onSelectSpot={selectSpot}
             onToggleSpotSelection={toggleSpotSelection}

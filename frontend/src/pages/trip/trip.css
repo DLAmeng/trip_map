@@ -2950,3 +2950,81 @@
     padding: 6px 8px;
   }
 }
+
+/* ============================================================
+ * P0-5: 空 trip 引导卡 — 浮在地图上方,用户刚创建无景点时显示
+ * 桌面居中,移动 viewport 上方留 ~120px 给 mobile-trip-context-card
+ * ============================================================ */
+.trip-empty-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent 0%, rgba(248, 239, 226, 0.88) 50%, rgba(239, 228, 211, 0.92) 100%);
+}
+
+.trip-empty-onboarding-card {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(76, 60, 43, 0.10);
+  border-radius: 22px;
+  padding: 28px 24px;
+  max-width: 320px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 18px 46px rgba(22, 37, 48, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: trip-empty-pop 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes trip-empty-pop {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.trip-empty-onboarding-icon {
+  font-size: 2.4rem;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+
+.trip-empty-onboarding-card h2 {
+  margin: 0 0 6px;
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.trip-empty-onboarding-card p {
+  margin: 0 0 20px;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.trip-empty-onboarding-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 24px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.32);
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.trip-empty-onboarding-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(234, 88, 12, 0.42);
+}

@@ -139,6 +139,24 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
     }, [payload.routeSegments.length, payload.spots.length, snapshot.days.length]);
     // 冲突数 — SaveBar 红点显示用
     const issueCount = useMemo(() => analyzeTripFeasibility(payload).issues.length, [payload]);
+    /**
+     * P0-1: 根据 trip.meta.startDate/endDate 算出"期望天数",传给 PlannerBoard 让 DayTabs
+     * 至少展开 N 个 day。用户在创建 trip 表单填了 06-01 → 06-05(5 天),即使 hook spots
+     * 还没有任何景点(snapshot.dayNumbers 是空),DayTabs 也会显示 D1-D5 5 个 chip,
+     * 用户能直接切到任一 day 开始加 spot。
+     */
+    const expectedDayCount = useMemo(() => {
+        const start = payload.meta.startDate;
+        const end = payload.meta.endDate;
+        if (!start || !end)
+            return undefined;
+        const startMs = Date.parse(start);
+        const endMs = Date.parse(end);
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs)
+            return undefined;
+        // 含起止两端,例如 06-01 → 06-05 = 5 天
+        return Math.floor((endMs - startMs) / (1000 * 60 * 60 * 24)) + 1;
+    }, [payload.meta.startDate, payload.meta.endDate]);
     const dayOptions = useMemo(() => sortDays([...snapshot.dayNumbers, activeDay, bulkTargetDay]), [activeDay, bulkTargetDay, snapshot.dayNumbers]);
     const selectedSpot = selectedSpotId ? snapshot.spotById.get(selectedSpotId) || null : null;
     const selectedSegment = selectedSegmentId
@@ -384,7 +402,7 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
         setSelectedSpotIds((current) => current.filter((id) => snapshot.spotById.get(id)?.day !== day));
         addToast('warning', `Day ${day} 已清空`);
     };
-    return (_jsxs("div", { className: "admin-shell", children: [_jsx(AdminToastStack, { items: toasts, onDismiss: (id) => setToasts((current) => current.filter((item) => item.id !== id)) }), _jsx(AdminHeader, { title: payload.meta.title || '', tripId: tripId, meta: payload.meta, isDefaultTrip: isDefaultTrip, stats: stats }), _jsx(SaveBar, { onSave: handleSave, onReset: handleReset, onUndo: undo, onRedo: redo, onOpenSettings: () => setSettingsOpen(true), onOpenConflicts: () => setConflictsOpen(true), issueCount: issueCount, isSaving: isSaving, isSyncing: isSyncing, isReloading: isReloading, isDirty: isDirty, canUndo: canUndo, canRedo: canRedo, restoredFromLocalDraft: restoredFromLocalDraft, inlineMessage: inlineMessage }), _jsx("main", { className: "planner-layout", children: _jsx("div", { className: "planner-main-column", children: _jsx(PlannerBoard, { days: snapshot.days, dayColors: payload.config.dayColors, activeDay: activeDay, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, selectedSpotIds: selectedSpotIds, onSetActiveDay: setActiveDay, onSelectSpot: selectSpot, onToggleSpotSelection: toggleSpotSelection, onSelectSegment: selectSegment, onAddSpot: handleAddSpot, onQuickAddPlace: handleQuickAddPlace, onMoveSpot: moveSpot, onDuplicateDay: (day) => {
+    return (_jsxs("div", { className: "admin-shell", children: [_jsx(AdminToastStack, { items: toasts, onDismiss: (id) => setToasts((current) => current.filter((item) => item.id !== id)) }), _jsx(AdminHeader, { title: payload.meta.title || '', tripId: tripId, meta: payload.meta, isDefaultTrip: isDefaultTrip, stats: stats }), _jsx(SaveBar, { onSave: handleSave, onReset: handleReset, onUndo: undo, onRedo: redo, onOpenSettings: () => setSettingsOpen(true), onOpenConflicts: () => setConflictsOpen(true), issueCount: issueCount, isSaving: isSaving, isSyncing: isSyncing, isReloading: isReloading, isDirty: isDirty, canUndo: canUndo, canRedo: canRedo, restoredFromLocalDraft: restoredFromLocalDraft, inlineMessage: inlineMessage }), _jsx("main", { className: "planner-layout", children: _jsx("div", { className: "planner-main-column", children: _jsx(PlannerBoard, { days: snapshot.days, dayColors: payload.config.dayColors, activeDay: activeDay, selectedSpotId: selectedSpotId, selectedSegmentId: selectedSegmentId, selectedSpotIds: selectedSpotIds, expectedDayCount: expectedDayCount, onSetActiveDay: setActiveDay, onSelectSpot: selectSpot, onToggleSpotSelection: toggleSpotSelection, onSelectSegment: selectSegment, onAddSpot: handleAddSpot, onQuickAddPlace: handleQuickAddPlace, onMoveSpot: moveSpot, onDuplicateDay: (day) => {
                             duplicateDay(day);
                             addToast('info', `已复制 Day ${day}`);
                         }, onClearDay: handleClearDay, onAutoSortDay: (day) => {

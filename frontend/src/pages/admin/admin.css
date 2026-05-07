@@ -767,6 +767,22 @@ a.btn {
   opacity: 0.92;
 }
 
+/* P0-2: "+ 加 day" 按钮 — 虚线边框,与已有 day tab 视觉区分 */
+.planner-day-tab.planner-day-tab-add {
+  background: transparent;
+  border: 1px dashed var(--admin-line);
+  color: var(--admin-muted);
+  min-width: 40px;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.planner-day-tab.planner-day-tab-add:hover {
+  background: rgba(184, 92, 56, 0.06);
+  border-color: var(--admin-accent);
+  color: var(--admin-accent);
+}
+
 
 .planner-toolbar-panel {
   margin-top: 0;
