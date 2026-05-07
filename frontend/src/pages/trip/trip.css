@@ -919,6 +919,28 @@
   --day-color: var(--ocean);
 }
 
+/* P5: Google Maps InfoWindow 容器优化 — 移动端让 popup 更舒展、避开 ✕ 按钮
+   .gm-style-iw-d 是 Google 的内容滚动区,默认 max-height 限制有时太小
+   .gm-style-iw-c 是外壳,默认 padding 0,我们靠 day-band 负 margin 自己撑边距 */
+.gm-style-iw-c {
+  padding: 12px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18) !important;
+}
+
+.gm-style-iw-d {
+  overflow: auto !important;
+  /* 给内部内容留出 16px 底部空气感,避免最后一个按钮贴底 */
+  padding-bottom: 4px;
+}
+
+/* Google 默认 ✕ 按钮 48×48 在右上,占据顶部空间 —
+   让 popup-day-band 顶到容器边但不被 ✕ 覆盖(✕ 在 day-band 上方更高 z) */
+.popup-shell {
+  /* 给 ✕ 按钮(48px 宽)留出右上角避让区,首行 day 文字不被遮 */
+  padding-top: 4px;
+}
+
 /*
  * 顶部 day 颜色色带 — 4px 高,贴 popup 顶,瞬间识别属于第几天。
  * 对齐设计稿 mobile.html L117 用 day color 的视觉关联。
@@ -941,8 +963,13 @@
 }
 
 .popup-day {
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
+  letter-spacing: 0.02em;
+  /* P5: 给右上 ✕ 按钮(48px)避让,避免长 day 文字被遮 */
+  padding-right: 44px;
+  /* day 与 name 之间气量 */
+  margin-bottom: 2px;
 }
 
 .popup-name {
@@ -950,9 +977,12 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 0.98rem;
+  font-size: 1.02rem;
   font-weight: 800;
   color: var(--text);
+  line-height: 1.3;
+  /* P5: name 比较短一般不会被 ✕ 遮,但长名字防换行后第二行被遮 */
+  padding-right: 4px;
 }
 
 .popup-name-en {
@@ -960,12 +990,22 @@
   color: var(--text-soft);
 }
 
+/* P5: meta 用 dot 中点分隔,更紧凑;原 gap: 10px 移除多余空白 */
 .popup-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 0.78rem;
+  align-items: center;
+  gap: 0;
+  font-size: 0.8rem;
   color: var(--text-soft);
+  margin-bottom: 2px;
+}
+
+.popup-meta > span:not(:last-child)::after {
+  content: '·';
+  margin: 0 8px;
+  color: rgba(83, 103, 110, 0.40);
+  font-weight: 700;
 }
 
 .popup-desc,
@@ -973,8 +1013,19 @@
 .popup-transport,
 .popup-next,
 .popup-nav-row {
-  font-size: 0.8rem;
-  line-height: 1.5;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+/* P5: "推荐理由" 区分视觉层级 — 加左侧 accent 色边 + 浅底
+   让推荐理由比普通描述更醒目(它是用户决策的关键信息) */
+.popup-why {
+  position: relative;
+  padding: 6px 10px;
+  background: rgba(35, 111, 122, 0.06);
+  border-left: 3px solid var(--day-color);
+  border-radius: 0 8px 8px 0;
   color: var(--text);
 }
 
@@ -995,16 +1046,46 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 0 10px;
+  /* P5: 触控目标 ≥ 40px(桌面),≥ 44px(移动通过 @media 提升) */
+  min-height: 40px;
+  padding: 0 14px;
   border-radius: 10px;
   border: 1px solid rgba(35, 111, 122, 0.16);
   background: rgba(35, 111, 122, 0.08);
   color: var(--ocean);
-  font-size: 0.76rem;
+  font-size: 0.84rem;
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.popup-nav-btn:active {
+  transform: scale(0.96);
+}
+
+/* P5: 主操作"导航"用实色填充,强化主按钮(原方案两按钮都 ghost,主次不分)
+   用 .popup-nav-btn.popup-current-btn 提高 specificity,
+   不被后定义的 .popup-nav-btn:hover 覆盖 */
+.popup-nav-btn.popup-current-btn {
+  background: var(--ocean);
+  color: #fff;
+  border-color: var(--ocean);
+}
+
+.popup-nav-btn.popup-current-btn:hover {
+  background: var(--ocean);
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+@media (max-width: 767px) {
+  .popup-nav-btn,
+  .popup-detail-btn {
+    min-height: 44px;
+    font-size: 0.88rem;
+    padding: 0 16px;
+  }
 }
 
 .popup-nav-btn:hover,
