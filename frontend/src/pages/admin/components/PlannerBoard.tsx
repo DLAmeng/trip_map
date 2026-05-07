@@ -37,7 +37,7 @@ interface PlannerBoardProps {
   onSelectSpot: (spotId: string) => void;
   onToggleSpotSelection: (spotId: string, checked: boolean) => void;
   onSelectSegment: (segmentId: string) => void;
-  onAddSpot: (day: number, index?: number) => void;
+  onAddSpot: (day: number, index?: number, partial?: Partial<SpotItem>) => void;
   /** 顶部 Quick Add 搜索选中地点后:加到 activeDay 末尾(replaces PlannerToolbarPanel 的 Quick Add) */
   onQuickAddPlace: (place: { name: string; lat: number; lng: number }) => void;
   onMoveSpot: (spotId: string, targetDay: number, targetIndex: number) => void;
@@ -411,7 +411,7 @@ export function PlannerBoard({
 
                       {dayItem.spots.length === 0 ? (
                         <div className="planner-empty-day">
-                          <p>这一天还没有景点，点地图或下方按钮开始添加。</p>
+                          <p>这一天还没有景点。用上方搜索栏添加地图地点，或下方按钮自定义。</p>
                         </div>
                       ) : null}
                     </div>
@@ -422,10 +422,18 @@ export function PlannerBoard({
                     className="planner-add-spot-btn"
                     onClick={() => {
                       onSetActiveDay(dayItem.day);
-                      onAddSpot(dayItem.day);
+                      // P1-7: 不再创建占位"新景点"强制让用户进 inspector 改名,
+                      // 改成先 prompt 输入名字,空字符串则取消创建。
+                      const raw = window.prompt(
+                        `给 Day ${dayItem.day} 自定义一个景点(留空取消):\n例:酒店休息 / 自由活动 / 机场`,
+                        '',
+                      );
+                      const name = (raw || '').trim();
+                      if (!name) return;
+                      onAddSpot(dayItem.day, undefined, { name });
                     }}
                   >
-                    + 添加景点到 Day {dayItem.day}
+                    + 自定义景点到 Day {dayItem.day}（无地点）
                   </button>
                 </div>
               </DayDropLane>

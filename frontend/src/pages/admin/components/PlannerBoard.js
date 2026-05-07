@@ -105,9 +105,15 @@ export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selec
                                                                     onSetActiveDay(dayItem.day);
                                                                     onSelectSegment(nextSegment.id);
                                                                 }, children: _jsxs("div", { className: "planner-leg-chip-main", children: [_jsx("strong", { children: buildRouteHeadline(nextSegment) }), _jsx("span", { children: buildRouteMetaLine(nextSegment).join(' · ') || '点击编辑路线说明' })] }) })) : null] }, spot.id));
-                                                }), dayItem.spots.length === 0 ? (_jsx("div", { className: "planner-empty-day", children: _jsx("p", { children: "\u8FD9\u4E00\u5929\u8FD8\u6CA1\u6709\u666F\u70B9\uFF0C\u70B9\u5730\u56FE\u6216\u4E0B\u65B9\u6309\u94AE\u5F00\u59CB\u6DFB\u52A0\u3002" }) })) : null] }) }), _jsxs("button", { type: "button", className: "planner-add-spot-btn", onClick: () => {
+                                                }), dayItem.spots.length === 0 ? (_jsx("div", { className: "planner-empty-day", children: _jsx("p", { children: "\u8FD9\u4E00\u5929\u8FD8\u6CA1\u6709\u666F\u70B9\u3002\u7528\u4E0A\u65B9\u641C\u7D22\u680F\u6DFB\u52A0\u5730\u56FE\u5730\u70B9\uFF0C\u6216\u4E0B\u65B9\u6309\u94AE\u81EA\u5B9A\u4E49\u3002" }) })) : null] }) }), _jsxs("button", { type: "button", className: "planner-add-spot-btn", onClick: () => {
                                             onSetActiveDay(dayItem.day);
-                                            onAddSpot(dayItem.day);
-                                        }, children: ["+ \u6DFB\u52A0\u666F\u70B9\u5230 Day ", dayItem.day] })] }) }, dayItem.day));
+                                            // P1-7: 不再创建占位"新景点"强制让用户进 inspector 改名,
+                                            // 改成先 prompt 输入名字,空字符串则取消创建。
+                                            const raw = window.prompt(`给 Day ${dayItem.day} 自定义一个景点(留空取消):\n例:酒店休息 / 自由活动 / 机场`, '');
+                                            const name = (raw || '').trim();
+                                            if (!name)
+                                                return;
+                                            onAddSpot(dayItem.day, undefined, { name });
+                                        }, children: ["+ \u81EA\u5B9A\u4E49\u666F\u70B9\u5230 Day ", dayItem.day, "\uFF08\u65E0\u5730\u70B9\uFF09"] })] }) }, dayItem.day));
                     }) }) })] }));
 }
