@@ -930,7 +930,9 @@
    用 !important 覆盖 Google 内部用 inline transform 控制位置的逻辑。 */
 .gm-style-iw-a {
   position: fixed !important;
-  top: 50% !important;
+  /* 下移 32px 让 popup 中心略低于 viewport 几何中心 —
+     避开顶部搜索栏 + header card 视觉重心,更符合移动端"操作区在下半屏"惯例 */
+  top: calc(50% + 32px) !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
   /* z-index 2500 — 高于 .map-search-bar (2100) / .map-notice-stack (2000) /
