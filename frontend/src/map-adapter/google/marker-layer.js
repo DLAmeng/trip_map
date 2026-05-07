@@ -217,13 +217,16 @@ export function createGoogleMarkerLayer(config) {
                 if (ref.marker.position) {
                     ref.infoWindow.setPosition(ref.marker.position);
                 }
-                // P6 修正:打开 popup 前让 marker 在屏幕中央(panTo 平滑移动地图),
-                // 然后 popup 自然出现在 marker 上方居中区域。
+                // P6 修正:打开 popup 前让 marker 移到屏幕中央**偏下**位置,
+                // 这样 popup(在 marker 上方)的视觉中心会更接近屏幕几何中央。
+                // panTo 让 marker 居中 → panBy(0, -120) 视图上移 120px ⇒ marker 屏幕位置下移 120px
                 // 之后用户拖动地图,popup 因锚定到 marker 会跟着地图一起移动 —
                 // 这是 Google InfoWindow 标准行为,符合用户对地图 popup 的直觉。
                 const markerPos = ref.marker.position;
                 if (markerPos) {
                     map.panTo(markerPos);
+                    // 让 marker 在屏幕下方 120px,popup 弹出后整体视觉居中
+                    map.panBy(0, -120);
                 }
                 ref.infoWindow.open({
                     map,
