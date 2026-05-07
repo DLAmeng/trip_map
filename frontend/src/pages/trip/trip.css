@@ -2613,15 +2613,18 @@
    * P5-F1: HeaderCard 自动收缩 — 任何全屏浮层(sheet / popover / poi card)打开时,
    * 上滑隐藏给地图腾出 ~52px,关闭后自动展开。纯 CSS :has,无需 React state。
    * P8: trip-card 和 map-search 已合并成一个浮卡,所以两者一起收起。
+   * P9: 加 .mobile-summary-modal — "概况"按钮打开的弹窗也要触发同步收起。
    */
   .trip-shell-mobile:has(.mobile-drawer) .mobile-trip-context-card,
   .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .mobile-trip-context-card,
   .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-trip-context-card,
+  .trip-shell-mobile:has(.mobile-summary-modal) .mobile-trip-context-card,
   .trip-shell-mobile:has(.external-poi-card) .mobile-trip-context-card,
   .trip-shell-mobile:has(.search-results-popover) .mobile-trip-context-card,
   .trip-shell-mobile:has(.mobile-drawer) .map-search,
   .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .map-search,
   .trip-shell-mobile:has(.mobile-route-detail-sheet) .map-search,
+  .trip-shell-mobile:has(.mobile-summary-modal) .map-search,
   .trip-shell-mobile:has(.external-poi-card) .map-search {
     transform: translateY(-220%);
     opacity: 0;
@@ -2943,7 +2946,8 @@
    */
   .trip-shell-mobile:has(.mobile-drawer) .mobile-trip-bottom-switcher,
   .trip-shell-mobile:has(.mobile-filter-sheet.is-open) .mobile-trip-bottom-switcher,
-  .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-trip-bottom-switcher {
+  .trip-shell-mobile:has(.mobile-route-detail-sheet) .mobile-trip-bottom-switcher,
+  .trip-shell-mobile:has(.mobile-summary-modal) .mobile-trip-bottom-switcher {
     opacity: 0.6;
   }
 
