@@ -131,27 +131,23 @@ export function createGoogleMarkerLayer(config: {
       destroy();
       markerCluster = createClusterer();
 
-      // P7: 按 spot.id 去重 — 防御性,避免上游数据 bug 导致同一 spot 被
-      // 渲染成 2 个 marker(cluster 误显示 "2")
-      const seenIds = new Set<string>();
-      const uniqueSpots: SpotItem[] = [];
-      let duplicateCount = 0;
-      for (const spot of spots) {
-        if (seenIds.has(spot.id)) {
-          duplicateCount += 1;
-          continue;
+      // P7 回退:之前按 spot.id 去重会**丢掉合理的多日访问 spot**,
+      // 只保留 jitter 处理同坐标视觉重叠 — 让所有 spot 都建 marker。
+      // 重复的 spot.id 仅打 debug 日志,不删除。
+      {
+        const seenIds = new Set<string>();
+        let duplicateCount = 0;
+        for (const spot of spots) {
+          if (seenIds.has(spot.id)) duplicateCount += 1;
+          else seenIds.add(spot.id);
         }
-        seenIds.add(spot.id);
-        uniqueSpots.push(spot);
+        if (duplicateCount > 0) {
+          debugTripMapEvent('google marker render duplicate ids (kept all)', {
+            total: spots.length,
+            duplicates: duplicateCount,
+          });
+        }
       }
-      if (duplicateCount > 0) {
-        debugTripMapEvent('google marker render dedup', {
-          original: spots.length,
-          unique: uniqueSpots.length,
-          duplicates: duplicateCount,
-        });
-      }
-      spots = uniqueSpots;
 
       // 按 day 分桶,基于 spot.order 计算每个 spot 在当天的 1-based 序号
       const dayCounters = new Map<number, number>();
