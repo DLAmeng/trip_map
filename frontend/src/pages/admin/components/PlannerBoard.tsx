@@ -44,6 +44,8 @@ interface PlannerBoardProps {
   onDuplicateDay: (day: number) => void;
   onClearDay: (day: number) => void;
   onAutoSortDay: (day: number) => void;
+  /** P4-5: spot 名字 inline 编辑 — 长按/双击进入,失焦 / Enter 提交 */
+  onRenameSpot: (spotId: string, name: string) => void;
 }
 
 interface PlannerSpotCardProps {
@@ -55,6 +57,8 @@ interface PlannerSpotCardProps {
   nextSegment?: PlannerSegment;
   onSelect: () => void;
   onToggleSelection: (checked: boolean) => void;
+  /** P4-5: 长按或点击编辑名字时调用,父组件回写 useTripPlannerEditor */
+  onRenameSpot: (spotId: string, name: string) => void;
 }
 
 function PlannerSpotCard({
@@ -66,6 +70,7 @@ function PlannerSpotCard({
   nextSegment,
   onSelect,
   onToggleSelection,
+  onRenameSpot,
 }: PlannerSpotCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: spot.id,
@@ -83,6 +88,42 @@ function PlannerSpotCard({
     transportType: nextSegment?.transportType || '',
   });
 
+  // P4-5: spot 名字 inline 编辑 — 长按 1s(移动)/ 双击(桌面)进入编辑
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftName, setDraftName] = useState(spot.name || '');
+  const longPressTimerRef = useRef<number | null>(null);
+  const inlineInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setDraftName(spot.name || '');
+      window.setTimeout(() => inlineInputRef.current?.select(), 30);
+    }
+  }, [isEditing, spot.name]);
+
+  const startLongPress = () => {
+    longPressTimerRef.current = window.setTimeout(() => {
+      setIsEditing(true);
+      // P4-6: 长按成功 haptic
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(30);
+    }, 700);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const commitRename = () => {
+    const name = draftName.trim();
+    setIsEditing(false);
+    if (name && name !== spot.name) {
+      onRenameSpot(spot.id, name);
+    }
+  };
+
   return (
     <article
       ref={setNodeRef}
@@ -90,6 +131,8 @@ function PlannerSpotCard({
       className={`planner-spot-card${selected ? ' is-selected' : ''}${
         checked ? ' is-checked' : ''
       }`}
+      // P4-1: data-spot-id 让 AdminPage 加 spot 后能 querySelector 滚到对应卡 + 高亮
+      data-spot-id={spot.id}
       onClick={onSelect}
     >
       <div className="planner-spot-card-top">
@@ -120,7 +163,45 @@ function PlannerSpotCard({
         </span>
         <div className="planner-spot-main">
           <div className="planner-spot-title-row">
-            <strong>{spot.name || '未命名景点'}</strong>
+            {isEditing ? (
+              <input
+                ref={inlineInputRef}
+                className="planner-spot-inline-input"
+                value={draftName}
+                maxLength={40}
+                onChange={(e) => setDraftName(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitRename();
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setIsEditing(false);
+                  }
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <strong
+                /* P4-5: 长按 700ms(移动) / 双击(桌面) → inline 编辑名字 */
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  startLongPress();
+                }}
+                onPointerUp={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onPointerCancel={cancelLongPress}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditing(true);
+                }}
+                title="长按 / 双击改名"
+              >
+                {spot.name || '未命名景点'}
+              </strong>
+            )}
             {spot.mustVisit ? <span className="planner-pill planner-pill-must">必去</span> : null}
             {spot.type === 'transport' ? (
               <span className="planner-pill planner-pill-muted">交通点</span>
@@ -191,6 +272,7 @@ export function PlannerBoard({
   onClearDay,
   onAutoSortDay,
   expectedDayCount,
+  onRenameSpot,
 }: PlannerBoardProps) {
   const [moreMenuDay, setMoreMenuDay] = useState<number | null>(null);
   // P3-Bug I: 替代 window.prompt() 的内联 dialog —
@@ -414,6 +496,7 @@ export function PlannerBoard({
                                 onSelectSpot(spot.id);
                               }}
                               onToggleSelection={(checked) => onToggleSpotSelection(spot.id, checked)}
+                              onRenameSpot={onRenameSpot}
                             />
 
                             {nextSegment ? (

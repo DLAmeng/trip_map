@@ -201,21 +201,30 @@ function AdminEditor({
 
   useBeforeUnload(isDirty);
 
-  const addToast = useCallback((tone: AdminToast['tone'], title: string, detail?: string) => {
+  const addToast = useCallback((
+    tone: AdminToast['tone'],
+    title: string,
+    detail?: string,
+    action?: AdminToast['action'],
+  ) => {
     const nextToast: AdminToast = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       tone,
       title,
       detail,
+      action,
     };
     setToasts((current) => [...current, nextToast]);
   }, []);
 
   useEffect(() => {
     if (!toasts.length) return undefined;
+    // P4-2: 带 undo action 的 toast 持续 6s(用户来得及撤销),普通 toast 仍 4.2s
+    const head = toasts[0];
+    const lifetime = head.action ? 6000 : 4200;
     const timeout = window.setTimeout(() => {
       setToasts((current) => current.slice(1));
-    }, 4200);
+    }, lifetime);
     return () => window.clearTimeout(timeout);
   }, [toasts]);
 
@@ -330,6 +339,21 @@ function AdminEditor({
     addSpot(day, { ...partial, id }, index);
     selectSpot(id);
     setInlineMessage(`已在 Day ${day} 新增景点`);
+    // P4-6: 移动端 haptic 反馈(iOS 16.4+ / Android Chrome 支持)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(15);
+    }
+    // P4-1: 等 React commit 后,滚到新 spot 卡 + 加 1.5s highlight 动画
+    // (移动端视口小,新加的 spot 在 day 末尾,如果不滚用户根本看不到)
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        const card = document.querySelector<HTMLElement>(`[data-spot-id="${id}"]`);
+        if (!card) return;
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('is-just-added');
+        window.setTimeout(() => card.classList.remove('is-just-added'), 1800);
+      }, 60);
+    }
   };
 
   const handleQuickAddPlace = (place: {
@@ -426,15 +450,21 @@ function AdminEditor({
   }, [editorParams]);
 
   const handleDeleteSpot = (spotId: string) => {
+    // P4-2: 删除立刻执行,toast 6s 内可撤销 — 比 window.confirm 在移动端友好得多
+    // (PWA 不弹原生 confirm,且减少摩擦)
     const spot = snapshot.spotById.get(spotId);
-    const confirmed = window.confirm(`删除景点“${spot?.name || spotId}”后不可恢复，继续吗？`);
-    if (!confirmed) return;
+    if (!spot) return;
+    const backup = { ...spot };
     deleteSpot(spotId);
     setSelectedSpotIds((current) => current.filter((id) => id !== spotId));
     if (selectedSpotId === spotId) {
       setSelectedSpotId(null);
     }
-    addToast('warning', '已删除景点');
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    addToast('warning', `已删除"${backup.name || '未命名景点'}"`, undefined, {
+      label: '撤销',
+      onAction: () => addSpots([backup]),
+    });
   };
 
   const handleSave = async () => {
@@ -450,14 +480,15 @@ function AdminEditor({
   };
 
   const handleReset = () => {
+    // P4-3: confirm 移到 SaveBar 内"二次轻点"逻辑(移动端 PWA 友好,
+    // 不再弹原生 window.confirm),这里直接执行
     if (!isDirty) return;
-    const confirmed = window.confirm('重置会丢弃当前未保存修改，继续吗？');
-    if (!confirmed) return;
     resetFromPayload(savedPayload);
     setSelectedSpotIds([]);
     setSelectedSpotId(null);
     setSelectedSegmentId(null);
     setInlineMessage('已恢复到最近一次保存状态');
+    addToast('info', '已重置为上次保存状态');
   };
 
   const handleReload = async () => {
@@ -519,28 +550,41 @@ function AdminEditor({
     }
   };
 
-  // P-final: handleMoveSelected/handleCopySelected/handleAppendTag 已被
-  // BulkActionsToolbar 内嵌取代,只保留 handleDeleteSelected (含 confirm 弹窗)
+  // P-final: handleMoveSelected/handleCopySelected/handleAppendTag 已被 BulkActionsToolbar 取代
+  // P4-2: handleDeleteSelected / handleClearDay 改 undoable toast(去掉 confirm 摩擦)
   const handleDeleteSelected = () => {
     if (!selectedSpotIds.length) return;
-    const confirmed = window.confirm(`删除选中的 ${selectedSpotIds.length} 个景点吗？`);
-    if (!confirmed) return;
+    // 备份被删 spot,toast 撤销时恢复
+    const backups = selectedSpotIds
+      .map((id) => snapshot.spotById.get(id))
+      .filter((s): s is NonNullable<typeof s> => !!s)
+      .map((s) => ({ ...s }));
+    if (!backups.length) return;
     deleteSelected(selectedSpotIds);
     setSelectedSpotIds([]);
     setSelectedSpotId(null);
-    addToast('warning', '已删除选中景点');
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    addToast('warning', `已删除 ${backups.length} 个景点`, undefined, {
+      label: '撤销',
+      onAction: () => addSpots(backups),
+    });
   };
 
   const handleClearDay = (day: number) => {
-    const confirmed = window.confirm(`清空 Day ${day} 的全部景点吗？`);
-    if (!confirmed) return;
+    const dayBackup = snapshot.days.find((d) => d.day === day);
+    if (!dayBackup || dayBackup.spots.length === 0) return;
+    const backups = dayBackup.spots.map((s) => ({ ...s }));
     clearDay(day);
     if (activeDay === day) {
       setSelectedSpotId(null);
       setSelectedSegmentId(null);
     }
     setSelectedSpotIds((current) => current.filter((id) => snapshot.spotById.get(id)?.day !== day));
-    addToast('warning', `Day ${day} 已清空`);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+    addToast('warning', `Day ${day} 已清空(${backups.length} 个景点)`, undefined, {
+      label: '撤销',
+      onAction: () => addSpots(backups),
+    });
   };
 
   return (
@@ -599,6 +643,10 @@ function AdminEditor({
             onAutoSortDay={(day) => {
               autoSortDay(day);
               setInlineMessage(`Day ${day} 已按地图距离重新排序`);
+            }}
+            onRenameSpot={(spotId, name) => {
+              updateSpot(spotId, { name });
+              if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(8);
             }}
           />
         </div>

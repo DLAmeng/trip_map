@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+
 interface SaveBarProps {
   onSave: () => void;
   onReset: () => void;
@@ -44,6 +46,31 @@ export function SaveBar({
   inlineMessage,
 }: SaveBarProps) {
   const isBusy = isSaving || isSyncing || isReloading;
+
+  // P4-3: 重置按钮"二次轻点确认" — 替代 window.confirm,移动端 PWA 友好
+  // 第一次点:进入 confirming 状态(变红 + 改文字 + 抖动);2.5s 内再点才执行 reset
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const confirmTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+  }, []);
+
+  const handleResetClick = () => {
+    if (!isDirty || isBusy) return;
+    if (confirmingReset) {
+      // 第二次点 — 执行
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+      setConfirmingReset(false);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(20);
+      onReset();
+      return;
+    }
+    // 第一次点 — 进入待确认
+    setConfirmingReset(true);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+    confirmTimerRef.current = window.setTimeout(() => setConfirmingReset(false), 2500);
+  };
 
   return (
     <div className="save-bar">
@@ -122,12 +149,12 @@ export function SaveBar({
         {/* 组 3:重置 / 保存(primary) */}
         <div className="save-bar-group save-bar-group-primary">
           <button
-            className="btn btn-ghost btn-danger"
-            onClick={onReset}
+            className={`btn btn-ghost btn-danger${confirmingReset ? ' is-confirming' : ''}`}
+            onClick={handleResetClick}
             disabled={!isDirty || isBusy}
-            title="丢弃未保存的所有更改"
+            title={confirmingReset ? '再点一次确认重置(2.5s 内有效)' : '丢弃未保存的所有更改'}
           >
-            重置
+            {confirmingReset ? '再点确认' : '重置'}
           </button>
           <button
             className="btn btn-primary btn-save"

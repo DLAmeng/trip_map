@@ -1,4 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useEffect, useRef, useState } from 'react';
 /**
  * 简化后的 SaveBar(P-final 移动优先重设计):
  *   - 撤销 / 重做(常用) — 一组
@@ -10,5 +11,32 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  */
 export function SaveBar({ onSave, onReset, onUndo, onRedo, onOpenSettings, onOpenConflicts, issueCount, isSaving, isSyncing, isReloading, isDirty, canUndo, canRedo, restoredFromLocalDraft, inlineMessage, }) {
     const isBusy = isSaving || isSyncing || isReloading;
-    return (_jsxs("div", { className: "save-bar", children: [_jsxs("div", { className: "save-bar-info", children: [_jsx("span", { className: isDirty ? 'save-status-dirty' : 'save-status-clean', children: isDirty ? '● 您有未保存的更改' : '所有更改已保存' }), restoredFromLocalDraft ? (_jsx("span", { className: "save-status-draft", children: "\u5DF2\u6062\u590D\u672C\u5730\u8349\u7A3F" })) : null, inlineMessage ? _jsx("span", { className: "save-status-inline", children: inlineMessage }) : null] }), _jsxs("div", { className: "save-bar-actions", children: [_jsxs("div", { className: "save-bar-group", children: [_jsx("button", { className: "btn btn-ghost", onClick: onUndo, disabled: !canUndo || isBusy, title: "\u64A4\u9500\u4E0A\u4E00\u6B65", "aria-label": "\u64A4\u9500", children: "\u64A4\u9500" }), _jsx("button", { className: "btn btn-ghost", onClick: onRedo, disabled: !canRedo || isBusy, title: "\u6062\u590D\u521A\u624D\u64A4\u9500\u7684\u66F4\u6539", "aria-label": "\u91CD\u505A", children: "\u91CD\u505A" })] }), _jsxs("div", { className: "save-bar-group", children: [_jsxs("button", { type: "button", className: `btn btn-ghost save-bar-conflict-btn${issueCount > 0 ? ' has-issues' : ''}`, onClick: onOpenConflicts, title: issueCount > 0 ? `${issueCount} 处冲突,点击查看` : '检查行程冲突', "aria-label": issueCount > 0 ? `${issueCount} 处冲突` : '冲突检查', children: [_jsxs("svg", { viewBox: "0 0 16 16", width: "16", height: "16", fill: "none", "aria-hidden": "true", children: [_jsx("path", { d: "M8 1.5l6.5 11.5h-13L8 1.5z", stroke: "currentColor", strokeWidth: "1.6", strokeLinejoin: "round" }), _jsx("path", { d: "M8 6v3.5", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round" }), _jsx("circle", { cx: "8", cy: "11.5", r: "0.7", fill: "currentColor" })] }), issueCount > 0 ? _jsx("span", { className: "save-bar-issue-badge", children: issueCount }) : null] }), _jsx("button", { type: "button", className: "btn btn-ghost save-bar-settings-btn", onClick: onOpenSettings, title: "\u8BBE\u7F6E / \u6279\u91CF\u5BFC\u5165 / \u672C\u5730 JSON", "aria-label": "\u8BBE\u7F6E", children: _jsxs("svg", { viewBox: "0 0 16 16", width: "16", height: "16", fill: "none", "aria-hidden": "true", children: [_jsx("circle", { cx: "8", cy: "8", r: "2.2", stroke: "currentColor", strokeWidth: "1.5" }), _jsx("path", { d: "M8 1v2M8 13v2M3.5 3.5l1.5 1.5M11 11l1.5 1.5M1 8h2M13 8h2M3.5 12.5l1.5-1.5M11 5l1.5-1.5", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" })] }) })] }), _jsxs("div", { className: "save-bar-group save-bar-group-primary", children: [_jsx("button", { className: "btn btn-ghost btn-danger", onClick: onReset, disabled: !isDirty || isBusy, title: "\u4E22\u5F03\u672A\u4FDD\u5B58\u7684\u6240\u6709\u66F4\u6539", children: "\u91CD\u7F6E" }), _jsx("button", { className: "btn btn-primary btn-save", onClick: onSave, disabled: !isDirty || isBusy, children: isSaving ? '正在保存...' : '保存更改' })] })] })] }));
+    // P4-3: 重置按钮"二次轻点确认" — 替代 window.confirm,移动端 PWA 友好
+    // 第一次点:进入 confirming 状态(变红 + 改文字 + 抖动);2.5s 内再点才执行 reset
+    const [confirmingReset, setConfirmingReset] = useState(false);
+    const confirmTimerRef = useRef(null);
+    useEffect(() => () => {
+        if (confirmTimerRef.current)
+            window.clearTimeout(confirmTimerRef.current);
+    }, []);
+    const handleResetClick = () => {
+        if (!isDirty || isBusy)
+            return;
+        if (confirmingReset) {
+            // 第二次点 — 执行
+            if (confirmTimerRef.current)
+                window.clearTimeout(confirmTimerRef.current);
+            setConfirmingReset(false);
+            if (typeof navigator !== 'undefined' && navigator.vibrate)
+                navigator.vibrate(20);
+            onReset();
+            return;
+        }
+        // 第一次点 — 进入待确认
+        setConfirmingReset(true);
+        if (typeof navigator !== 'undefined' && navigator.vibrate)
+            navigator.vibrate(10);
+        confirmTimerRef.current = window.setTimeout(() => setConfirmingReset(false), 2500);
+    };
+    return (_jsxs("div", { className: "save-bar", children: [_jsxs("div", { className: "save-bar-info", children: [_jsx("span", { className: isDirty ? 'save-status-dirty' : 'save-status-clean', children: isDirty ? '● 您有未保存的更改' : '所有更改已保存' }), restoredFromLocalDraft ? (_jsx("span", { className: "save-status-draft", children: "\u5DF2\u6062\u590D\u672C\u5730\u8349\u7A3F" })) : null, inlineMessage ? _jsx("span", { className: "save-status-inline", children: inlineMessage }) : null] }), _jsxs("div", { className: "save-bar-actions", children: [_jsxs("div", { className: "save-bar-group", children: [_jsx("button", { className: "btn btn-ghost", onClick: onUndo, disabled: !canUndo || isBusy, title: "\u64A4\u9500\u4E0A\u4E00\u6B65", "aria-label": "\u64A4\u9500", children: "\u64A4\u9500" }), _jsx("button", { className: "btn btn-ghost", onClick: onRedo, disabled: !canRedo || isBusy, title: "\u6062\u590D\u521A\u624D\u64A4\u9500\u7684\u66F4\u6539", "aria-label": "\u91CD\u505A", children: "\u91CD\u505A" })] }), _jsxs("div", { className: "save-bar-group", children: [_jsxs("button", { type: "button", className: `btn btn-ghost save-bar-conflict-btn${issueCount > 0 ? ' has-issues' : ''}`, onClick: onOpenConflicts, title: issueCount > 0 ? `${issueCount} 处冲突,点击查看` : '检查行程冲突', "aria-label": issueCount > 0 ? `${issueCount} 处冲突` : '冲突检查', children: [_jsxs("svg", { viewBox: "0 0 16 16", width: "16", height: "16", fill: "none", "aria-hidden": "true", children: [_jsx("path", { d: "M8 1.5l6.5 11.5h-13L8 1.5z", stroke: "currentColor", strokeWidth: "1.6", strokeLinejoin: "round" }), _jsx("path", { d: "M8 6v3.5", stroke: "currentColor", strokeWidth: "1.6", strokeLinecap: "round" }), _jsx("circle", { cx: "8", cy: "11.5", r: "0.7", fill: "currentColor" })] }), issueCount > 0 ? _jsx("span", { className: "save-bar-issue-badge", children: issueCount }) : null] }), _jsx("button", { type: "button", className: "btn btn-ghost save-bar-settings-btn", onClick: onOpenSettings, title: "\u8BBE\u7F6E / \u6279\u91CF\u5BFC\u5165 / \u672C\u5730 JSON", "aria-label": "\u8BBE\u7F6E", children: _jsxs("svg", { viewBox: "0 0 16 16", width: "16", height: "16", fill: "none", "aria-hidden": "true", children: [_jsx("circle", { cx: "8", cy: "8", r: "2.2", stroke: "currentColor", strokeWidth: "1.5" }), _jsx("path", { d: "M8 1v2M8 13v2M3.5 3.5l1.5 1.5M11 11l1.5 1.5M1 8h2M13 8h2M3.5 12.5l1.5-1.5M11 5l1.5-1.5", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" })] }) })] }), _jsxs("div", { className: "save-bar-group save-bar-group-primary", children: [_jsx("button", { className: `btn btn-ghost btn-danger${confirmingReset ? ' is-confirming' : ''}`, onClick: handleResetClick, disabled: !isDirty || isBusy, title: confirmingReset ? '再点一次确认重置(2.5s 内有效)' : '丢弃未保存的所有更改', children: confirmingReset ? '再点确认' : '重置' }), _jsx("button", { className: "btn btn-primary btn-save", onClick: onSave, disabled: !isDirty || isBusy, children: isSaving ? '正在保存...' : '保存更改' })] })] })] }));
 }

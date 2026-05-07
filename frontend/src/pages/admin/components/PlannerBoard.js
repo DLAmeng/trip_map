@@ -5,7 +5,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy, sortableKeyb
 import { CSS } from '@dnd-kit/utilities';
 import { buildRouteHeadline, buildRouteMetaLine } from '../../../utils/route-detail';
 import { PlaceSearchAutocomplete } from './PlaceSearchAutocomplete';
-function PlannerSpotCard({ spot, index, dayColor, selected, checked, nextSegment, onSelect, onToggleSelection, }) {
+function PlannerSpotCard({ spot, index, dayColor, selected, checked, nextSegment, onSelect, onToggleSelection, onRenameSpot, }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: spot.id,
     });
@@ -19,7 +19,56 @@ function PlannerSpotCard({ spot, index, dayColor, selected, checked, nextSegment
         duration: nextSegment?.duration,
         transportType: nextSegment?.transportType || '',
     });
-    return (_jsxs("article", { ref: setNodeRef, style: style, className: `planner-spot-card${selected ? ' is-selected' : ''}${checked ? ' is-checked' : ''}`, onClick: onSelect, children: [_jsxs("div", { className: "planner-spot-card-top", children: [_jsx("div", { className: "planner-spot-drag", "aria-label": "\u62D6\u62FD\u666F\u70B9", ...attributes, ...listeners, children: "\u283F" }), _jsx("label", { className: "planner-spot-select", title: "\u52FE\u9009\u53EF\u6279\u91CF\u64CD\u4F5C(\u79FB\u52A8 / \u590D\u5236 / \u5220\u9664\u5230\u5176\u4ED6 Day)", "aria-label": "\u6279\u91CF\u52FE\u9009\u6B64\u666F\u70B9", onClick: (event) => event.stopPropagation(), children: _jsx("input", { type: "checkbox", checked: checked, onChange: (event) => onToggleSelection(event.target.checked) }) }), _jsx("span", { className: "planner-spot-order", style: { backgroundColor: dayColor }, children: index + 1 }), _jsxs("div", { className: "planner-spot-main", children: [_jsxs("div", { className: "planner-spot-title-row", children: [_jsx("strong", { children: spot.name || '未命名景点' }), spot.mustVisit ? _jsx("span", { className: "planner-pill planner-pill-must", children: "\u5FC5\u53BB" }) : null, spot.type === 'transport' ? (_jsx("span", { className: "planner-pill planner-pill-muted", children: "\u4EA4\u901A\u70B9" })) : null] }), _jsx("div", { className: "planner-spot-subline", children: [spot.city, spot.area, spot.timeSlot].filter(Boolean).join(' · ') || '待补充' })] }), spot.photos?.[0] ? (_jsx("img", { className: "planner-spot-thumb", src: spot.photos[0], alt: "" })) : null] }), _jsxs("div", { className: "planner-spot-meta-row", children: [_jsx("span", { children: spot.stayMinutes ? `停留 ${spot.stayMinutes} 分钟` : '未设置停留时长' }), spot.tags?.length ? _jsx("span", { children: spot.tags.join(' / ') }) : null] }), nextSegment ? (_jsxs("div", { className: "planner-next-leg-inline", children: [_jsx("span", { className: "planner-next-leg-label", children: buildRouteHeadline(nextSegment) }), metaLine.length ? _jsx("span", { children: metaLine.join(' · ') }) : null] })) : null] }));
+    // P4-5: spot 名字 inline 编辑 — 长按 1s(移动)/ 双击(桌面)进入编辑
+    const [isEditing, setIsEditing] = useState(false);
+    const [draftName, setDraftName] = useState(spot.name || '');
+    const longPressTimerRef = useRef(null);
+    const inlineInputRef = useRef(null);
+    useEffect(() => {
+        if (isEditing) {
+            setDraftName(spot.name || '');
+            window.setTimeout(() => inlineInputRef.current?.select(), 30);
+        }
+    }, [isEditing, spot.name]);
+    const startLongPress = () => {
+        longPressTimerRef.current = window.setTimeout(() => {
+            setIsEditing(true);
+            // P4-6: 长按成功 haptic
+            if (typeof navigator !== 'undefined' && navigator.vibrate)
+                navigator.vibrate(30);
+        }, 700);
+    };
+    const cancelLongPress = () => {
+        if (longPressTimerRef.current) {
+            window.clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+    const commitRename = () => {
+        const name = draftName.trim();
+        setIsEditing(false);
+        if (name && name !== spot.name) {
+            onRenameSpot(spot.id, name);
+        }
+    };
+    return (_jsxs("article", { ref: setNodeRef, style: style, className: `planner-spot-card${selected ? ' is-selected' : ''}${checked ? ' is-checked' : ''}`, "data-spot-id": spot.id, onClick: onSelect, children: [_jsxs("div", { className: "planner-spot-card-top", children: [_jsx("div", { className: "planner-spot-drag", "aria-label": "\u62D6\u62FD\u666F\u70B9", ...attributes, ...listeners, children: "\u283F" }), _jsx("label", { className: "planner-spot-select", title: "\u52FE\u9009\u53EF\u6279\u91CF\u64CD\u4F5C(\u79FB\u52A8 / \u590D\u5236 / \u5220\u9664\u5230\u5176\u4ED6 Day)", "aria-label": "\u6279\u91CF\u52FE\u9009\u6B64\u666F\u70B9", onClick: (event) => event.stopPropagation(), children: _jsx("input", { type: "checkbox", checked: checked, onChange: (event) => onToggleSelection(event.target.checked) }) }), _jsx("span", { className: "planner-spot-order", style: { backgroundColor: dayColor }, children: index + 1 }), _jsxs("div", { className: "planner-spot-main", children: [_jsxs("div", { className: "planner-spot-title-row", children: [isEditing ? (_jsx("input", { ref: inlineInputRef, className: "planner-spot-inline-input", value: draftName, maxLength: 40, onChange: (e) => setDraftName(e.target.value), onBlur: commitRename, onKeyDown: (e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                commitRename();
+                                            }
+                                            if (e.key === 'Escape') {
+                                                e.preventDefault();
+                                                setIsEditing(false);
+                                            }
+                                        }, onClick: (e) => e.stopPropagation() })) : (_jsx("strong", { 
+                                        /* P4-5: 长按 700ms(移动) / 双击(桌面) → inline 编辑名字 */
+                                        onPointerDown: (e) => {
+                                            e.stopPropagation();
+                                            startLongPress();
+                                        }, onPointerUp: cancelLongPress, onPointerLeave: cancelLongPress, onPointerCancel: cancelLongPress, onDoubleClick: (e) => {
+                                            e.stopPropagation();
+                                            setIsEditing(true);
+                                        }, title: "\u957F\u6309 / \u53CC\u51FB\u6539\u540D", children: spot.name || '未命名景点' })), spot.mustVisit ? _jsx("span", { className: "planner-pill planner-pill-must", children: "\u5FC5\u53BB" }) : null, spot.type === 'transport' ? (_jsx("span", { className: "planner-pill planner-pill-muted", children: "\u4EA4\u901A\u70B9" })) : null] }), _jsx("div", { className: "planner-spot-subline", children: [spot.city, spot.area, spot.timeSlot].filter(Boolean).join(' · ') || '待补充' })] }), spot.photos?.[0] ? (_jsx("img", { className: "planner-spot-thumb", src: spot.photos[0], alt: "" })) : null] }), _jsxs("div", { className: "planner-spot-meta-row", children: [_jsx("span", { children: spot.stayMinutes ? `停留 ${spot.stayMinutes} 分钟` : '未设置停留时长' }), spot.tags?.length ? _jsx("span", { children: spot.tags.join(' / ') }) : null] }), nextSegment ? (_jsxs("div", { className: "planner-next-leg-inline", children: [_jsx("span", { className: "planner-next-leg-label", children: buildRouteHeadline(nextSegment) }), metaLine.length ? _jsx("span", { children: metaLine.join(' · ') }) : null] })) : null] }));
 }
 function DayDropLane({ day, active, children, }) {
     const { setNodeRef, isOver } = useDroppable({
@@ -27,7 +76,7 @@ function DayDropLane({ day, active, children, }) {
     });
     return (_jsx("div", { ref: setNodeRef, className: `planner-day-lane${active ? ' is-active' : ''}${isOver ? ' is-over' : ''}`, children: children }));
 }
-export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onQuickAddPlace, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, expectedDayCount, }) {
+export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onQuickAddPlace, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, expectedDayCount, onRenameSpot, }) {
     const [moreMenuDay, setMoreMenuDay] = useState(null);
     // P3-Bug I: 替代 window.prompt() 的内联 dialog —
     // 普通浏览器 + iOS Safari + PWA 都可靠工作(原生 prompt 在 PWA 可能被静默忽略)
@@ -124,7 +173,7 @@ export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selec
                                                     return (_jsxs("div", { className: "planner-day-spot-wrap", children: [_jsx(PlannerSpotCard, { spot: spot, index: index, dayColor: dayColor, selected: selectedSpotId === spot.id, checked: selectedIds.has(spot.id), nextSegment: nextSegment, onSelect: () => {
                                                                     onSetActiveDay(dayItem.day);
                                                                     onSelectSpot(spot.id);
-                                                                }, onToggleSelection: (checked) => onToggleSpotSelection(spot.id, checked) }), nextSegment ? (_jsx("div", { className: `planner-leg-chip${selectedSegmentId === nextSegment.id ? ' is-selected' : ''}`, onClick: () => {
+                                                                }, onToggleSelection: (checked) => onToggleSpotSelection(spot.id, checked), onRenameSpot: onRenameSpot }), nextSegment ? (_jsx("div", { className: `planner-leg-chip${selectedSegmentId === nextSegment.id ? ' is-selected' : ''}`, onClick: () => {
                                                                     onSetActiveDay(dayItem.day);
                                                                     onSelectSegment(nextSegment.id);
                                                                 }, children: _jsxs("div", { className: "planner-leg-chip-main", children: [_jsx("strong", { children: buildRouteHeadline(nextSegment) }), _jsx("span", { children: buildRouteMetaLine(nextSegment).join(' · ') || '点击编辑路线说明' })] }) })) : null] }, spot.id));
