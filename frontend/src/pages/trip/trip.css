@@ -919,26 +919,44 @@
   --day-color: var(--ocean);
 }
 
-/* P5: Google Maps InfoWindow 容器优化 — 移动端让 popup 更舒展、避开 ✕ 按钮
-   .gm-style-iw-d 是 Google 的内容滚动区,默认 max-height 限制有时太小
-   .gm-style-iw-c 是外壳,默认 padding 0,我们靠 day-band 负 margin 自己撑边距 */
+/* P5: Google Maps InfoWindow 容器优化 — 移动端让 popup 更舒展、消除顶部空白
+   关键问题:Google 默认 .gm-style-iw-chr(✕ 按钮 row)占据 48px 顶部 layout 空间,
+   导致 popup-day 上方一大片空白。改 absolute 浮起来,不占布局。 */
 .gm-style-iw-c {
-  padding: 12px !important;
+  padding: 0 !important;
   border-radius: 14px !important;
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18) !important;
+  /* 让子元素 absolute 定位以本容器为参考 */
+  position: relative !important;
+  /* 隐藏溢出但保留 day-band 顶到边的视觉 */
+  overflow: hidden !important;
 }
 
+/* ✕ 按钮浮到右上角,不占据 layout 空间(原本 48×48 被 chr row 撑顶部) */
+.gm-style-iw-chr {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  z-index: 10 !important;
+  pointer-events: none; /* row 容器透传,只有 ✕ 按钮自己接收点击 */
+}
+
+.gm-style-iw-chr > button {
+  pointer-events: auto;
+}
+
+/* 内容区:顶到容器顶,左右 14px padding 给 popup-shell 内容留空气 */
 .gm-style-iw-d {
   overflow: auto !important;
-  /* 给内部内容留出 16px 底部空气感,避免最后一个按钮贴底 */
-  padding-bottom: 4px;
+  padding: 14px 14px 12px !important;
+  /* 重置 Google 默认 max-height 计算(我们靠 InfoWindow maxWidth 控宽度) */
+  max-height: none !important;
 }
 
-/* Google 默认 ✕ 按钮 48×48 在右上,占据顶部空间 —
-   让 popup-day-band 顶到容器边但不被 ✕ 覆盖(✕ 在 day-band 上方更高 z) */
 .popup-shell {
-  /* 给 ✕ 按钮(48px 宽)留出右上角避让区,首行 day 文字不被遮 */
-  padding-top: 4px;
+  /* day-band 在 .popup-shell 内顶部,需要顶到 .gm-style-iw-c 边 —
+     .gm-style-iw-d 的 padding 14px 14px 12px,所以 band 用 -14px -14px */
+  padding-top: 0;
 }
 
 /*
@@ -950,7 +968,8 @@
   height: 4px;
   background: var(--day-color);
   border-radius: 8px 8px 0 0;
-  margin: -10px -10px 4px;
+  /* 顶到 .gm-style-iw-c 容器边(.gm-style-iw-d 内 padding 14px,band 用 -14 抵消) */
+  margin: -14px -14px 8px;
   flex-shrink: 0;
 }
 
@@ -981,8 +1000,8 @@
   font-weight: 800;
   color: var(--text);
   line-height: 1.3;
-  /* P5: name 比较短一般不会被 ✕ 遮,但长名字防换行后第二行被遮 */
-  padding-right: 4px;
+  /* P5: 给 ✕ 按钮(48×48 absolute 在右上)避让,长名字第一行不被遮 */
+  padding-right: 44px;
 }
 
 .popup-name-en {
