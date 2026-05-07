@@ -919,44 +919,46 @@
   --day-color: var(--ocean);
 }
 
-/* P5: Google Maps InfoWindow 容器优化 — 移动端让 popup 更舒展、消除顶部空白
-   关键问题:Google 默认 .gm-style-iw-chr(✕ 按钮 row)占据 48px 顶部 layout 空间,
-   导致 popup-day 上方一大片空白。改 absolute 浮起来,不占布局。 */
+/* P5: Google Maps InfoWindow 容器优化 — 仅做"无副作用"的视觉微调
+   不动 position / overflow / 内容区 layout(让 Google 自己管),
+   避免与 Google 内部定位逻辑冲突导致 popup 消失。 */
 .gm-style-iw-c {
-  padding: 0 !important;
   border-radius: 14px !important;
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18) !important;
-  /* 让子元素 absolute 定位以本容器为参考 */
-  position: relative !important;
-  /* 隐藏溢出但保留 day-band 顶到边的视觉 */
-  overflow: hidden !important;
 }
 
-/* ✕ 按钮浮到右上角,不占据 layout 空间(原本 48×48 被 chr row 撑顶部) */
+/* 顶部空白问题主要来自 .gm-style-iw-chr(✕ row)默认占 48px 高度。
+   缩短它到 36px + 让 popup-shell 用负 margin-top 把 day-band 拉上去贴边。
+   这样不动 Google 的定位逻辑,只调高度。 */
 .gm-style-iw-chr {
-  position: absolute !important;
-  top: 0 !important;
-  right: 0 !important;
-  z-index: 10 !important;
-  pointer-events: none; /* row 容器透传,只有 ✕ 按钮自己接收点击 */
+  height: 36px;
+  min-height: 36px;
 }
 
 .gm-style-iw-chr > button {
-  pointer-events: auto;
+  /* ✕ 按钮缩小到 36×36 与 row 高度一致(原 48×48) */
+  width: 36px !important;
+  height: 36px !important;
 }
 
-/* 内容区:顶到容器顶,左右 14px padding 给 popup-shell 内容留空气 */
+.gm-style-iw-chr > button > span {
+  width: 18px !important;
+  height: 18px !important;
+  margin: 9px !important;
+}
+
+/* 内容区贴底,padding 自适应 */
 .gm-style-iw-d {
   overflow: auto !important;
-  padding: 14px 14px 12px !important;
-  /* 重置 Google 默认 max-height 计算(我们靠 InfoWindow maxWidth 控宽度) */
-  max-height: none !important;
+  padding: 0 12px 12px !important;
 }
 
 .popup-shell {
-  /* day-band 在 .popup-shell 内顶部,需要顶到 .gm-style-iw-c 边 —
-     .gm-style-iw-d 的 padding 14px 14px 12px,所以 band 用 -14px -14px */
-  padding-top: 0;
+  /* 用负 margin-top 让 day-band 顶到容器边,
+     抵消 .gm-style-iw-chr 36px 高度 — 这样色带在最顶。
+     但 ✕ 按钮的 absolute z-index 高(Google 默认),仍在色带上层不被遮。 */
+  margin-top: -36px;
+  padding-top: 8px; /* 给 day-band 上方 4px 高度 + 一点留白 */
 }
 
 /*
