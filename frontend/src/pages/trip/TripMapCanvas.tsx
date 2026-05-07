@@ -388,13 +388,30 @@ export function TripMapCanvas({
       if (currentDaySpots.length > 0) {
         controller.fitToSpots(currentDaySpots);
       } else if (filter.day === null && filter.city === null) {
-        controller.resetView();
+        // 取消所有 filter 时回到"完整行程视野"而非 config 默认 center(可能写死东京)
+        if (spots.length > 0) {
+          controller.fitToSpots(spots);
+        } else {
+          controller.resetView();
+        }
       }
     }
-  }, [filter.day, filter.city, selectedSpotId, currentDaySpots]);
+  }, [filter.day, filter.city, selectedSpotId, currentDaySpots, spots]);
 
   const handleReset = () => {
-    controllerRef.current?.resetView();
+    // P0-fix: 之前只调 resetView() 飞回 config.centerLat/centerLng,
+    // 但 trip-template.js 写死东京坐标 (35.6762, 139.6503),
+    // 新建巴黎/伦敦等行程后点"回到初始视角"反而把地图飞回东京 ——
+    // 与按钮文案"回到行程初始视角"严重不符。
+    // 改:有 spots 时 fitToSpots(全部 spots) 把整个行程框入视野;
+    //     没 spots 时才 fallback 到 config.center 默认视角。
+    const controller = controllerRef.current;
+    if (!controller) return;
+    if (spots.length > 0) {
+      controller.fitToSpots(spots);
+    } else {
+      controller.resetView();
+    }
   };
 
   const handleFitToDay = () => {
