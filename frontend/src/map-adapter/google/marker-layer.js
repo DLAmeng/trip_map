@@ -128,13 +128,15 @@ export function createGoogleMarkerLayer(config) {
                     dayColors: config.dayColors,
                     onNextSpotClick: config.onSpotClick,
                 });
-                // P5: 动态 maxWidth — 移动端突破 260 限制至 viewport - 32(留 16px 左右 padding),
-                // 上限 360 防 iPad / 桌面过宽。让 popup 在 iPhone 上更舒展。
+                // P5: 动态 maxWidth — 移动端突破 260 限制至 viewport - 32
                 const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 360;
                 const dynamicMaxWidth = Math.max(280, Math.min(viewportWidth - 32, 360));
                 const infoWindow = new google.maps.InfoWindow({
                     content: popupContent,
                     maxWidth: dynamicMaxWidth,
+                    // P6: popup 用 CSS 强制 fixed center 居中 viewport,无需 Google 自动 pan
+                    // 地图把 marker 移到视口;关闭 autoPan 防地图打开 popup 时突然滑动
+                    disableAutoPan: true,
                 });
                 marker.addListener('gmp-click', () => {
                     debugTripMapEvent('google marker click', { spotId: spot.id });

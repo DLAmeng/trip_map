@@ -930,21 +930,28 @@
    用 !important 覆盖 Google 内部用 inline transform 控制位置的逻辑。 */
 .gm-style-iw-a {
   position: fixed !important;
-  /* 下移 32px 让 popup 中心略低于 viewport 几何中心 —
-     避开顶部搜索栏 + header card 视觉重心,更符合移动端"操作区在下半屏"惯例 */
-  top: calc(50% + 32px) !important;
-  left: 50% !important;
+  /* 下移 56 + 左移 24 — popup 中心偏离 viewport 几何中心,
+     避开顶部搜索栏 + 右侧 toolbar 重心,更符合拇指可达 */
+  top: calc(50% + 56px) !important;
+  left: calc(50% - 24px) !important;
   transform: translate(-50%, -50%) !important;
   /* z-index 2500 — 高于 .map-search-bar (2100) / .map-notice-stack (2000) /
      mobile-trip-context-card,低于 .loading-card (3000) */
   z-index: 2500 !important;
-  /* 限制 popup 整体不超出 viewport — 避免高内容时顶端进入搜索栏区域
-     viewport - 32 给上下 16px 安全边距;dvh 兼容 iOS 地址栏 */
+  /* 限制 popup 整体不超出 viewport */
   max-width: calc(100vw - 32px) !important;
   max-height: calc(100vh - 80px) !important;
   max-height: calc(100dvh - 80px) !important;
   /* 加强光晕 */
   filter: drop-shadow(0 20px 50px rgba(15, 23, 42, 0.30));
+}
+
+/* 关键:.gm-style-iw-t 是 Google 内部的 transform 容器,
+   地图拖动时 Google 持续在它上设 inline transform 让 popup 跟随 marker。
+   强制 transform: none 让 popup 真正脱离地图坐标系,固定在 viewport */
+.gm-style-iw-t {
+  transform: none !important;
+  position: static !important;
 }
 
 /* 限制内部内容高度,内容超出时 popup 内部滚动而非撑高 popup */
