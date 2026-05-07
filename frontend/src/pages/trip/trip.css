@@ -934,13 +934,22 @@
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
   /* z-index 2500 — 高于 .map-search-bar (2100) / .map-notice-stack (2000) /
-     mobile-trip-context-card,低于 .loading-card (3000),让 popup ✕ 不被任何
-     toolbar 遮挡 */
+     mobile-trip-context-card,低于 .loading-card (3000) */
   z-index: 2500 !important;
-  /* 移动端避免 popup 超出屏幕 */
+  /* 限制 popup 整体不超出 viewport — 避免高内容时顶端进入搜索栏区域
+     viewport - 32 给上下 16px 安全边距;dvh 兼容 iOS 地址栏 */
   max-width: calc(100vw - 32px) !important;
-  /* 加强光晕,让 popup 在地图背景上有"浮起"层级感 */
+  max-height: calc(100vh - 80px) !important;
+  max-height: calc(100dvh - 80px) !important;
+  /* 加强光晕 */
   filter: drop-shadow(0 20px 50px rgba(15, 23, 42, 0.30));
+}
+
+/* 限制内部内容高度,内容超出时 popup 内部滚动而非撑高 popup */
+.gm-style-iw-d {
+  max-height: calc(100vh - 140px) !important;
+  max-height: calc(100dvh - 140px) !important;
+  overflow-y: auto !important;
 }
 
 /* 隐藏 popup 底部指向 marker 的小三角 — 既然 popup 不再跟着 marker,
