@@ -166,9 +166,30 @@ export function createGoogleMarkerLayer(config: {
         dayIndexById.set(spot.id, next);
       }
 
+      // P7: 同坐标 marker jitter — 业务里"第 N 天访问 X" + "第 M 天再访问 X"
+      // 是合理数据,但 lat/lng 完全相同会让 cluster 把它们永远合并显示 "N",
+      // 用户点击只能看到一个 popup。给同位置第 2+ 个 marker 加微小角度偏移,
+      // ~11 米/个,zoom 16+ 时视觉上能分开,cluster fitBounds 能正常展开。
+      const positionGroupCount = new Map<string, number>();
+      const POSITION_PRECISION = 6;
+      const JITTER_DEG = 0.0001; // ~11 米
+
       markerRefs = spots.map((spot) => {
+        // 同坐标第 N+1 个 spot:沿黄金角圆周偏移,分布均匀
+        const posKey = `${spot.lat.toFixed(POSITION_PRECISION)},${spot.lng.toFixed(POSITION_PRECISION)}`;
+        const groupIdx = positionGroupCount.get(posKey) ?? 0;
+        positionGroupCount.set(posKey, groupIdx + 1);
+        let renderLat = spot.lat;
+        let renderLng = spot.lng;
+        if (groupIdx > 0) {
+          const angle = (groupIdx * 137.5 * Math.PI) / 180;
+          const r = JITTER_DEG * groupIdx;
+          const cosLat = Math.cos((spot.lat * Math.PI) / 180) || 1;
+          renderLat += r * Math.cos(angle);
+          renderLng += (r * Math.sin(angle)) / cosLat;
+        }
         const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: { lat: spot.lat, lng: spot.lng },
+          position: { lat: renderLat, lng: renderLng },
           title: spot.name,
         });
         const popupContent = buildSpotPopupElement(spot, {
