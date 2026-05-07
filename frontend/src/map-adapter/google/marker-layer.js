@@ -134,9 +134,8 @@ export function createGoogleMarkerLayer(config) {
                 const infoWindow = new google.maps.InfoWindow({
                     content: popupContent,
                     maxWidth: dynamicMaxWidth,
-                    // P6: popup 用 CSS 强制 fixed center 居中 viewport,无需 Google 自动 pan
-                    // 地图把 marker 移到视口;关闭 autoPan 防地图打开 popup 时突然滑动
-                    disableAutoPan: true,
+                    // P6 回退:让 Google 自己 autoPan 处理边界(默认 false)
+                    // 我们在 openPopup 里手动 panTo 让 marker 居中,然后 popup 自然跟随 marker
                 });
                 marker.addListener('gmp-click', () => {
                     debugTripMapEvent('google marker click', { spotId: spot.id });
@@ -217,6 +216,14 @@ export function createGoogleMarkerLayer(config) {
                 }
                 if (ref.marker.position) {
                     ref.infoWindow.setPosition(ref.marker.position);
+                }
+                // P6 修正:打开 popup 前让 marker 在屏幕中央(panTo 平滑移动地图),
+                // 然后 popup 自然出现在 marker 上方居中区域。
+                // 之后用户拖动地图,popup 因锚定到 marker 会跟着地图一起移动 —
+                // 这是 Google InfoWindow 标准行为,符合用户对地图 popup 的直觉。
+                const markerPos = ref.marker.position;
+                if (markerPos) {
+                    map.panTo(markerPos);
                 }
                 ref.infoWindow.open({
                     map,

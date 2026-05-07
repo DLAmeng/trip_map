@@ -925,67 +925,10 @@
   box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18) !important;
 }
 
-/* P6: Popup 居中 viewport — 用户希望点击 marker 后 popup 在屏幕正中间,
-   而非默认 Google 锚定到 marker 旁边(移动端经常被各种 toolbar/地图边缘遮挡)。
-   用 !important 覆盖 Google 内部用 inline transform 控制位置的逻辑。 */
-.gm-style-iw-a {
-  position: fixed !important;
-  /* 下移 56 + 左移 24 — popup 中心偏离 viewport 几何中心,
-     避开顶部搜索栏 + 右侧 toolbar 重心,更符合拇指可达 */
-  top: calc(50% + 56px) !important;
-  left: calc(50% - 24px) !important;
-  transform: translate(-50%, -50%) !important;
-  /* z-index 2500 — 高于 .map-search-bar (2100) / .map-notice-stack (2000) /
-     mobile-trip-context-card,低于 .loading-card (3000) */
-  z-index: 2500 !important;
-  /* 限制 popup 整体不超出 viewport */
-  max-width: calc(100vw - 32px) !important;
-  max-height: calc(100vh - 80px) !important;
-  max-height: calc(100dvh - 80px) !important;
-  /* 加强光晕 */
-  filter: drop-shadow(0 20px 50px rgba(15, 23, 42, 0.30));
-}
-
-/* 关键:.gm-style-iw-t 是 Google 内部的 transform 容器,
-   地图拖动时 Google 持续在它上设 inline transform 让 popup 跟随 marker。
-   强制 transform: none 让 popup 真正脱离地图坐标系,固定在 viewport */
-.gm-style-iw-t {
-  transform: none !important;
-  position: static !important;
-}
-
-/* 限制内部内容高度,内容超出时 popup 内部滚动而非撑高 popup */
-.gm-style-iw-d {
-  max-height: calc(100vh - 140px) !important;
-  max-height: calc(100dvh - 140px) !important;
-  overflow-y: auto !important;
-}
-
-/* 隐藏 popup 底部指向 marker 的小三角 — 既然 popup 不再跟着 marker,
-   小三角指向就没意义了 */
-.gm-style-iw-tc,
-.gm-style-iw-t::after {
-  display: none !important;
-}
-
-/* P6: 半透明 backdrop — 用 ::before 伪元素附加到 .gm-style-iw-a,
-   配合 popup 居中给用户"模态层"感知,提示这是浮层 */
-.gm-style-iw-a::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.40);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  z-index: -1;
-  pointer-events: none; /* 不挡 popup 内部交互;用户用 ✕ 关闭 */
-  animation: popup-backdrop-fade 200ms ease-out;
-}
-
-@keyframes popup-backdrop-fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/* P6 回退:不再用 CSS fixed 锁住 popup,改让 popup 跟随 marker(地图绝对位置)。
+   打开 popup 时由 marker-layer 主动 map.panTo 让 marker 居中,popup 自然
+   出现在屏幕中央;之后用户拖动地图,popup 跟着 marker 在地图上移动 — 这是
+   Google InfoWindow 的标准行为,符合用户对地图 popup 的直觉。 */
 
 /* 顶部空白问题主要来自 .gm-style-iw-chr(✕ row)默认占 48px 高度。
    缩短它到 36px + 让 popup-shell 用负 margin-top 把 day-band 拉上去贴边。
