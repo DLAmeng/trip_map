@@ -1852,17 +1852,34 @@
     z-index: 1200;
     background: var(--m-layer-bg);
     border: var(--m-layer-border);
-    border-radius: 999px;
+    /* 改 999px 胶囊 → 14px 圆角矩形,与 .mobile-trip-context-card (16px) 风格协调 */
+    border-radius: 14px;
     box-shadow: var(--m-layer-shadow);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .map-search-inner {
-    padding: 0 12px;
+    padding: 0 14px;
     height: var(--m-search-height);
+    gap: 12px;
+  }
+
+  .map-search-icon {
+    color: var(--text-soft);
+    flex-shrink: 0;
   }
 
   .map-search-input {
-    font-size: 0.95rem;
+    /* P3-Bug H: 移动端 ≥ 16px 防 iOS auto zoom */
+    font-size: 16px;
+    color: var(--text);
+    padding: 0;
+  }
+
+  .map-search-input::placeholder {
+    color: var(--text-soft);
+    opacity: 0.8;
   }
 
   /*
