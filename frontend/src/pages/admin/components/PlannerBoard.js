@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DndContext, KeyboardSensor, PointerSensor, closestCorners, useDroppable, useSensor, useSensors, } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, sortableKeyboardCoordinates, } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -29,6 +29,29 @@ function DayDropLane({ day, active, children, }) {
 }
 export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selectedSegmentId, selectedSpotIds, onSetActiveDay, onSelectSpot, onToggleSpotSelection, onSelectSegment, onAddSpot, onQuickAddPlace, onMoveSpot, onDuplicateDay, onClearDay, onAutoSortDay, expectedDayCount, }) {
     const [moreMenuDay, setMoreMenuDay] = useState(null);
+    // P3-Bug I: 替代 window.prompt() 的内联 dialog —
+    // 普通浏览器 + iOS Safari + PWA 都可靠工作(原生 prompt 在 PWA 可能被静默忽略)
+    const [customNameDialog, setCustomNameDialog] = useState(null);
+    const [customName, setCustomName] = useState('');
+    const customDialogRef = useRef(null);
+    const customNameInputRef = useRef(null);
+    useEffect(() => {
+        const dialog = customDialogRef.current;
+        if (!dialog)
+            return;
+        if (customNameDialog) {
+            if (typeof dialog.showModal === 'function') {
+                dialog.showModal();
+            }
+            else {
+                dialog.setAttribute('open', '');
+            }
+            window.setTimeout(() => customNameInputRef.current?.focus(), 30);
+        }
+        else if (dialog.open) {
+            dialog.close();
+        }
+    }, [customNameDialog]);
     const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
     const selectedIds = new Set(selectedSpotIds);
     const allDays = days.length > 0 ? days : [{ day: 1, spots: [], segments: [] }];
@@ -107,13 +130,20 @@ export function PlannerBoard({ days, dayColors, activeDay, selectedSpotId, selec
                                                                 }, children: _jsxs("div", { className: "planner-leg-chip-main", children: [_jsx("strong", { children: buildRouteHeadline(nextSegment) }), _jsx("span", { children: buildRouteMetaLine(nextSegment).join(' · ') || '点击编辑路线说明' })] }) })) : null] }, spot.id));
                                                 }), dayItem.spots.length === 0 ? (_jsx("div", { className: "planner-empty-day", children: _jsx("p", { children: "\u8FD9\u4E00\u5929\u8FD8\u6CA1\u6709\u666F\u70B9\u3002\u7528\u4E0A\u65B9\u641C\u7D22\u680F\u6DFB\u52A0\u5730\u56FE\u5730\u70B9\uFF0C\u6216\u4E0B\u65B9\u6309\u94AE\u81EA\u5B9A\u4E49\u3002" }) })) : null] }) }), _jsxs("button", { type: "button", className: "planner-add-spot-btn", onClick: () => {
                                             onSetActiveDay(dayItem.day);
-                                            // P1-7: 不再创建占位"新景点"强制让用户进 inspector 改名,
-                                            // 改成先 prompt 输入名字,空字符串则取消创建。
-                                            const raw = window.prompt(`给 Day ${dayItem.day} 自定义一个景点(留空取消):\n例:酒店休息 / 自由活动 / 机场`, '');
-                                            const name = (raw || '').trim();
-                                            if (!name)
-                                                return;
-                                            onAddSpot(dayItem.day, undefined, { name });
+                                            // P3-Bug I: 用内联 <dialog> 替代 window.prompt(),
+                                            // 在 iOS Safari PWA 模式下 prompt 可能被静默忽略。
+                                            setCustomName('');
+                                            setCustomNameDialog({ day: dayItem.day });
                                         }, children: ["+ \u81EA\u5B9A\u4E49\u666F\u70B9\u5230 Day ", dayItem.day, "\uFF08\u65E0\u5730\u70B9\uFF09"] })] }) }, dayItem.day));
-                    }) }) })] }));
+                    }) }) }), _jsx("dialog", { ref: customDialogRef, className: "planner-custom-name-dialog", onClose: () => setCustomNameDialog(null), children: _jsxs("form", { method: "dialog", onSubmit: (e) => {
+                        e.preventDefault();
+                        const name = customName.trim();
+                        const targetDay = customNameDialog?.day;
+                        if (!name || !targetDay) {
+                            setCustomNameDialog(null);
+                            return;
+                        }
+                        onAddSpot(targetDay, undefined, { name });
+                        setCustomNameDialog(null);
+                    }, children: [_jsxs("h3", { children: ["\u81EA\u5B9A\u4E49\u666F\u70B9 \u2014 Day ", customNameDialog?.day] }), _jsx("p", { className: "planner-custom-name-hint", children: "\u9002\u7528\u4E8E\"\u9152\u5E97\u4F11\u606F / \u81EA\u7531\u6D3B\u52A8 / \u673A\u573A\"\u7B49\u6CA1\u6709\u5177\u4F53\u5730\u56FE\u4F4D\u7F6E\u7684\u5360\u4F4D\u9879\u3002" }), _jsx("input", { ref: customNameInputRef, type: "text", value: customName, onChange: (e) => setCustomName(e.target.value), placeholder: "\u666F\u70B9\u540D\u79F0", autoComplete: "off", maxLength: 40 }), _jsxs("div", { className: "planner-custom-name-actions", children: [_jsx("button", { type: "button", className: "btn btn-ghost", onClick: () => setCustomNameDialog(null), children: "\u53D6\u6D88" }), _jsx("button", { type: "submit", className: "btn btn-primary", disabled: !customName.trim(), children: "\u52A0\u5165" })] })] }) })] }));
 }

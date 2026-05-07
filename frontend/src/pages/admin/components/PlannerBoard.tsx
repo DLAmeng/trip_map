@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -193,6 +193,27 @@ export function PlannerBoard({
   expectedDayCount,
 }: PlannerBoardProps) {
   const [moreMenuDay, setMoreMenuDay] = useState<number | null>(null);
+  // P3-Bug I: 替代 window.prompt() 的内联 dialog —
+  // 普通浏览器 + iOS Safari + PWA 都可靠工作(原生 prompt 在 PWA 可能被静默忽略)
+  const [customNameDialog, setCustomNameDialog] = useState<{ day: number } | null>(null);
+  const [customName, setCustomName] = useState('');
+  const customDialogRef = useRef<HTMLDialogElement>(null);
+  const customNameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const dialog = customDialogRef.current;
+    if (!dialog) return;
+    if (customNameDialog) {
+      if (typeof dialog.showModal === 'function') {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute('open', '');
+      }
+      window.setTimeout(() => customNameInputRef.current?.focus(), 30);
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }, [customNameDialog]);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -426,15 +447,10 @@ export function PlannerBoard({
                     className="planner-add-spot-btn"
                     onClick={() => {
                       onSetActiveDay(dayItem.day);
-                      // P1-7: 不再创建占位"新景点"强制让用户进 inspector 改名,
-                      // 改成先 prompt 输入名字,空字符串则取消创建。
-                      const raw = window.prompt(
-                        `给 Day ${dayItem.day} 自定义一个景点(留空取消):\n例:酒店休息 / 自由活动 / 机场`,
-                        '',
-                      );
-                      const name = (raw || '').trim();
-                      if (!name) return;
-                      onAddSpot(dayItem.day, undefined, { name });
+                      // P3-Bug I: 用内联 <dialog> 替代 window.prompt(),
+                      // 在 iOS Safari PWA 模式下 prompt 可能被静默忽略。
+                      setCustomName('');
+                      setCustomNameDialog({ day: dayItem.day });
                     }}
                   >
                     + 自定义景点到 Day {dayItem.day}（无地点）
@@ -445,6 +461,60 @@ export function PlannerBoard({
           })}
         </div>
       </DndContext>
+
+      {/* P3-Bug I: 自定义景点输入 dialog(替代 window.prompt) */}
+      <dialog
+        ref={customDialogRef}
+        className="planner-custom-name-dialog"
+        onClose={() => setCustomNameDialog(null)}
+      >
+        <form
+          method="dialog"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const name = customName.trim();
+            const targetDay = customNameDialog?.day;
+            if (!name || !targetDay) {
+              setCustomNameDialog(null);
+              return;
+            }
+            onAddSpot(targetDay, undefined, { name });
+            setCustomNameDialog(null);
+          }}
+        >
+          <h3>
+            自定义景点 — Day {customNameDialog?.day}
+          </h3>
+          <p className="planner-custom-name-hint">
+            适用于"酒店休息 / 自由活动 / 机场"等没有具体地图位置的占位项。
+          </p>
+          <input
+            ref={customNameInputRef}
+            type="text"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            placeholder="景点名称"
+            autoComplete="off"
+            maxLength={40}
+          />
+          <div className="planner-custom-name-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setCustomNameDialog(null)}
+            >
+              取消
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!customName.trim()}
+            >
+              加入
+            </button>
+          </div>
+        </form>
+      </dialog>
     </section>
   );
 }

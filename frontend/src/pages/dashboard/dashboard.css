@@ -617,13 +617,16 @@
 }
 
 .dialog-close-btn {
-  width: 32px;
-  height: 32px;
+  /* P3-Bug E: 触控目标 ≥ 44px(iOS HIG);视觉保持 32px 圆形,
+     用 padding 扩展 hit area 到 44×44 */
+  width: 44px;
+  height: 44px;
+  padding: 6px;
   border-radius: 999px;
   border: 0;
   background: rgba(74, 57, 40, 0.06);
   color: var(--ink, #4a3928);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -900,5 +903,11 @@
   }
   .field-row {
     grid-template-columns: 1fr;
+  }
+  /* P3-Bug H: CreateTripDialog 表单 input / textarea 在移动端必须 ≥ 16px,
+     否则 iOS Safari focus 触发 zoom 跳屏 */
+  .field input,
+  .field textarea {
+    font-size: 16px;
   }
 }

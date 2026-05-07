@@ -317,6 +317,12 @@ a.btn {
   outline: none;
 }
 
+/* P3-Bug C: 移动端 input font-size 必须 ≥ 16px,否则 iOS Safari focus 时
+   会自动缩放视口("zoom on focus"),严重影响搜索体验 */
+@media (max-width: 767px) {
+  .place-search-input { font-size: 16px; }
+}
+
 .place-results {
   position: absolute;
   top: 100%;
@@ -335,9 +341,14 @@ a.btn {
 }
 
 .place-result-item {
-  padding: 8px 12px;
+  /* P3-Bug C: 移动端触控目标 ≥ 48px(iOS HIG 推荐 ≥ 44) */
+  min-height: 48px;
+  padding: 12px 14px;
   cursor: pointer;
   border-bottom: 1px solid rgba(0,0,0,0.04);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .place-result-item:last-child {
@@ -366,6 +377,17 @@ a.btn {
   padding: 12px;
   font-size: 0.85rem;
   color: var(--admin-muted);
+  text-align: center;
+}
+
+/* P3-Bug B: 错误状态 — 网络失败 / 后端 500 时显示,与 empty 视觉区分 */
+.place-result-error {
+  padding: 12px;
+  font-size: 0.85rem;
+  color: #b91c1c;
+  background: rgba(254, 226, 226, 0.4);
+  border-radius: 6px;
+  margin: 4px 8px;
   text-align: center;
 }
 
@@ -1460,6 +1482,14 @@ a.btn {
     padding: 14px;
     border-radius: 18px;
     gap: 12px;
+    /* P3-Bug A: 移动端 SaveBar 必须 sticky 才能保证滚长 spot list 时
+       6 个核心按钮(撤销/重做/重置/保存/🔔冲突/⚙设置)始终可见。
+       z-index 1100 < backdrop 1300 — 打开 sheet 时被合理遮罩。 */
+    position: sticky;
+    top: env(safe-area-inset-top, 0);
+    z-index: 1100;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
   .save-bar-actions {
@@ -1644,6 +1674,9 @@ a.btn {
   right: 0;
   bottom: 0;
   max-height: 88vh;
+  /* P3-Bug G: dvh 在 iOS Safari 16+ 动态减去地址栏高度,
+     地址栏出现/隐藏时 sheet 高度不再跳变 */
+  max-height: 88dvh;
   border-radius: 24px 24px 0 0;
   animation: admin-sheet-slide-up 240ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1688,6 +1721,7 @@ a.btn {
   right: 0;
   bottom: 0;
   max-height: 86vh;
+  max-height: 86dvh; /* P3-Bug G: iOS dvh 兼容 */
   border-radius: 24px 24px 0 0;
   animation: admin-sheet-slide-up 240ms cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1729,6 +1763,7 @@ a.btn {
     right: 24px;
     width: 380px;
     max-height: calc(100vh - 100px);
+    max-height: calc(100dvh - 100px); /* P3-Bug G */
     border-radius: 18px;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
     animation: spot-inspector-fade-in 200ms ease-out;
@@ -1754,6 +1789,7 @@ a.btn {
   right: 0;
   bottom: 0;
   max-height: 80vh;
+  max-height: 80dvh; /* P3-Bug G */
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
   animation: admin-sheet-slide-up 240ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -1768,6 +1804,7 @@ a.btn {
     transform: translate(-50%, -50%);
     width: min(560px, 90vw);
     max-height: 80vh;
+    max-height: 80dvh; /* P3-Bug G */
     border-radius: 22px;
     animation: spot-inspector-fade-in 200ms ease-out;
   }
@@ -1888,8 +1925,9 @@ a.btn {
 }
 
 .bulk-actions-cancel {
-  width: 32px;
-  height: 32px;
+  /* P3-Bug F: 触控目标 ≥ 40px(暗 toolbar 上保持紧凑) */
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.10);
@@ -2023,5 +2061,93 @@ a.btn {
   .planner-board-panel {
     min-width: 0;
     overflow: hidden;
+  }
+}
+
+/* P3-Bug I: 自定义景点输入 dialog —
+   替代 window.prompt(),iOS Safari PWA 也可靠工作 */
+.planner-custom-name-dialog {
+  border: none;
+  border-radius: 18px;
+  padding: 0;
+  max-width: 420px;
+  width: calc(100vw - 32px);
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+}
+
+.planner-custom-name-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.planner-custom-name-dialog form {
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.planner-custom-name-dialog h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--admin-text);
+}
+
+.planner-custom-name-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--admin-muted);
+  line-height: 1.4;
+}
+
+.planner-custom-name-dialog input {
+  font: inherit;
+  padding: 12px 14px;
+  border: 1px solid var(--admin-line);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+@media (max-width: 767px) {
+  .planner-custom-name-dialog input {
+    font-size: 16px; /* P3-Bug H: 防 iOS zoom */
+  }
+}
+
+.planner-custom-name-dialog input:focus {
+  border-color: var(--accent, #d97706);
+}
+
+.planner-custom-name-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* P3-Bug H: 移动端 input / select / textarea 必须 ≥ 16px,
+   否则 iOS Safari focus 时强制 zoom-in 到 16px,引发跳屏。
+   覆盖所有 admin 表单元素 + 全局 inline 编辑器 */
+@media (max-width: 767px) {
+  .bulk-actions-day-select,
+  .bulk-actions-toolbar select,
+  .planner-inline-input,
+  .planner-inline-field,
+  .spot-inspector-sheet input,
+  .spot-inspector-sheet textarea,
+  .spot-inspector-sheet select,
+  .segment-inspector-sheet input,
+  .segment-inspector-sheet textarea,
+  .segment-inspector-sheet select,
+  .admin-settings-sheet input,
+  .admin-settings-sheet textarea,
+  .admin-settings-sheet select,
+  .planner-inspector input,
+  .planner-inspector textarea,
+  .planner-inspector select {
+    font-size: 16px;
   }
 }
