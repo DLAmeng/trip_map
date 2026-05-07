@@ -101,8 +101,12 @@ function PlannerSpotCard({
         >
           ⠿
         </div>
+        {/* P2-11: checkbox 触控区扩 + 提示文案,让用户意识到"勾选可批量操作"
+            而不是被"单击弹 inspector"误导成单 spot 编辑唯一入口 */}
         <label
           className="planner-spot-select"
+          title="勾选可批量操作(移动 / 复制 / 删除到其他 Day)"
+          aria-label="批量勾选此景点"
           onClick={(event) => event.stopPropagation()}
         >
           <input

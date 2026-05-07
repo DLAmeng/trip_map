@@ -132,7 +132,18 @@ export const CreateTripDialog = forwardRef<CreateTripDialogHandle>((_props, ref)
       }}
     >
       <form method="dialog" onSubmit={handleSubmit}>
-        <h2>新建行程</h2>
+        <div className="dialog-header">
+          <h2>新建行程</h2>
+          {/* P2-8: iOS 标准右上角 ✕ 关闭按钮(原本只有底部"取消") */}
+          <button
+            type="button"
+            className="dialog-close-btn"
+            aria-label="关闭"
+            onClick={close}
+          >
+            ✕
+          </button>
+        </div>
         <label className="field">
           <span>
             名称 <em className="req">*</em>
@@ -142,7 +153,7 @@ export const CreateTripDialog = forwardRef<CreateTripDialogHandle>((_props, ref)
             name="name"
             type="text"
             required
-            placeholder="比如:京都 5 日游"
+            placeholder="比如：京都 5 日游"
             autoComplete="off"
             value={form.name}
             onChange={handleChange('name')}
@@ -153,7 +164,7 @@ export const CreateTripDialog = forwardRef<CreateTripDialogHandle>((_props, ref)
           <input
             name="destination"
             type="text"
-            placeholder="比如:日本关西"
+            placeholder="比如：日本关西"
             autoComplete="off"
             value={form.destination}
             onChange={handleChange('destination')}

@@ -61,7 +61,9 @@ export function formatDestination(trip) {
 }
 /**
  * 客户端过滤 + 排序,与 dashboard.js 的 filterAndSort 一致。
- * current 行程在按时间排序时固定置顶,按名称/景点排序时保留自然序。
+ * P2-9: 之前 'current' 行程被强制置顶,导致新建的 trip 即使 updatedAt
+ * 最新也被挤到第 2 位 — 现在严格按 updatedAt/createdAt 排序,
+ * 默认行程的"特殊"地位由卡片徽章表达,不再抢第一位。
  */
 export function filterAndSort(trips, query, sortBy) {
     const normalizedQuery = query.trim().toLowerCase();
@@ -91,12 +93,7 @@ export function filterAndSort(trips, query, sortBy) {
             sorted.sort((a, b) => parseTimestamp(b.updatedAt) - parseTimestamp(a.updatedAt));
             break;
     }
-    if (sortBy === 'updated' || sortBy === 'created') {
-        const currentIdx = sorted.findIndex((t) => t.id === 'current');
-        if (currentIdx > 0) {
-            const [current] = sorted.splice(currentIdx, 1);
-            sorted.unshift(current);
-        }
-    }
+    // P2-9: 不再强制把 id='current' 的默认行程置顶 —
+    // 严格按时间排,新建的 trip 自然排到最前。
     return sorted;
 }

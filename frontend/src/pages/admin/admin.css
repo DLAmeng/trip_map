@@ -971,13 +971,39 @@ a.btn {
 }
 
 .planner-spot-select {
+  /* P2-11: 扩大触控区到 28×28(移动端友好),checkbox 视觉保持 18×18 */
   display: inline-flex;
-  padding-top: 5px;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px;
+  margin: -4px -2px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 120ms ease;
+}
+
+.planner-spot-select:hover {
+  background: rgba(74, 57, 40, 0.06);
 }
 
 .planner-spot-select input {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent, #d97706);
+}
+
+@media (max-width: 768px) {
+  .planner-spot-select {
+    min-width: 32px;
+    min-height: 32px;
+  }
+  .planner-spot-select input {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .planner-spot-order {

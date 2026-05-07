@@ -608,6 +608,40 @@
   font-weight: 800;
 }
 
+/* P2-8: 对话框右上角 ✕ 按钮 */
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dialog-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(74, 57, 40, 0.06);
+  color: var(--ink, #4a3928);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.dialog-close-btn:hover {
+  background: rgba(74, 57, 40, 0.12);
+}
+
+.dialog-close-btn:active {
+  transform: scale(0.92);
+}
+
 .field {
   display: flex;
   flex-direction: column;
