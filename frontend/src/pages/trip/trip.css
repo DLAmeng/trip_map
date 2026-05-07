@@ -933,7 +933,10 @@
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  z-index: 1500 !important;
+  /* z-index 2500 — 高于 .map-search-bar (2100) / .map-notice-stack (2000) /
+     mobile-trip-context-card,低于 .loading-card (3000),让 popup ✕ 不被任何
+     toolbar 遮挡 */
+  z-index: 2500 !important;
   /* 移动端避免 popup 超出屏幕 */
   max-width: calc(100vw - 32px) !important;
   /* 加强光晕,让 popup 在地图背景上有"浮起"层级感 */
