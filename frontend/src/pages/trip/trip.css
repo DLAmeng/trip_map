@@ -1786,17 +1786,20 @@
 
   .map-search {
     position: fixed;
+    /* P8: 紧贴 trip-card 底部(去掉 --m-stack-gap),
+       两者合并成一个浮卡 */
     top: calc(
       var(--m-top-safe) + var(--m-top-offset)
-      + var(--m-search-height) + var(--m-stack-gap)
+      + var(--m-search-height)
     );
     left: var(--m-layer-padding-x);
     width: calc(100% - var(--m-layer-padding-x) * 2);
     z-index: 1200;
     background: var(--m-layer-bg);
     border: var(--m-layer-border);
-    /* 改 999px 胶囊 → 14px 圆角矩形,与 .mobile-trip-context-card (16px) 风格协调 */
-    border-radius: 14px;
+    /* P8: 仅下圆角,顶部与 trip-card 共边(无 border-top) */
+    border-radius: 0 0 var(--m-layer-radius) var(--m-layer-radius);
+    border-top: 1px solid rgba(76, 60, 43, 0.06); /* hairline 分隔 */
     box-shadow: var(--m-layer-shadow);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -2595,7 +2598,10 @@
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: var(--m-layer-border);
-    border-radius: var(--m-layer-radius);
+    /* P8: 与下方 .map-search 合并成一个浮卡 — 仅上圆角,
+       下边与 search 共边(无 border-bottom) */
+    border-radius: var(--m-layer-radius) var(--m-layer-radius) 0 0;
+    border-bottom: none;
     box-shadow: var(--m-layer-shadow);
     /* P5-J: 防 iOS Safari 滚动抖动 + P5-F1: 滑动收缩过渡 */
     will-change: transform;
