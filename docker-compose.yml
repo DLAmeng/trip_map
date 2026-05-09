@@ -13,4 +13,8 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/app/data
+      # itinerary.json 可选 — 若 host 上不存在,Docker 会创建空目录挂载
+      # 进容器,trip-service.js 已对此兜底(自动用空模板创建默认 trip),
+      # 不影响启动。如需用自己的初始行程数据,把 itinerary.json 放在项目
+      # 根目录即可。注释掉本行也可以(完全不挂载,启动用空模板)。
       - ./itinerary.json:/app/itinerary.json

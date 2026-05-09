@@ -137,8 +137,31 @@ function deleteTrip(id) {
   return repository.deleteTripById(id);
 }
 
+/**
+ * 读取本地 itinerary.json。
+ * 返回 null 表示文件不存在 / 不可解析(不抛错),让调用方用兜底逻辑。
+ *
+ * Docker 场景下,如果 host 上没准备 itinerary.json,docker-compose 的
+ * `./itinerary.json:/app/itinerary.json` volume mount 会创建空目录,
+ * readFileSync 会抛 EISDIR;完全无 mount 时抛 ENOENT。两种情况都视为
+ * "用户没提供初始数据",启动时创建一个空默认 trip 即可。
+ */
 function readLocalItineraryFile() {
-  return JSON.parse(fs.readFileSync(LOCAL_ITINERARY_PATH, 'utf8'));
+  try {
+    const stat = fs.statSync(LOCAL_ITINERARY_PATH);
+    if (!stat.isFile()) {
+      return null; // Docker volume mount 创建的空目录
+    }
+    const raw = fs.readFileSync(LOCAL_ITINERARY_PATH, 'utf8');
+    if (!raw.trim()) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    if (err && (err.code === 'ENOENT' || err.code === 'EISDIR')) {
+      return null;
+    }
+    // 其它错误(权限 / JSON 语法错)如实抛,让用户看见
+    throw err;
+  }
 }
 
 function writeLocalItineraryFile(payload) {
@@ -221,17 +244,25 @@ function updateTripFull(id, payload) {
 function seedDatabaseIfEmpty() {
   const current = repository.findTripById(DEFAULT_TRIP_ID);
   if (current) return current;
+  // 优先从 itinerary.json 种子;若文件不存在则用空模板兜底,
+  // 让 Docker 部署时即使没准备 itinerary.json 也能正常启动
   const localItinerary = readLocalItineraryFile();
+  const payload = localItinerary
+    || createEmptyTripPayload({ title: DEFAULT_TRIP_NAME });
   return persistTrip({
     id: DEFAULT_TRIP_ID,
     slug: DEFAULT_TRIP_SLUG,
     name: localItinerary?.meta?.title || DEFAULT_TRIP_NAME,
-    payload: localItinerary,
+    payload,
   });
 }
 
 function syncCurrentFromLocal() {
+  // 用户主动调"同步"才走这里,文件必须存在 — 抛友好错让上层 toast 提示
   const localItinerary = readLocalItineraryFile();
+  if (!localItinerary) {
+    throw new Error('未找到 itinerary.json,请先把行程文件放在项目根目录或挂载到容器 /app/itinerary.json。');
+  }
   return persistTrip({
     id: DEFAULT_TRIP_ID,
     slug: DEFAULT_TRIP_SLUG,

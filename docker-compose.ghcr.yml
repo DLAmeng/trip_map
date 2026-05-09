@@ -11,4 +11,6 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/app/data
+      # itinerary.json 可选 — host 没有时 Docker 会挂载空目录,
+      # trip-service.js 自动兜底用空模板,不影响启动
       - ./itinerary.json:/app/itinerary.json
