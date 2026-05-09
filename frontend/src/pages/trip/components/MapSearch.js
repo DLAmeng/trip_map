@@ -8,6 +8,7 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
     const [selectedIndex, setSelectedIndex] = useState(-1);
     const inputRef = useRef(null);
     const listRef = useRef(null);
+    const containerRef = useRef(null);
     const isMobile = useIsMobile();
     const searchIndex = useMemo(() => buildSearchIndex(spots, segments), [spots, segments]);
     const [externalResults, setExternalResults] = useState([]);
@@ -191,7 +192,25 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
             }
         }
     }, [selectedIndex]);
-    return (_jsxs("div", { className: "map-search tool-panel", onKeyDown: handleKeyDown, children: [_jsxs("div", { className: "map-search-inner", children: [isMobile && query ? (_jsx("button", { className: "mobile-search-back", type: "button", onClick: handleClose, "aria-label": "\u8FD4\u56DE", children: _jsx("svg", { viewBox: "0 0 20 20", fill: "none", width: "20", height: "20", children: _jsx("path", { d: "M12 4 6 10l6 6", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }) }) })) : (_jsxs("svg", { className: "map-search-icon", viewBox: "0 0 20 20", fill: "none", width: "18", height: "18", children: [_jsx("circle", { cx: "8.5", cy: "8.5", r: "5.5", stroke: "currentColor", strokeWidth: "1.8" }), _jsx("path", { d: "M13 13l3.5 3.5", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round" })] })), _jsx("input", { ref: inputRef, className: "map-search-input", type: "search", placeholder: "\u641C\u7D22\u5730\u70B9 \u00B7 \u666F\u70B9 \u00B7 \u57CE\u5E02", value: query, onChange: (e) => setQuery(e.target.value), onFocus: onFocus, autoComplete: "off", spellCheck: "false" }), query && (_jsx("button", { className: "search-clear", type: "button", onClick: handleClose, children: "\u2715" }))] }), query && (_jsxs("div", { className: "search-results-popover", children: [_jsx("p", { className: "search-results-meta", children: isSearchingExternal ? '正在搜索外部地点...' : results.length > 0 ? `找到 ${results.length} 个结果` : '未找到匹配项' }), _jsx("div", { className: "search-results-list", ref: listRef, role: "listbox", children: results.map((result, index) => {
+    // P11-5: 点搜索框外(地图 / 任意其他位置)→ 关闭 popover
+    // 仅在有 query(即 popover 显示中)时绑定,避免无谓监听
+    useEffect(() => {
+        if (!query)
+            return;
+        const onPointerDown = (e) => {
+            if (!containerRef.current)
+                return;
+            if (containerRef.current.contains(e.target))
+                return;
+            // 点容器外 → 清空 query 让 popover 隐藏(handleClose 也会 blur input)
+            setQuery('');
+            setExternalResults([]);
+            inputRef.current?.blur();
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        return () => document.removeEventListener('pointerdown', onPointerDown);
+    }, [query]);
+    return (_jsxs("div", { ref: containerRef, className: "map-search tool-panel", onKeyDown: handleKeyDown, children: [_jsxs("div", { className: "map-search-inner", children: [isMobile && query ? (_jsx("button", { className: "mobile-search-back", type: "button", onClick: handleClose, "aria-label": "\u8FD4\u56DE", children: _jsx("svg", { viewBox: "0 0 20 20", fill: "none", width: "20", height: "20", children: _jsx("path", { d: "M12 4 6 10l6 6", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }) }) })) : (_jsxs("svg", { className: "map-search-icon", viewBox: "0 0 20 20", fill: "none", width: "18", height: "18", children: [_jsx("circle", { cx: "8.5", cy: "8.5", r: "5.5", stroke: "currentColor", strokeWidth: "1.8" }), _jsx("path", { d: "M13 13l3.5 3.5", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round" })] })), _jsx("input", { ref: inputRef, className: "map-search-input", type: "search", placeholder: "\u641C\u7D22\u5730\u70B9 \u00B7 \u666F\u70B9 \u00B7 \u57CE\u5E02", value: query, onChange: (e) => setQuery(e.target.value), onFocus: onFocus, autoComplete: "off", spellCheck: "false" }), query && (_jsx("button", { className: "search-clear", type: "button", onClick: handleClose, children: "\u2715" }))] }), query && (_jsxs("div", { className: "search-results-popover", children: [_jsx("p", { className: "search-results-meta", children: isSearchingExternal ? '正在搜索外部地点...' : results.length > 0 ? `找到 ${results.length} 个结果` : '未找到匹配项' }), _jsx("div", { className: "search-results-list", ref: listRef, role: "listbox", children: results.map((result, index) => {
                             const isSpot = result.type === 'spot';
                             const isRoute = result.type === 'route';
                             const isExternal = result.type === 'external';

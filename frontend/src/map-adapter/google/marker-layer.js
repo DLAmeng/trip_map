@@ -264,8 +264,12 @@ export function createGoogleMarkerLayer(config) {
                 const markerPos = ref.marker.position;
                 if (markerPos) {
                     map.panTo(markerPos);
-                    // 让 marker 在屏幕下方 120px,popup 弹出后整体视觉居中
-                    map.panBy(0, -120);
+                    // P11-1: 动态计算 panY — viewport 18% 上限 120px。
+                    // iPhone Pro (812h) → -120;iPhone SE (568h) → -102;窄屏 → 更小,
+                    // 避免 popup 顶端撞合并的 trip-card+search 区域。
+                    const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
+                    const panY = -Math.min(120, Math.floor(viewportH * 0.18));
+                    map.panBy(0, panY);
                 }
                 ref.infoWindow.open({
                     map,

@@ -1065,6 +1065,17 @@
   gap: 8px;
 }
 
+/* P11-4: 最后一个 spot popup "无下一站" 时,grid 仍把"导航"按钮压到 50%,
+   旁边是 disabled 灰按钮 — 视觉上"导航"看起来"被迫缩了一半"。
+   :has() 检测如果 next 按钮是 disabled,改单列让"导航"占满 */
+.popup-nav-row:has(.popup-next-btn.is-disabled) {
+  grid-template-columns: 1fr;
+}
+
+.popup-nav-row:has(.popup-next-btn.is-disabled) .popup-next-btn {
+  display: none;
+}
+
 .popup-nav-btn,
 .popup-detail-btn {
   display: inline-flex;
@@ -2023,6 +2034,15 @@
 
 }
 
+/* P11-2: 极窄屏(< 360px)summary-bar 三列各 ~36px 太挤,
+   "城市" / "景点" / "路线" 标签会被截断,改 1 列纵向 */
+@media (max-width: 360px) {
+  .mobile-summary-modal .summary-bar {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
 /* ============ Mobile Components (Default Hidden for Desktop) ============ */
 
 .mobile-floating-actions,
@@ -2346,6 +2366,31 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+/* P11-3: 移动端 — chip-row 在 day(30+ 天) / city(10+ 城市)多时
+   wrap 撑高 sheet 让底行被"完成"按钮遮。改横滚:
+   单行 nowrap + overflow-x:auto + 隐滚动条 + 右侧渐隐 mask 提示可滑 */
+@media (max-width: 1024px) {
+  .mobile-filter-sheet .chip-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    padding: 2px 4px 6px 0;
+    margin-right: -4px;
+    /* 右侧 24px 渐隐提示可横滑 */
+    mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
+  }
+  .mobile-filter-sheet .chip-row::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-filter-sheet .chip-row > * {
+    flex-shrink: 0;
+  }
 }
 
 .filter-toggle-row {

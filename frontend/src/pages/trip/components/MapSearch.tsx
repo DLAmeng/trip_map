@@ -25,6 +25,7 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   const searchIndex = useMemo(() => buildSearchIndex(spots, segments), [spots, segments]);
@@ -218,8 +219,24 @@ export function MapSearch({ spots, segments, apiKey, onSelectSpot, onSelectRoute
     }
   }, [selectedIndex]);
 
+  // P11-5: 点搜索框外(地图 / 任意其他位置)→ 关闭 popover
+  // 仅在有 query(即 popover 显示中)时绑定,避免无谓监听
+  useEffect(() => {
+    if (!query) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (!containerRef.current) return;
+      if (containerRef.current.contains(e.target as Node)) return;
+      // 点容器外 → 清空 query 让 popover 隐藏(handleClose 也会 blur input)
+      setQuery('');
+      setExternalResults([]);
+      inputRef.current?.blur();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [query]);
+
   return (
-    <div className="map-search tool-panel" onKeyDown={handleKeyDown}>
+    <div ref={containerRef} className="map-search tool-panel" onKeyDown={handleKeyDown}>
       <div className="map-search-inner">
         {isMobile && query ? (
           <button className="mobile-search-back" type="button" onClick={handleClose} aria-label="返回">
