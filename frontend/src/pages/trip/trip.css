@@ -919,10 +919,11 @@
   --day-color: var(--ocean);
 }
 
-/* P5: Google Maps InfoWindow 容器优化 — 仅做"无副作用"的视觉微调 */
+/* P5: Google Maps InfoWindow 容器优化 — 仅做"无副作用"的视觉微调
+   P12-1: 数值精度对齐设计稿 components-map-popup.html — radius 18 + shadow 18/46 + 蓝灰 RGB(22,37,48) */
 .gm-style-iw-c {
-  border-radius: 14px !important;
-  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.18) !important;
+  border-radius: 18px !important;
+  box-shadow: 0 18px 46px rgba(22, 37, 48, 0.18) !important;
 }
 
 /* P6 回退:不再用 CSS fixed 锁住 popup,改让 popup 跟随 marker(地图绝对位置)。
