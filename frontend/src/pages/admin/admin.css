@@ -14,7 +14,9 @@
 
 /* 在 AdminPage.tsx 中会通过副作用将这些变量应用到 body */
 .admin-page-bg {
+  /* P13: dvh 兼容 iOS 地址栏跳变 — 100vh 在 PWA standalone 不算 home indicator */
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at top left, rgba(239, 200, 158, 0.35), transparent 34%),
     linear-gradient(180deg, #fbf7f0 0%, #f2ebe1 100%);
@@ -1485,7 +1487,10 @@ a.btn {
 /* 2. 中尺寸 (Tablet Portrait / Large Mobile) */
 @media (max-width: 768px) {
   .admin-shell {
-    padding: 16px 16px 48px;
+    /* P13: 顶部加 safe-area 避让灵动岛(iPhone 14 Pro+ ~50px),
+       底部加 safe-area 避让 home indicator(~34px) */
+    padding: max(env(safe-area-inset-top, 0px), 16px) 16px
+             max(env(safe-area-inset-bottom, 0px), 48px) 16px;
   }
 
   .btn {

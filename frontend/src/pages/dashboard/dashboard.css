@@ -56,6 +56,12 @@
   color: var(--ink);
 }
 
+/* P13: 修复 iOS PWA 底部"白框" — html 底色对齐 dashboard 渐变最深处,
+   这样滚动溢出区 / dvh 跳变时露出来的也是 parchment 而非 body 默认 #f8fafc */
+html:has(.dash-shell) {
+  background: #e9dcbc;
+}
+
 /* ============ Header ============ */
 
 .dash-header {
@@ -808,7 +814,13 @@
 /* 1. 平板尺寸 (Tablet) */
 @media (max-width: 1024px) {
   .dash-shell {
-    padding: 32px 24px;
+    /* P13: 移动端 .app-nav 已隐藏(global.css:87),min-height 不再减 56;
+       100dvh 兼容 iOS 地址栏跳变,顶部加 safe-area 避让灵动岛,
+       底部加 safe-area 避让 home indicator */
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: max(env(safe-area-inset-top, 0px), 24px) 24px
+             max(env(safe-area-inset-bottom, 0px), 24px) 24px;
   }
   .dash-toolbar {
     border-radius: 20px;
@@ -826,7 +838,9 @@
 /* 3. 手机尺寸 (Mobile) */
 @media (max-width: 640px) {
   .dash-shell {
-    padding: 24px 16px 32px;
+    /* P13: 1024 块已设 100dvh + safe-area,这里只缩横 padding */
+    padding: max(env(safe-area-inset-top, 0px), 24px) 16px
+             max(env(safe-area-inset-bottom, 0px), 32px) 16px;
   }
 
   .dash-header-copy {

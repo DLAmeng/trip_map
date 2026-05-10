@@ -4,7 +4,7 @@
     {
       "name": "trip-map",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file=.env", "server.js"],
+      "runtimeArgs": ["--env-file-if-exists=.env", "server.js"],
       "port": 8080,
       "autoPort": true
     }
