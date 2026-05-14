@@ -59,6 +59,26 @@ export function AdminSettingsSheet({
   // P19: file input ref + 上传处理
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * P19-2: 校验每个 spot 是否能被地图识别。
+   * 地图渲染 marker 的条件:Number.isFinite(lat) && Number.isFinite(lng) && day 是有效数字。
+   * 任一缺失,该 spot 不会出现在地图上(仅在列表显示)。
+   */
+  const analyzeImportPayload = (parsed: TripFullPayload) => {
+    const spots = Array.isArray(parsed.spots) ? parsed.spots : [];
+    const valid: SpotItem[] = [];
+    const invalid: { spot: SpotItem; reasons: string[] }[] = [];
+    for (const spot of spots) {
+      const reasons: string[] = [];
+      if (!Number.isFinite(spot?.lat)) reasons.push('缺 lat');
+      if (!Number.isFinite(spot?.lng)) reasons.push('缺 lng');
+      if (!Number.isFinite(spot?.day)) reasons.push('缺 day');
+      if (reasons.length === 0) valid.push(spot);
+      else invalid.push({ spot, reasons });
+    }
+    return { valid, invalid, total: spots.length };
+  };
+
   const handleFilePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // 处理完清空 value,让用户能连续上传同名文件
@@ -77,11 +97,38 @@ export function AdminSettingsSheet({
         window.alert('JSON 缺少必要字段(spots / config),不是合法 itinerary。');
         return;
       }
-      // 二次确认:覆盖当前 trip 是破坏性操作
+
+      // P19-2: 预扫描所有 spot,统计地图可识别 / 不可识别
+      const { valid, invalid, total } = analyzeImportPayload(parsed);
+
+      // 全 0 景点 → 友好阻止
+      if (total === 0) {
+        window.alert('文件里 spots 数组是空的,导入后地图上看不到任何景点。请检查文件。');
+        return;
+      }
+
+      // 全部 spot 字段都缺 → 阻止(数据格式不对)
+      if (valid.length === 0) {
+        const samples = invalid.slice(0, 3).map(
+          (it) => `  · ${it.spot?.name || '<未命名>'}:${it.reasons.join(' / ')}`,
+        ).join('\n');
+        window.alert(
+          `文件里 ${total} 个景点全部缺关键字段(lat / lng / day),地图无法识别。\n\n` +
+          `前 3 个示例:\n${samples}\n\n` +
+          `请检查 JSON 格式是否正确。每个 spot 需要 lat / lng / day 三个数字字段。`,
+        );
+        return;
+      }
+
+      // 部分 invalid 加警告;全 valid 给绿光
+      const warnLine = invalid.length > 0
+        ? `\n⚠ ${invalid.length} 个景点缺字段(列表可见,但地图不显示 marker)`
+        : '\n✓ 所有景点位置完整,地图可全部识别';
       const ok = window.confirm(
-        `确定用上传的文件覆盖当前行程吗?\n` +
-        `上传:${parsed.spots.length} 个景点 / ${parsed.routeSegments?.length || 0} 条路线\n` +
-        `此操作会丢弃当前未保存的修改,但你可以"撤销"或重新加载。`,
+        `确定用上传的文件覆盖当前行程吗?\n\n` +
+        `上传:${total} 个景点 / ${parsed.routeSegments?.length || 0} 条路线\n` +
+        `✓ ${valid.length} 个景点有完整位置(lat / lng / day)${warnLine}\n\n` +
+        `此操作会丢弃当前未保存的修改,但你可以"撤销"或重新加载恢复。`,
       );
       if (!ok) return;
       onImportFromFile(parsed);
@@ -138,7 +185,9 @@ export function AdminSettingsSheet({
             <h3 className="admin-sheet-section-title">从文件导入行程</h3>
             <p className="admin-sheet-section-desc">
               选择电脑上的 itinerary.json 文件,覆盖当前行程。<br/>
-              文件需符合行程数据格式(meta / config / spots / routeSegments)。
+              <strong>地图识别要求</strong>:每个 spot 需要 <code>lat / lng / day</code>
+              {' '}三个数字字段才能在地图上显示 marker。<br/>
+              缺字段的 spot 仍会在列表显示,但地图不会画它。
             </p>
             <input
               ref={fileInputRef}

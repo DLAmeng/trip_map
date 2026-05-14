@@ -463,8 +463,18 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
             setSelectedSpotIds([]);
             setSelectedSpotId(null);
             setSelectedSegmentId(null);
-            setInlineMessage(`已导入 ${parsed.spots?.length ?? 0} 景点 / ${parsed.routeSegments?.length ?? 0} 路线,记得保存`);
-            addToast('success', '导入成功', '已用文件内容覆盖,点保存以同步到后端');
+            // P19-2: 统计能被地图识别的 spot 数(lat/lng/day 全有效),让用户知道地图上有多少 marker
+            const spots = Array.isArray(parsed.spots) ? parsed.spots : [];
+            const mappable = spots.filter((s) => Number.isFinite(s?.lat) &&
+                Number.isFinite(s?.lng) &&
+                Number.isFinite(s?.day)).length;
+            const missing = spots.length - mappable;
+            setInlineMessage(`已导入 ${spots.length} 景点 / ${parsed.routeSegments?.length ?? 0} 路线`
+                + (missing > 0 ? `,其中 ${missing} 个缺位置无法在地图显示` : '')
+                + `,记得保存`);
+            addToast(missing === 0 ? 'success' : 'warning', '导入成功', missing === 0
+                ? `${mappable} 个景点全部可识别 → 保存后切 trip 页可见 marker`
+                : `${mappable} 个景点可在地图显示,${missing} 个缺字段(列表可见,无 marker)`);
             setSettingsOpen(false);
         }
         catch (error) {
