@@ -409,7 +409,23 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
                 } })) : null, !isMobile && selectedRoute ? (_jsxs("div", { className: "route-detail-popover", style: desktopRoutePopoverStyle ?? undefined, role: "dialog", "aria-label": "\u8DEF\u7EBF\u8BF4\u660E", children: [_jsx("button", { type: "button", className: "route-detail-dismiss", onClick: () => {
                             setSelectedRouteId(null);
                             setRouteAnchor(null);
-                        }, "aria-label": "\u5173\u95ED\u8DEF\u7EBF\u8BF4\u660E", children: "\u00D7" }), _jsx(RouteDetailContent, { segment: selectedRoute })] })) : null, _jsx(MobileRouteDetailSheet, { isOpen: Boolean(isMobile && selectedRoute), segment: selectedRoute, onClose: () => {
+                        }, "aria-label": "\u5173\u95ED\u8DEF\u7EBF\u8BF4\u660E", children: "\u00D7" }), _jsx(RouteDetailContent, { segment: selectedRoute })] })) : null, _jsx(MobileRouteDetailSheet, { isOpen: Boolean(isMobile && selectedRoute), segment: selectedRoute, 
+                /* P17: 把起终点 lat/lng 传下去,sheet 据此生成 Google Maps 导航 URL */
+                fromCoord: (() => {
+                    if (!selectedRoute)
+                        return null;
+                    const s = spotById.get(selectedRoute.fromSpotId);
+                    return s && Number.isFinite(s.lat) && Number.isFinite(s.lng)
+                        ? { lat: s.lat, lng: s.lng }
+                        : null;
+                })(), toCoord: (() => {
+                    if (!selectedRoute)
+                        return null;
+                    const s = spotById.get(selectedRoute.toSpotId);
+                    return s && Number.isFinite(s.lat) && Number.isFinite(s.lng)
+                        ? { lat: s.lat, lng: s.lng }
+                        : null;
+                })(), onClose: () => {
                     setSelectedRouteId(null);
                     setRouteAnchor(null);
                 } })] }));

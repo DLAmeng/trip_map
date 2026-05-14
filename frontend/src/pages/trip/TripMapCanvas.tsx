@@ -683,6 +683,21 @@ export function TripMapCanvas({
         <MobileRouteDetailSheet
           isOpen={Boolean(isMobile && selectedRoute)}
           segment={selectedRoute}
+          /* P17: 把起终点 lat/lng 传下去,sheet 据此生成 Google Maps 导航 URL */
+          fromCoord={(() => {
+            if (!selectedRoute) return null;
+            const s = spotById.get(selectedRoute.fromSpotId);
+            return s && Number.isFinite(s.lat) && Number.isFinite(s.lng)
+              ? { lat: s.lat, lng: s.lng }
+              : null;
+          })()}
+          toCoord={(() => {
+            if (!selectedRoute) return null;
+            const s = spotById.get(selectedRoute.toSpotId);
+            return s && Number.isFinite(s.lat) && Number.isFinite(s.lng)
+              ? { lat: s.lat, lng: s.lng }
+              : null;
+          })()}
           onClose={() => {
             setSelectedRouteId(null);
             setRouteAnchor(null);

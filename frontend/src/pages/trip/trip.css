@@ -3121,9 +3121,68 @@
   }
 }
 
+/* P17: trip 页主按钮 — design system btn-primary 风格(覆盖 admin.css 棕橙污染) */
+.trip-shell .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #0f3d5c, #163b51);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(15, 61, 92, 0.18);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+  text-decoration: none;
+}
+.trip-shell .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 36px rgba(15, 61, 92, 0.22);
+}
+.trip-shell .btn-primary:active {
+  transform: translateY(0);
+}
+
+/* P17: trip 页 ghost 按钮(取消 / 次操作) */
+.trip-shell .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 1px solid rgba(28, 18, 7, 0.10);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--ink-soft, #4a3928);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.trip-shell .btn-ghost:hover {
+  background: #fff;
+  border-color: rgba(28, 18, 7, 0.18);
+}
+
+/* P17: RouteDetail actions 容器 — 纵向 stack,主按钮在上 */
+.route-detail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.route-detail-nav-btn,
 .route-detail-close-btn {
   width: 100%;
-  margin-top: 16px;
 }
 
 /* iPhone SE / 小屏手机(≤ 380px):进一步压缩顶部两层浮层,防止被挤变形 */
