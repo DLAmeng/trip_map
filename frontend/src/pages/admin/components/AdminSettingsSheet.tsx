@@ -16,6 +16,11 @@ interface AdminSettingsSheetProps {
   onExport: () => void;
   /** P19: 从用户电脑上传 JSON 文件,覆盖当前 trip(任意 trip 都能用,不限默认) */
   onImportFromFile: (parsed: TripFullPayload) => void;
+  /** P20: 批量自动定位缺 lat/lng 的 spot,走 /api/places/search 反查 Google Places */
+  onAutoLocateSpots: () => Promise<void> | void;
+  /** P20: 当前缺位置 spot 数,用于按钮显示数量 + disabled 状态 */
+  missingLocationCount: number;
+  isAutoLocating: boolean;
   isReloading: boolean;
   isSaving: boolean;
   isSyncing: boolean;
@@ -42,6 +47,9 @@ export function AdminSettingsSheet({
   onImport,
   onExport,
   onImportFromFile,
+  onAutoLocateSpots,
+  missingLocationCount,
+  isAutoLocating,
   isReloading,
   isSaving,
   isSyncing,
@@ -205,6 +213,50 @@ export function AdminSettingsSheet({
                 title="从电脑上传一个 itinerary.json 文件"
               >
                 选择 JSON 文件…
+              </button>
+            </div>
+          </section>
+
+          {/* P20: 批量自动定位缺位置景点 */}
+          <section className="admin-sheet-section">
+            <h3 className="admin-sheet-section-title">
+              修复缺位置景点
+              {missingLocationCount > 0 ? (
+                <span style={{
+                  marginLeft: 8,
+                  fontSize: '0.72rem',
+                  background: 'rgba(234, 88, 12, 0.12)',
+                  color: '#c2410c',
+                  padding: '2px 8px',
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  letterSpacing: '0.02em',
+                }}>{missingLocationCount} 个待修</span>
+              ) : null}
+            </h3>
+            <p className="admin-sheet-section-desc">
+              如果导入的 JSON 里景点名字写对了但缺 <code>lat/lng</code>,
+              这里可以**自动用 Google Places 反查**(根据 name + 城市)填回。<br/>
+              <strong>注意</strong>:同名地点多个时,可能定位到错的(比如"中央公园"
+              在多个城市都有)。修复后请去 SpotInspector 复核,失败的可手动搜索。
+            </p>
+            <div className="admin-sheet-actions">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onAutoLocateSpots()}
+                disabled={isBusy || isAutoLocating || missingLocationCount === 0}
+                title={
+                  missingLocationCount === 0
+                    ? '所有景点已有经纬度'
+                    : `用 Google Places 自动定位 ${missingLocationCount} 个缺位置景点`
+                }
+              >
+                {isAutoLocating
+                  ? '反查中…'
+                  : missingLocationCount === 0
+                    ? '所有景点已有位置'
+                    : `自动定位 ${missingLocationCount} 个景点`}
               </button>
             </div>
           </section>

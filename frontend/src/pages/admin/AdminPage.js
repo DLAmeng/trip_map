@@ -457,6 +457,57 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
      * 用户保存后才同步到后端,在此之前停留在 isDirty 状态,可以撤销 / 重置回到原状。
      * 不限默认 trip,任何 trip 都能用。
      */
+    /**
+     * P20: 批量自动定位缺 lat/lng 的 spot
+     * 用 spot.name + city 作 query 调 /api/places/search(后端走 Google Places API),
+     * 取第一条结果的 lat/lng 写回 spot。串行避免 burst quota。
+     *
+     * 适用场景:用户上传的 JSON 只有 name 没有经纬度,或地点名拼错位置缺失。
+     * 失败:跳过该 spot(列表仍可见,用户可去 SpotInspectorSheet 手动搜索修)。
+     */
+    const [isAutoLocating, setIsAutoLocating] = useState(false);
+    const handleAutoLocateSpots = useCallback(async () => {
+        const candidates = payload.spots.filter((s) => !Number.isFinite(s.lat) || !Number.isFinite(s.lng));
+        if (candidates.length === 0) {
+            addToast('info', '没有需要自动定位的景点', '所有景点已有经纬度');
+            return;
+        }
+        if (!payload.config?.googleMaps?.apiKey) {
+            addToast('error', '后端未配 Google Maps API key', '无法用 Places API 反查');
+            return;
+        }
+        setIsAutoLocating(true);
+        let resolved = 0;
+        let failed = 0;
+        for (const spot of candidates) {
+            const query = [spot.name, spot.city].filter(Boolean).join(' ').trim();
+            if (!query) {
+                failed += 1;
+                continue;
+            }
+            try {
+                const r = await fetch('/api/places/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query }),
+                });
+                const data = await r.json();
+                const first = data?.ok && Array.isArray(data.places) ? data.places[0] : null;
+                if (first && Number.isFinite(first.lat) && Number.isFinite(first.lng)) {
+                    updateSpot(spot.id, { lat: first.lat, lng: first.lng });
+                    resolved += 1;
+                }
+                else {
+                    failed += 1;
+                }
+            }
+            catch {
+                failed += 1;
+            }
+        }
+        setIsAutoLocating(false);
+        addToast(resolved > 0 ? 'success' : 'warning', `自动定位完成`, `已定位 ${resolved} 个 / 失败 ${failed} 个${failed > 0 ? ',失败的可在 SpotInspector 手动搜索' : ''}`);
+    }, [payload.spots, payload.config?.googleMaps?.apiKey, updateSpot, addToast]);
     const handleImportFromFile = (parsed) => {
         try {
             resetFromPayload(parsed);
@@ -568,5 +619,5 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
                     if (spots[0]?.day)
                         setActiveDay(spots[0].day);
                     addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-                }, onReload: handleReload, onImport: handleImport, onExport: handleExport, onImportFromFile: handleImportFromFile, isReloading: isReloading, isSaving: isSaving, isSyncing: isSyncing }), _jsx(ConflictsModal, { isOpen: conflictsOpen, onClose: () => setConflictsOpen(false), trip: payload, onSelectIssue: handleIssueSelect })] }));
+                }, onReload: handleReload, onImport: handleImport, onExport: handleExport, onImportFromFile: handleImportFromFile, onAutoLocateSpots: handleAutoLocateSpots, isAutoLocating: isAutoLocating, missingLocationCount: payload.spots.filter((s) => !Number.isFinite(s.lat) || !Number.isFinite(s.lng)).length, isReloading: isReloading, isSaving: isSaving, isSyncing: isSyncing }), _jsx(ConflictsModal, { isOpen: conflictsOpen, onClose: () => setConflictsOpen(false), trip: payload, onSelectIssue: handleIssueSelect })] }));
 }
