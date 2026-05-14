@@ -452,6 +452,25 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
             addToast('error', '导入失败', error.message);
         }
     };
+    /**
+     * P19: 从用户电脑上传 JSON 文件覆盖当前 trip(纯前端,不调后端)。
+     * 用户保存后才同步到后端,在此之前停留在 isDirty 状态,可以撤销 / 重置回到原状。
+     * 不限默认 trip,任何 trip 都能用。
+     */
+    const handleImportFromFile = (parsed) => {
+        try {
+            resetFromPayload(parsed);
+            setSelectedSpotIds([]);
+            setSelectedSpotId(null);
+            setSelectedSegmentId(null);
+            setInlineMessage(`已导入 ${parsed.spots?.length ?? 0} 景点 / ${parsed.routeSegments?.length ?? 0} 路线,记得保存`);
+            addToast('success', '导入成功', '已用文件内容覆盖,点保存以同步到后端');
+            setSettingsOpen(false);
+        }
+        catch (error) {
+            addToast('error', '导入失败', error.message);
+        }
+    };
     const handleExport = async () => {
         try {
             const result = await onExport();
@@ -539,5 +558,5 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
                     if (spots[0]?.day)
                         setActiveDay(spots[0].day);
                     addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-                }, onReload: handleReload, onImport: handleImport, onExport: handleExport, isReloading: isReloading, isSaving: isSaving, isSyncing: isSyncing }), _jsx(ConflictsModal, { isOpen: conflictsOpen, onClose: () => setConflictsOpen(false), trip: payload, onSelectIssue: handleIssueSelect })] }));
+                }, onReload: handleReload, onImport: handleImport, onExport: handleExport, onImportFromFile: handleImportFromFile, isReloading: isReloading, isSaving: isSaving, isSyncing: isSyncing }), _jsx(ConflictsModal, { isOpen: conflictsOpen, onClose: () => setConflictsOpen(false), trip: payload, onSelectIssue: handleIssueSelect })] }));
 }
