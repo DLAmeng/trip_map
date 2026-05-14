@@ -512,6 +512,17 @@ export function useTripPlannerEditor(initialData, tripId) {
             const toSpot = draft.spots.find((spot) => spot.id === toSpotId);
             if (!fromSpot || !toSpot)
                 return;
+            // P18-1: transportType 变更时,旧的 realDistance/realDuration/realWarnings/transitSummary
+            // 全是按旧 transport 算的 stale 数据,清空让 AdminPage 的 hydrate effect 重算。
+            // 仅传入了 transportType 且确实变化时才清空(其它字段更新走 ?? existing 保留)
+            const transportChanged = restPayload.transportType !== undefined
+                && restPayload.transportType !== (existing?.transportType ?? 'walk');
+            const preservedRealDistance = transportChanged ? null : (existing?.realDistanceMeters ?? null);
+            const preservedRealDuration = transportChanged ? null : (existing?.realDurationSec ?? null);
+            const preservedRealWarnings = transportChanged ? null : (existing?.realWarnings ?? null);
+            const preservedSource = transportChanged ? null : (existing?.runtimeSource ?? null);
+            const preservedTransitSummary = transportChanged ? null : (existing?.runtimeTransitSummary ?? null);
+            const preservedTransitLegs = transportChanged ? null : (existing?.runtimeTransitLegs ?? null);
             draft.legDrafts[key] = {
                 key,
                 id: existing?.id || createAutoSegmentId(fromSpotId, toSpotId),
@@ -523,12 +534,12 @@ export function useTripPlannerEditor(initialData, tripId) {
                 label: existing?.label || '',
                 duration: existing?.duration || '',
                 note: existing?.note || '',
-                realDistanceMeters: existing?.realDistanceMeters ?? null,
-                realDurationSec: existing?.realDurationSec ?? null,
-                realWarnings: existing?.realWarnings ?? null,
-                runtimeSource: existing?.runtimeSource ?? null,
-                runtimeTransitSummary: existing?.runtimeTransitSummary ?? null,
-                runtimeTransitLegs: existing?.runtimeTransitLegs ?? null,
+                realDistanceMeters: preservedRealDistance,
+                realDurationSec: preservedRealDuration,
+                realWarnings: preservedRealWarnings,
+                runtimeSource: preservedSource,
+                runtimeTransitSummary: preservedTransitSummary,
+                runtimeTransitLegs: preservedTransitLegs,
                 ...restPayload,
                 pathOverride: rawPathOverride
                     ? clone(rawPathOverride)

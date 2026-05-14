@@ -6,6 +6,7 @@ import { exportCurrentToLocal, getTripFull, importLocalToCurrent, updateTripFull
 import { normalizeTripForSave } from '../../utils/trip-normalize';
 import { useBeforeUnload } from '../../hooks/useBeforeUnload';
 import { analyzeTripFeasibility } from '../../utils/trip-analysis';
+import { hydrateRealRouteGeometries } from '../../api/routing-api';
 import { AdminHeader } from './components/AdminHeader';
 import { AdminToastStack } from './components/AdminToastStack';
 import { AdminSettingsSheet } from './components/AdminSettingsSheet';
@@ -143,6 +144,77 @@ function AdminEditor({ tripId, isDefaultTrip, initialData, isSaving, onSave, onI
     }, [payload.routeSegments.length, payload.spots.length, snapshot.days.length]);
     // 冲突数 — SaveBar 红点显示用
     const issueCount = useMemo(() => analyzeTripFeasibility(payload).issues.length, [payload]);
+    /**
+     * P18-2: 改 transportType 后自动 hydrate 重算 distance / duration / path 信息
+     *
+     * 流程:
+     * 1. useTripPlannerEditor.updateLeg(P18-1)在 transportType 变更时清空 realDistance/realDuration
+     * 2. 本 effect 监听 payload.routeSegments,找出 realDistance == null 的 segment
+     * 3. 通过 attemptKey = `${id}:${transportType}` 跟踪已尝试过的(用 ref 不触发 re-render)
+     * 4. debounce 400ms 后调用 hydrateRealRouteGeometries(支持 Google Directions API + RapidAPI)
+     * 5. onResolved 回调用 updateLeg 写回 draft,UI 立即看到新值
+     *
+     * 死循环防护:
+     * - attemptKey 包含 transportType,改回相同 transport 时 key 相同不重试
+     * - 改不同 transport → key 变 → 重新尝试 ✓
+     * - hydrate 失败(API 失败 / transport 不在 Google travel modes 映射)→ ref 已记录,不再重试
+     */
+    const hydrationAttemptsRef = useRef(new Set());
+    useEffect(() => {
+        // 没有 Google API key 时不尝试 hydrate
+        if (!payload.config.googleMaps?.apiKey)
+            return;
+        const candidates = payload.routeSegments.filter((seg) => {
+            // 已有真实距离 → 不需要重算
+            if (seg.realDistanceMeters != null)
+                return false;
+            // attemptKey 含 transportType,改 transport 时 key 变,可重新尝试
+            const attemptKey = `${seg.id}:${seg.transportType}`;
+            return !hydrationAttemptsRef.current.has(attemptKey);
+        });
+        if (candidates.length === 0)
+            return;
+        // 立即标记已尝试,避免 hydrate 异步期间重复触发
+        candidates.forEach((seg) => {
+            hydrationAttemptsRef.current.add(`${seg.id}:${seg.transportType}`);
+        });
+        const ac = new AbortController();
+        // debounce 400ms — 用户连续改 transportType 时避免每次都发请求
+        const timer = window.setTimeout(() => {
+            hydrateRealRouteGeometries({
+                segments: candidates,
+                spotById: snapshot.spotById,
+                config: payload.config,
+                routingEngine: 'google',
+                signal: ac.signal,
+                onResolved: (segmentId, geometry) => {
+                    const seg = payload.routeSegments.find((s) => s.id === segmentId);
+                    if (!seg)
+                        return;
+                    const key = `${seg.fromSpotId}__${seg.toSpotId}`;
+                    updateLeg(key, {
+                        realDistanceMeters: geometry.distanceMeters,
+                        realDurationSec: geometry.durationSec,
+                        realWarnings: geometry.warnings ?? null,
+                        runtimeSource: geometry.source ?? null,
+                        runtimeTransitSummary: geometry.transitSummary ?? null,
+                        runtimeTransitLegs: geometry.transitLegs ?? null,
+                    });
+                },
+            }).catch((err) => {
+                // hydrate 内部错误不该崩页面,记日志
+                if (err?.name !== 'AbortError') {
+                    // eslint-disable-next-line no-console
+                    console.warn('[admin hydrate] failed:', err);
+                }
+            });
+        }, 400);
+        return () => {
+            window.clearTimeout(timer);
+            ac.abort();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [payload.routeSegments, payload.config.googleMaps?.apiKey]);
     /**
      * P0-1: 根据 trip.meta.startDate/endDate 算出"期望天数",传给 PlannerBoard 让 DayTabs
      * 至少展开 N 个 day。用户在创建 trip 表单填了 06-01 → 06-05(5 天),即使 hook spots
