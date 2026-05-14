@@ -1,12 +1,17 @@
 services:
   trip_map:
-    image: ${TRIP_MAP_IMAGE:-ghcr.io/your-github-name/trip_map:latest}
+    image: ${TRIP_MAP_IMAGE:-ghcr.io/dlameng/trip_map:latest}
     container_name: trip_map
     restart: unless-stopped
+    pull_policy: always
     environment:
       PORT: 8080
       NODE_ENV: production
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      RAPIDAPI_ROUTER_KEY: ${RAPIDAPI_ROUTER_KEY:-}
+      RAPIDAPI_ROUTER_HOST: ${RAPIDAPI_ROUTER_HOST:-navitime-route-totalnavi.p.rapidapi.com}
+      RAPIDAPI_ROUTER_BASE_URL: ${RAPIDAPI_ROUTER_BASE_URL:-https://navitime-route-totalnavi.p.rapidapi.com}
+      RAPIDAPI_ROUTER_TIMEOUT_MS: ${RAPIDAPI_ROUTER_TIMEOUT_MS:-5000}
     ports:
       - "8080:8080"
     volumes:
@@ -14,3 +19,15 @@ services:
       # itinerary.json 可选 — host 没有时 Docker 会挂载空目录,
       # trip-service.js 自动兜底用空模板,不影响启动
       - ./itinerary.json:/app/itinerary.json
+    # P16: healthcheck 不用 wget(slim 镜像没装),用 node 内置 fetch(node 21+)。
+    # 用 CMD 数组形式直接执行 node,不走 sh,避免 wget 缺失报 "/bin/sh: 1: wget: not found"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
