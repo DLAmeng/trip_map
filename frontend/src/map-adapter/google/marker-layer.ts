@@ -103,14 +103,22 @@ export function createGoogleMarkerLayer(config: {
         const domEvent = event.domEvent as Event | undefined;
         domEvent?.stopPropagation?.();
         domEvent?.preventDefault?.();
+        // P15: cluster 视觉位置偏下 — 避开顶部合并卡(trip-context + map-search 共 ~120px)
+        // 与单 marker click(P11-1)同样比例(viewportH * 0.15,上限 120px)
+        const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
+        const panY = Math.min(120, Math.floor(viewportH * 0.15));
         const bounds = cluster.bounds;
         if (bounds && !bounds.isEmpty()) {
           clusterMap.fitBounds(bounds, 64);
+          // fitBounds 同步设完 zoom/center,setTimeout 0 让 panBy 在它之后,
+          // 视图上移 → cluster 中心视觉下移
+          window.setTimeout(() => clusterMap.panBy(0, -panY), 0);
           return;
         }
         const zoom = clusterMap.getZoom() ?? 8;
         clusterMap.setCenter(cluster.position);
         clusterMap.setZoom(Math.min(zoom + 2, 15));
+        clusterMap.panBy(0, -panY);
       },
     });
   }
