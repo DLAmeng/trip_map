@@ -30,4 +30,10 @@ COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 EXPOSE 8080
 
+# Healthcheck:用 node 内置 fetch(v21+ 默认有)检查 /api/health。
+# 不依赖 wget / curl(slim 镜像默认都没装),避免部署平台(Portainer / Dokploy 等)
+# 自己注入 `sh -c "wget ..."` 失败报 "wget: not found"。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+process.env.PORT+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 CMD ["node", "server.js"]
