@@ -910,14 +910,8 @@ function AdminEditor({
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         meta={payload.meta}
-        spots={payload.spots}
         isDefaultTrip={isDefaultTrip}
         onUpdateMeta={updateMeta}
-        onAddImportedSpots={(spots) => {
-          addSpots(spots);
-          if (spots[0]?.day) setActiveDay(spots[0].day);
-          addToast('success', '批量导入完成', `已加入 ${spots.length} 个景点`);
-        }}
         onReload={handleReload}
         onImport={handleImport}
         onExport={handleExport}

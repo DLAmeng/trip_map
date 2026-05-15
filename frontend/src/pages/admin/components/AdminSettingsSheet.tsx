@@ -1,16 +1,13 @@
 import { useEffect, useRef } from 'react';
 import type { SpotItem, TripFullPayload, TripMeta } from '../../../types/trip';
 import { TripMetaForm } from './TripMetaForm';
-import { BatchImportPanel } from './BatchImportPanel';
 
 interface AdminSettingsSheetProps {
   isOpen: boolean;
   onClose: () => void;
   meta: TripMeta;
-  spots: SpotItem[];
   isDefaultTrip: boolean;
   onUpdateMeta: (payload: Partial<TripMeta>) => void;
-  onAddImportedSpots: (spots: SpotItem[]) => void;
   onReload: () => void;
   onImport: () => void;
   onExport: () => void;
@@ -29,8 +26,12 @@ interface AdminSettingsSheetProps {
 /**
  * 容纳从主流程移走的低频功能:
  *   - 行程 Meta 编辑(标题/描述/目的地/起止/标签/dayColors)
- *   - 批量导入(CSV / JSON / Google Maps URL)
+ *   - 从文件导入行程(整体覆盖 JSON)
+ *   - 修复缺位置景点(P20 auto-locate)
  *   - 本地 itinerary.json 重载/导入/导出 (仅 isDefaultTrip)
+ *
+ * P24: 移除「批量导入 (GPX/KML/URL)」section — 主入口已被「从文件导入行程(JSON)」
+ *      覆盖, GPX/KML 桌面端 PlannerInspector 仍保留入口。
  *
  * 移动端:bottom sheet 风格,从底部滑入,max-height 88vh
  * 桌面端:右侧 360px 抽屉(同 backdrop)
@@ -39,10 +40,8 @@ export function AdminSettingsSheet({
   isOpen,
   onClose,
   meta,
-  spots,
   isDefaultTrip,
   onUpdateMeta,
-  onAddImportedSpots,
   onReload,
   onImport,
   onExport,
@@ -257,20 +256,9 @@ export function AdminSettingsSheet({
             </div>
           </section>
 
-          {/* P21: 4. 批量导入 (GPX/KML/URL) — 文案纠正:不再误标"JSON",且小字指引整 trip JSON 走上方 */}
-          <section className="admin-sheet-section">
-            <h3 className="admin-sheet-section-title">
-              批量导入
-              <span className="admin-sheet-section-tag">GPX / KML / URL</span>
-            </h3>
-            <p className="admin-sheet-section-desc">
-              从 GPX / KML 文件 或 Google Maps 链接一次<strong>追加</strong>多个景点。
-              <small>整个行程的 JSON 导入请用上方"从文件导入行程"。</small>
-            </p>
-            <div className="admin-sheet-embed">
-              <BatchImportPanel spots={spots} onAddSpots={onAddImportedSpots} />
-            </div>
-          </section>
+          {/* P24: 「批量导入 (GPX/KML/URL)」section 整体移除 — 主用例已被
+                「从文件导入行程(JSON)」覆盖, GPX/KML 桌面端 PlannerInspector
+                还保留入口,移动端 sheet 不再展示。 */}
 
           {/* 5. 本地 itinerary.json 工具 — 仅默认行程显示(开发期/迁移使用) */}
           {isDefaultTrip ? (
