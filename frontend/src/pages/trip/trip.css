@@ -1069,6 +1069,24 @@
   line-height: 1.5;
 }
 
+/* P26: popup 名字旁的分类 chip — inline glass 风格,与 popup-transport 同语义 */
+.popup-type-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(35, 111, 122, 0.12);
+  border: 1px solid rgba(35, 111, 122, 0.18);
+  color: var(--ocean, #0f3d5c);
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 .popup-next,
 .popup-nav-row {
   display: grid;

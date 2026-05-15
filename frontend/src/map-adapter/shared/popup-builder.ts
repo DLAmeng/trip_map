@@ -1,4 +1,5 @@
 import type { SpotItem } from '../../types/trip';
+import { SPOT_TYPE_META, coerceSpotType } from '../../constants/spot-types';
 
 export interface PopupBuilderOptions {
   dayColors: string[];
@@ -44,6 +45,11 @@ function getPopupMarkup(spot: SpotItem, options: PopupBuilderOptions): string {
     ? `<div class="popup-name-en">${escapeHtml(spot.nameEn)}</div>`
     : '';
   const mustBadge = spot.mustVisit ? '<span class="popup-must">必去</span>' : '';
+  // P26: type chip — 显示 spot 分类(emoji + label),非 spot 类型才显示(默认 spot 不显示避免冗余)
+  const spotType = coerceSpotType(spot.type);
+  const typeChip = spotType !== 'spot'
+    ? `<span class="popup-type-chip">${SPOT_TYPE_META[spotType].emoji} ${SPOT_TYPE_META[spotType].label}</span>`
+    : '';
   const stayLine =
     typeof spot.stayMinutes === 'number' && spot.stayMinutes > 0
       ? `<span>${spot.stayMinutes} 分钟</span>`
@@ -79,7 +85,7 @@ function getPopupMarkup(spot: SpotItem, options: PopupBuilderOptions): string {
       <div class="popup-day-band" aria-hidden="true"></div>
       ${photo}
       <div class="popup-day" style="color:${color}">第 ${spot.day} 天 · ${escapeHtml(formatTimeSlot(spot.timeSlot))}</div>
-      <div class="popup-name">${escapeHtml(spot.name)}${mustBadge}</div>
+      <div class="popup-name">${escapeHtml(spot.name)}${mustBadge}${typeChip}</div>
       ${subLabel}
       <div class="popup-meta">
         <span>${escapeHtml(spot.area || spot.city || '')}</span>

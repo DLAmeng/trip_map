@@ -1,5 +1,6 @@
 import type { RouteSegment, SpotItem, TripFullPayload } from '../types/trip';
 import { buildCompactDayMap, compactDayValue } from '../utils/trip-day-sequence';
+import { type SpotType, coerceSpotType } from '../constants/spot-types';
 
 /**
  * 把 TripFullPayload 派生成前端要用的各种索引。
@@ -26,19 +27,26 @@ export interface NormalizedTrip {
 
 export interface NormalizeOptions {
   /**
-   * P25: 是否在 trip 页显示「住宿/交通」节点(酒店、机场、车站、入住/出发/收尾等)
-   *  - false(默认):过滤掉 type=transport/accommodation + 名字含 logistics 关键词的 entry
-   *  - true:除了 hideFromMap=true 的 entry 外全部显示(用户在 MobileFilterSheet 打开开关)
+   * P26: 按 spot.type 过滤(替代 P25 的 showLogistics 粗粒度开关)
+   *  - undefined / null:不过滤,显示全部 6 类(默认)
+   *  - 数组(可空):只显示数组里的 type;[] = 都不显示
+   *
+   * hideFromMap=true 的 entry 在任何模式下都不显示。
    */
-  showLogistics?: boolean;
+  spotTypes?: SpotType[] | null;
 }
 
 export function normalizeTripData(
   payload: TripFullPayload,
   options: NormalizeOptions = {},
 ): NormalizedTrip {
-  const { showLogistics = false } = options;
-  const passes = (spot: SpotItem) => isDisplayAttractionStop(spot, showLogistics);
+  const { spotTypes = null } = options;
+  // P26 过滤逻辑:hideFromMap 总是排除;否则按 spotTypes 数组判断
+  const passes = (spot: SpotItem) => {
+    if (spot.hideFromMap === true) return false;
+    if (!spotTypes) return true;
+    return spotTypes.includes(coerceSpotType(spot.type));
+  };
 
   const allEntries = Array.isArray(payload.spots) ? payload.spots : [];
   const routeSegments = Array.isArray(payload.routeSegments) ? payload.routeSegments : [];
@@ -142,61 +150,14 @@ export function computeStats(normalized: NormalizedTrip): TripStats {
   };
 }
 
-const LOGISTICS_STOP_KEYWORDS = [
-  '酒店',
-  '旅馆',
-  '入住',
-  '出发',
-  '收尾',
-  '站周边',
-  '车站周边',
-  '机场',
-  '轻松活动',
-  '回到',
-];
-
-const ATTRACTION_NAME_ALLOWLIST = [
-  '表参道',
-  '秋叶原',
-  '心斋桥',
-  '难波',
-  '道顿堀',
-  '电电城',
-  '老街',
-  '本町通',
-  '丸之内',
-  '角色街',
-  '台场',
-  'PARCO',
-  'Namba Parks',
-];
-
-function hasLogisticsName(spot: SpotItem): boolean {
-  const name = spot.name || '';
-  return LOGISTICS_STOP_KEYWORDS.some((keyword) => name.includes(keyword));
-}
-
-function isKnownAttractionName(spot: SpotItem): boolean {
-  const name = spot.name || '';
-  return ATTRACTION_NAME_ALLOWLIST.some((keyword) => name.includes(keyword));
-}
-
 /**
- * 判断一条 entry 是否作为"可点击景点"在地图 marker + 列表 + 路线端点上展示。
- * 规则按当前日本行程语义收敛:
- *   1. 显式 hideFromMap === true      → false  (数据层明确打标,最高优先,任何模式都遵守)
- *   2. P25 showLogistics=true:除上述外全部显示(用户主动要求看住宿/交通)
- *   3. type === 'transport'           → false  (换乘/车站/机场)
- *   4. type === 'accommodation'       → false  (酒店/温泉旅馆)
- *   5. 名称像入住/出发/收尾/机场等物流点 → false
- *   6. 商圈/街区/景点类 spot             → true
+ * P26: 简化为仅判断 hideFromMap。原来的 P25 名字关键词 fallback
+ * (LOGISTICS_STOP_KEYWORDS / ATTRACTION_NAME_ALLOWLIST)整组删除 —
+ * 新过滤逻辑完全靠 spot.type 字段(由 admin select 显式编辑,sanitizeSpotType
+ * 兜底默认 'spot'),不再用脆弱的名字猜测。
+ *
+ * 保留 export 名字兼容旧代码 import,但 showLogistics 参数已废弃(忽略)。
  */
-export function isDisplayAttractionStop(spot: SpotItem, showLogistics = false): boolean {
-  if (spot.hideFromMap === true) return false;
-  if (showLogistics) return true;
-  if (spot.type === 'transport') return false;
-  if (spot.type === 'accommodation') return false;
-  if (hasLogisticsName(spot)) return false;
-  if (isKnownAttractionName(spot)) return true;
-  return true;
+export function isDisplayAttractionStop(spot: SpotItem, _showLogistics = false): boolean {
+  return spot.hideFromMap !== true;
 }

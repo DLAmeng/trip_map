@@ -63,8 +63,12 @@ export interface TripConfig {
 }
 
 /**
- * 单个景点。`type: 'transport'` 代表交通点(仅占位),
- * 真正显示在地图上的是 `type: 'spot'`。
+ * 单个景点。
+ * P26: type 扩展为 6 类 union(从 3 类 + 修复 sanitizeSpotType bug):
+ *   - spot: 普通景点(默认),marker 显示 day number
+ *   - restaurant / cafe / shopping / accommodation / transport: 各类型 marker 显示 emoji
+ *
+ * 与 SPOT_TYPE_VALUES (`frontend/src/constants/spot-types.ts`) 同步。
  */
 export interface SpotItem {
   id: string;
@@ -78,7 +82,7 @@ export interface SpotItem {
   lat: number;
   lng: number;
   mustVisit: boolean;
-  type: 'spot' | 'transport' | 'accommodation';
+  type: 'spot' | 'transport' | 'accommodation' | 'restaurant' | 'cafe' | 'shopping';
   description?: string;
   whyGo?: string;
   stayMinutes?: number;

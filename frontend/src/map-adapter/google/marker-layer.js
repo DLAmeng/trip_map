@@ -1,6 +1,7 @@
 import { MarkerClusterer } from '@googlemaps/markerclusterer';
 import { buildSpotPopupElement } from '../shared/popup-builder';
 import { debugTripMapEvent } from '../debug';
+import { SPOT_TYPE_META, coerceSpotType } from '../../constants/spot-types';
 export function createGoogleMarkerLayer(config) {
     let map = null;
     let markerRefs = [];
@@ -17,8 +18,14 @@ export function createGoogleMarkerLayer(config) {
             : isNext
                 ? (spot.mustVisit ? 1.28 : 1.12)
                 : (spot.mustVisit ? 1.15 : 1);
+        // P26: 默认 type=spot 的 marker 仍显示 day number(保持向后兼容,用户已习惯);
+        // 其他 5 类用 emoji icon 区分(🍽 🏨 🚆 ☕ 🛍),background 仍由 day color 表达「第几天」
+        const type = coerceSpotType(spot.type);
+        const glyphText = type === 'spot'
+            ? String(dayIndex || spot.order)
+            : SPOT_TYPE_META[type].emoji;
         return new google.maps.marker.PinElement({
-            glyphText: String(dayIndex || spot.order),
+            glyphText,
             glyphColor: '#fff',
             background: config.dayColors[spot.day - 1] || '#ea4335',
             borderColor: isActive ? '#183847' : isNext ? '#236f7a' : '#fff',

@@ -5,7 +5,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getTripFull, DEFAULT_TRIP_ID } from '../../api/trip-api';
-import { normalizeTripData, computeStats, isDisplayAttractionStop } from '../../selectors/tripSelectors';
+import { normalizeTripData, computeStats } from '../../selectors/tripSelectors';
+import { SPOT_TYPE_VALUES, coerceSpotType, isSpotType, } from '../../constants/spot-types';
 import { TripHeader } from './TripHeader';
 import { TripMapCanvas } from './TripMapCanvas';
 import { SpotList } from './SpotList';
@@ -48,29 +49,61 @@ export function TripPage() {
         queryFn: () => getTripFull(tripId),
         staleTime: 30_000,
     });
-    // P25: URL 参数 logistics=true 表示要显示住宿/交通节点(默认只显示景点)
-    // 用 URL 而不是 useState 让用户能 bookmark / 分享 URL 时保留状态
-    const showLogistics = params.get('logistics') === 'true';
+    // P26: URL 参数 ?types=spot,restaurant,cafe 表示按分类过滤
+    // 没参数 → null = 显示全部 6 类;有参数 → 仅显示数组里的 type
+    // 用 URL 而非 useState 让用户能 bookmark / 分享 URL 时保留状态
+    const spotTypes = useMemo(() => {
+        const param = params.get('types');
+        if (!param)
+            return null;
+        return param.split(',').filter(isSpotType);
+    }, [params]);
     const normalized = useMemo(() => {
         if (!data)
             return null;
-        return normalizeTripData(data, { showLogistics });
-    }, [data, showLogistics]);
-    // P25: 被隐藏的 logistics 节点数 — 给 filter sheet 的 toggle 显示数字。
-    // 不依赖当前 showLogistics 状态,始终算「如果关闭开关会被排除多少个」(不含 hideFromMap=true)
-    const hiddenLogisticsCount = useMemo(() => {
+        return normalizeTripData(data, { spotTypes });
+    }, [data, spotTypes]);
+    // P26: 每类 entry 数(包括 hideFromMap=true 的也算,给 filter chip 显示总量参考)
+    // — 注意:每类计数基于「数据总量」,与当前过滤无关,让用户知道每类有多少
+    const typeBreakdown = useMemo(() => {
+        const breakdown = Object.fromEntries(SPOT_TYPE_VALUES.map((t) => [t, 0]));
         if (!data)
-            return 0;
+            return breakdown;
         const allEntries = Array.isArray(data.spots) ? data.spots : [];
-        return allEntries.filter((s) => s.hideFromMap !== true && !isDisplayAttractionStop(s, false)).length;
+        for (const spot of allEntries) {
+            if (spot.hideFromMap === true)
+                continue; // 与 normalize 一致:hideFromMap 完全排除
+            breakdown[coerceSpotType(spot.type)] += 1;
+        }
+        return breakdown;
     }, [data]);
-    const toggleLogistics = useCallback(() => {
+    // P26: 切换某 type 的过滤状态。null → ['spot',...] except t; ['spot',t] → ['spot']; etc.
+    const toggleSpotType = useCallback((t) => {
         setParams((prev) => {
             const next = new URLSearchParams(prev);
-            if (prev.get('logistics') === 'true')
-                next.delete('logistics');
-            else
-                next.set('logistics', 'true');
+            const current = prev.get('types')
+                ? prev.get('types').split(',').filter(isSpotType)
+                : null;
+            let nextArray;
+            if (current === null) {
+                // 当前显示全部 → 点击 t 表示要排除 t → 其他 5 类都留下
+                nextArray = SPOT_TYPE_VALUES.filter((x) => x !== t);
+            }
+            else if (current.includes(t)) {
+                // 当前包含 t → 排除 t
+                nextArray = current.filter((x) => x !== t);
+            }
+            else {
+                // 当前不含 t → 加入
+                nextArray = [...current, t];
+            }
+            // 全 6 类 → 等价于 null,清掉 URL 参数让 URL 干净
+            if (nextArray.length === SPOT_TYPE_VALUES.length) {
+                next.delete('types');
+            }
+            else {
+                next.set('types', nextArray.join(','));
+            }
             return next;
         });
     }, [setParams]);
@@ -211,5 +244,5 @@ export function TripPage() {
                 } })) : null, activeTool === 'summary' && isMobile && (_jsxs(_Fragment, { children: [_jsx("div", { className: "sheet-backdrop", onClick: closeAllPopups }), _jsxs("div", { className: "mobile-summary-modal", children: [_jsx("div", { className: "modal-header", children: _jsx("h3", { children: "\u884C\u7A0B\u6982\u51B5" }) }), _jsx("div", { className: "modal-body", children: _jsx(SummaryBar, { stats: stats, isFiltered: filter.day !== null ||
                                         filter.city !== null ||
                                         filter.mustOnly ||
-                                        filter.nextOnly }) })] })] })), _jsx(MobileFilterSheet, { isOpen: isFilterSheetOpen, onClose: () => setIsFilterSheetOpen(false), dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, cityNames: normalized.cityNames, filter: filter, onChange: setFilter, showLogistics: showLogistics, hiddenLogisticsCount: hiddenLogisticsCount, onToggleLogistics: toggleLogistics })] }));
+                                        filter.nextOnly }) })] })] })), _jsx(MobileFilterSheet, { isOpen: isFilterSheetOpen, onClose: () => setIsFilterSheetOpen(false), dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, cityNames: normalized.cityNames, filter: filter, onChange: setFilter, spotTypes: spotTypes, typeBreakdown: typeBreakdown, onToggleSpotType: toggleSpotType })] }));
 }

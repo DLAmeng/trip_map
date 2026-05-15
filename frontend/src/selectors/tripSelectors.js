@@ -1,7 +1,15 @@
 import { buildCompactDayMap, compactDayValue } from '../utils/trip-day-sequence';
+import { coerceSpotType } from '../constants/spot-types';
 export function normalizeTripData(payload, options = {}) {
-    const { showLogistics = false } = options;
-    const passes = (spot) => isDisplayAttractionStop(spot, showLogistics);
+    const { spotTypes = null } = options;
+    // P26 过滤逻辑:hideFromMap 总是排除;否则按 spotTypes 数组判断
+    const passes = (spot) => {
+        if (spot.hideFromMap === true)
+            return false;
+        if (!spotTypes)
+            return true;
+        return spotTypes.includes(coerceSpotType(spot.type));
+    };
     const allEntries = Array.isArray(payload.spots) ? payload.spots : [];
     const routeSegments = Array.isArray(payload.routeSegments) ? payload.routeSegments : [];
     const displayDayMap = buildCompactDayMap(allEntries.filter(passes).map((spot) => spot.day));
@@ -92,63 +100,14 @@ export function computeStats(normalized) {
         spots: normalized.spots.length,
     };
 }
-const LOGISTICS_STOP_KEYWORDS = [
-    '酒店',
-    '旅馆',
-    '入住',
-    '出发',
-    '收尾',
-    '站周边',
-    '车站周边',
-    '机场',
-    '轻松活动',
-    '回到',
-];
-const ATTRACTION_NAME_ALLOWLIST = [
-    '表参道',
-    '秋叶原',
-    '心斋桥',
-    '难波',
-    '道顿堀',
-    '电电城',
-    '老街',
-    '本町通',
-    '丸之内',
-    '角色街',
-    '台场',
-    'PARCO',
-    'Namba Parks',
-];
-function hasLogisticsName(spot) {
-    const name = spot.name || '';
-    return LOGISTICS_STOP_KEYWORDS.some((keyword) => name.includes(keyword));
-}
-function isKnownAttractionName(spot) {
-    const name = spot.name || '';
-    return ATTRACTION_NAME_ALLOWLIST.some((keyword) => name.includes(keyword));
-}
 /**
- * 判断一条 entry 是否作为"可点击景点"在地图 marker + 列表 + 路线端点上展示。
- * 规则按当前日本行程语义收敛:
- *   1. 显式 hideFromMap === true      → false  (数据层明确打标,最高优先,任何模式都遵守)
- *   2. P25 showLogistics=true:除上述外全部显示(用户主动要求看住宿/交通)
- *   3. type === 'transport'           → false  (换乘/车站/机场)
- *   4. type === 'accommodation'       → false  (酒店/温泉旅馆)
- *   5. 名称像入住/出发/收尾/机场等物流点 → false
- *   6. 商圈/街区/景点类 spot             → true
+ * P26: 简化为仅判断 hideFromMap。原来的 P25 名字关键词 fallback
+ * (LOGISTICS_STOP_KEYWORDS / ATTRACTION_NAME_ALLOWLIST)整组删除 —
+ * 新过滤逻辑完全靠 spot.type 字段(由 admin select 显式编辑,sanitizeSpotType
+ * 兜底默认 'spot'),不再用脆弱的名字猜测。
+ *
+ * 保留 export 名字兼容旧代码 import,但 showLogistics 参数已废弃(忽略)。
  */
-export function isDisplayAttractionStop(spot, showLogistics = false) {
-    if (spot.hideFromMap === true)
-        return false;
-    if (showLogistics)
-        return true;
-    if (spot.type === 'transport')
-        return false;
-    if (spot.type === 'accommodation')
-        return false;
-    if (hasLogisticsName(spot))
-        return false;
-    if (isKnownAttractionName(spot))
-        return true;
-    return true;
+export function isDisplayAttractionStop(spot, _showLogistics = false) {
+    return spot.hideFromMap !== true;
 }

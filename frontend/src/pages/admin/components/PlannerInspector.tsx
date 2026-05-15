@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { SpotItem, TripMeta } from '../../../types/trip';
 import { parsePathInput } from '../../../utils/trip-normalize';
+import { SPOT_TYPE_VALUES, SPOT_TYPE_META } from '../../../constants/spot-types';
 import { RouteDetailContent } from '../../trip/components/RouteDetailContent';
 import { BatchImportPanel } from './BatchImportPanel';
 import { PhotoUploader } from './PhotoUploader';
@@ -227,6 +228,7 @@ export function PlannerInspector({
               </label>
               <div className="field">
                 <label>类型</label>
+                {/* P26: 扩展到 6 类(景点 / 餐厅 / 咖啡 / 购物 / 住宿 / 交通) */}
                 <select
                   value={selectedSpot.type ?? 'spot'}
                   onChange={(event) =>
@@ -235,8 +237,11 @@ export function PlannerInspector({
                     })
                   }
                 >
-                  <option value="spot">景点 / 停留点</option>
-                  <option value="transport">交通节点</option>
+                  {SPOT_TYPE_VALUES.map((t) => (
+                    <option key={t} value={t}>
+                      {SPOT_TYPE_META[t].emoji} {SPOT_TYPE_META[t].label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="field field-wide">

@@ -8,6 +8,7 @@ import type {
 } from '../../../types/trip';
 import { makeBlankSpot } from '../../../utils/trip-factory';
 import { compactTripPayloadDays } from '../../../utils/trip-day-sequence';
+import { coerceSpotType } from '../../../constants/spot-types';
 
 const STORAGE_PREFIX = 'trip-planner-editor-draft:';
 
@@ -92,8 +93,12 @@ function createAutoSegmentId(fromSpotId: string, toSpotId: string): string {
   return `seg-auto-${fromSpotId}__${toSpotId}`;
 }
 
+/**
+ * P26: 改 allowlist — 之前 buggy 只接受 'transport',导致
+ * 'accommodation' / 'restaurant' / 'cafe' / 'shopping' 都被强制变 'spot'。
+ */
 function sanitizeSpotType(type: unknown): SpotItem['type'] {
-  return String(type || '').trim() === 'transport' ? 'transport' : 'spot';
+  return coerceSpotType(type);
 }
 
 function createEditorSpot(spot: Partial<SpotItem>, index = 0): SpotItem {

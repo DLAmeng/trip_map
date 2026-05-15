@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { makeBlankSpot } from '../../../utils/trip-factory';
 import { compactTripPayloadDays } from '../../../utils/trip-day-sequence';
+import { coerceSpotType } from '../../../constants/spot-types';
 const STORAGE_PREFIX = 'trip-planner-editor-draft:';
 function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -14,8 +15,12 @@ export function buildLegKey(fromSpotId, toSpotId) {
 function createAutoSegmentId(fromSpotId, toSpotId) {
     return `seg-auto-${fromSpotId}__${toSpotId}`;
 }
+/**
+ * P26: 改 allowlist — 之前 buggy 只接受 'transport',导致
+ * 'accommodation' / 'restaurant' / 'cafe' / 'shopping' 都被强制变 'spot'。
+ */
 function sanitizeSpotType(type) {
-    return String(type || '').trim() === 'transport' ? 'transport' : 'spot';
+    return coerceSpotType(type);
 }
 function createEditorSpot(spot, index = 0) {
     const fallback = makeBlankSpot({

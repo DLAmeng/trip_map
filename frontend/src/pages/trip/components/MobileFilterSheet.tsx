@@ -1,4 +1,9 @@
 import type { FilterState } from '../../../selectors/filterState';
+import {
+  SPOT_TYPE_VALUES,
+  SPOT_TYPE_META,
+  type SpotType,
+} from '../../../constants/spot-types';
 
 interface MobileFilterSheetProps {
   isOpen: boolean;
@@ -9,12 +14,12 @@ interface MobileFilterSheetProps {
   cityNames: string[];
   filter: FilterState;
   onChange: (filter: FilterState) => void;
-  /** P25: 是否显示「住宿/交通」节点(酒店/机场/车站等) */
-  showLogistics?: boolean;
-  /** P25: 当前被隐藏的 logistics 节点数(关闭时显示在 toggle 文字里,给用户参考) */
-  hiddenLogisticsCount?: number;
-  /** P25: 切换显示住宿/交通 */
-  onToggleLogistics?: () => void;
+  /** P26: 当前显示的 spot 类型数组(null=显示全部 6 类) */
+  spotTypes?: SpotType[] | null;
+  /** P26: 每类 entry 数,给 chip 显示在 label 上,disabled 0 个的类 */
+  typeBreakdown?: Record<SpotType, number>;
+  /** P26: 切换某 type 的显示/隐藏 */
+  onToggleSpotType?: (type: SpotType) => void;
 }
 
 export function MobileFilterSheet({
@@ -25,9 +30,9 @@ export function MobileFilterSheet({
   cityNames,
   filter,
   onChange,
-  showLogistics = false,
-  hiddenLogisticsCount = 0,
-  onToggleLogistics,
+  spotTypes = null,
+  typeBreakdown,
+  onToggleSpotType,
 }: MobileFilterSheetProps) {
   return (
     <>
@@ -95,6 +100,37 @@ export function MobileFilterSheet({
             </div>
           ) : null}
 
+          {/* P26: 分类 chip 多选(替代 P25 的 showLogistics 总开关) */}
+          {onToggleSpotType ? (
+            <div className="sheet-section">
+              <div className="sheet-section-title">分类</div>
+              <div className="chip-row">
+                {SPOT_TYPE_VALUES.map((t) => {
+                  // null 状态等价于全部选中
+                  const isActive = !spotTypes || spotTypes.includes(t);
+                  const count = typeBreakdown?.[t] ?? 0;
+                  return (
+                    <button
+                      key={t}
+                      className={`filter-btn ${isActive ? 'active' : ''}`}
+                      onClick={() => onToggleSpotType(t)}
+                      disabled={count === 0}
+                      title={
+                        count === 0
+                          ? `${SPOT_TYPE_META[t].label}(此行程没有这类)`
+                          : `${isActive ? '点击隐藏' : '点击显示'} ${count} 个${SPOT_TYPE_META[t].label}`
+                      }
+                    >
+                      <span aria-hidden="true">{SPOT_TYPE_META[t].emoji}</span>
+                      <span>{SPOT_TYPE_META[t].label}</span>
+                      {count > 0 ? <span style={{ opacity: 0.7 }}>({count})</span> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <div className="sheet-section">
             <div className="filter-toggle-row">
               <button
@@ -109,24 +145,6 @@ export function MobileFilterSheet({
               >
                 只看下一段
               </button>
-              {/* P25: 显示住宿/交通 toggle — 关闭时显示隐藏数(若 > 0) */}
-              {onToggleLogistics ? (
-                <button
-                  className={`toggle-btn ${showLogistics ? 'active' : ''}`}
-                  onClick={onToggleLogistics}
-                  title={
-                    showLogistics
-                      ? '当前显示所有节点(含酒店/机场/车站)'
-                      : `当前已隐藏 ${hiddenLogisticsCount} 个住宿/交通节点`
-                  }
-                >
-                  {showLogistics
-                    ? '已显示住宿/交通'
-                    : hiddenLogisticsCount > 0
-                      ? `显示住宿/交通 (${hiddenLogisticsCount})`
-                      : '显示住宿/交通'}
-                </button>
-              ) : null}
             </div>
           </div>
 
