@@ -106,7 +106,7 @@ export function SaveBar({
           </button>
         </div>
 
-        {/* 组 2:冲突 + 设置 */}
+        {/* 组 2:冲突 + 设置(P23: SVG icon 换成文字按钮,更直观) */}
         <div className="save-bar-group">
           <button
             type="button"
@@ -115,16 +115,7 @@ export function SaveBar({
             title={issueCount > 0 ? `${issueCount} 处冲突,点击查看` : '检查行程冲突'}
             aria-label={issueCount > 0 ? `${issueCount} 处冲突` : '冲突检查'}
           >
-            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
-              <path
-                d="M8 1.5l6.5 11.5h-13L8 1.5z"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                strokeLinejoin="round"
-              />
-              <path d="M8 6v3.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-              <circle cx="8" cy="11.5" r="0.7" fill="currentColor" />
-            </svg>
+            冲突
             {issueCount > 0 ? <span className="save-bar-issue-badge">{issueCount}</span> : null}
           </button>
           <button
@@ -134,15 +125,7 @@ export function SaveBar({
             title="设置 / 批量导入 / 本地 JSON"
             aria-label="设置"
           >
-            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
-              <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.5" />
-              <path
-                d="M8 1v2M8 13v2M3.5 3.5l1.5 1.5M11 11l1.5 1.5M1 8h2M13 8h2M3.5 12.5l1.5-1.5M11 5l1.5-1.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            设置
           </button>
         </div>
 

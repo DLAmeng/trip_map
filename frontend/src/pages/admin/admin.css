@@ -38,7 +38,9 @@ html:has(.admin-page-bg) {
   max-width: var(--container-wide, 1500px);
   width: 100%;
   margin: 0 auto;
-  padding: var(--page-py, 20px) var(--page-px, 20px) 72px;
+  /* P23: SaveBar 固定底部,需要给 shell 加足够 padding-bottom 防遮挡
+     桌面 SaveBar 高度约 70px + 间距 20px = 110px,加 safe-area-inset-bottom */
+  padding: var(--page-py, 20px) var(--page-px, 20px) calc(120px + env(safe-area-inset-bottom, 0px));
   /* P-final-fix: 兜底防移动端 grid/flex 子项 min-content 把容器撑开,
      超出部分在父级被裁断,而不是引起整个 body 横向滚 */
   min-width: 0;
@@ -594,10 +596,15 @@ a.btn {
   cursor: not-allowed;
 }
 
+/* P23: SaveBar 固定在视口底部(桌面 + 移动统一),贴底浮卡风格 */
 .save-bar {
-  position: static;
-  width: 100%;
-  margin: 20px 0;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: env(safe-area-inset-bottom, 0px);
+  width: calc(100% - 40px);
+  max-width: calc(var(--container-wide, 1500px) - 40px);
+  margin: 0;
   background: rgba(37, 24, 15, 0.94);
   color: #fff;
   padding: 14px 18px;
@@ -605,10 +612,11 @@ a.btn {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  z-index: 70;
-  box-shadow: 0 16px 36px rgba(37, 24, 15, 0.22);
+  z-index: 1100;
+  box-shadow: 0 16px 36px rgba(37, 24, 15, 0.32);
   gap: 14px;
   backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .save-status-dirty {
@@ -1539,19 +1547,16 @@ a.btn {
   }
 
   .save-bar {
-    width: 100%;
-    flex-direction: column;
-    padding: 14px;
-    border-radius: 18px;
-    gap: 12px;
-    /* P3-Bug A: 移动端 SaveBar 必须 sticky 才能保证滚长 spot list 时
-       6 个核心按钮(撤销/重做/重置/保存/🔔冲突/⚙设置)始终可见。
+    /* P23: 移动端从 sticky-top 改成 fixed-bottom(对齐桌面端,贴底浮卡)
+       width / left / transform / bottom 在桌面端基线规则里已设,这里只调内部布局:
+       flex-direction column + 紧凑 padding,避免 SaveBar 太高遮挡内容。
        z-index 1100 < backdrop 1300 — 打开 sheet 时被合理遮罩。 */
-    position: sticky;
-    top: env(safe-area-inset-top, 0);
-    z-index: 1100;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    width: calc(100% - 24px);
+    max-width: calc(100% - 24px);
+    flex-direction: column;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-radius: 18px;
+    gap: 10px;
   }
 
   .save-bar-actions {
@@ -1929,13 +1934,12 @@ a.btn {
   }
 }
 
-/* SaveBar 冲突按钮 + 红点 */
+/* SaveBar 冲突按钮 + 红点(P23: SVG icon 改文字后,padding/width 走默认 .btn 规则) */
 .save-bar-conflict-btn {
   position: relative;
-  padding: 0 12px;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .save-bar-conflict-btn.has-issues {
@@ -1958,9 +1962,8 @@ a.btn {
   margin-left: 2px;
 }
 
+/* P23: 设置按钮 SVG → 文字后,去掉 icon-only width: 36px,走默认 .btn padding */
 .save-bar-settings-btn {
-  width: 36px;
-  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2074,34 +2077,11 @@ a.btn {
   }
 }
 
-/* FAB 设置按钮 — 移动端右下角浮 */
+/* P23: FAB 整体废弃 — SaveBar 现在桌面 + 移动都固定底部,
+   并自带"设置"文字按钮,FAB 重复且和 SaveBar 在底部重叠,直接隐藏。
+   保留规则块以便日后单独评估,加 display:none 强制不显示。 */
 .admin-fab-settings {
-  position: fixed;
-  right: 16px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--admin-accent);
-  color: #fff;
-  border: none;
-  box-shadow: 0 10px 24px rgba(184, 92, 56, 0.36);
-  cursor: pointer;
-  z-index: 1100;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.admin-fab-settings:hover {
-  background: var(--admin-accent-strong);
-}
-
-@media (min-width: 1024px) {
-  /* 桌面端不需要 FAB(因为 SaveBar 已经有 ⚙ 按钮),隐藏 */
-  .admin-fab-settings {
-    display: none;
-  }
+  display: none;
 }
 
 /* PlannerBoard 内 day card 改进 */
@@ -2169,10 +2149,11 @@ a.btn {
   background: rgba(184, 92, 56, 0.08);
 }
 
-/* 移动端:admin 现已无地图,planner-layout block 即单列;留 padding-bottom 给 BulkToolbar */
+/* 移动端:admin 现已无地图,planner-layout block 即单列;
+   P23: SaveBar 移动端固定在底部,column 布局高度约 200-240px,加足够 padding-bottom 防遮挡 */
 @media (max-width: 1023.98px) {
   .planner-layout {
-    padding-bottom: 80px;
+    padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px));
   }
   .planner-main-column {
     min-width: 0;
