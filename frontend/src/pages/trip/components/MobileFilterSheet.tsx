@@ -9,6 +9,12 @@ interface MobileFilterSheetProps {
   cityNames: string[];
   filter: FilterState;
   onChange: (filter: FilterState) => void;
+  /** P25: 是否显示「住宿/交通」节点(酒店/机场/车站等) */
+  showLogistics?: boolean;
+  /** P25: 当前被隐藏的 logistics 节点数(关闭时显示在 toggle 文字里,给用户参考) */
+  hiddenLogisticsCount?: number;
+  /** P25: 切换显示住宿/交通 */
+  onToggleLogistics?: () => void;
 }
 
 export function MobileFilterSheet({
@@ -19,6 +25,9 @@ export function MobileFilterSheet({
   cityNames,
   filter,
   onChange,
+  showLogistics = false,
+  hiddenLogisticsCount = 0,
+  onToggleLogistics,
 }: MobileFilterSheetProps) {
   return (
     <>
@@ -100,6 +109,24 @@ export function MobileFilterSheet({
               >
                 只看下一段
               </button>
+              {/* P25: 显示住宿/交通 toggle — 关闭时显示隐藏数(若 > 0) */}
+              {onToggleLogistics ? (
+                <button
+                  className={`toggle-btn ${showLogistics ? 'active' : ''}`}
+                  onClick={onToggleLogistics}
+                  title={
+                    showLogistics
+                      ? '当前显示所有节点(含酒店/机场/车站)'
+                      : `当前已隐藏 ${hiddenLogisticsCount} 个住宿/交通节点`
+                  }
+                >
+                  {showLogistics
+                    ? '已显示住宿/交通'
+                    : hiddenLogisticsCount > 0
+                      ? `显示住宿/交通 (${hiddenLogisticsCount})`
+                      : '显示住宿/交通'}
+                </button>
+              ) : null}
             </div>
           </div>
 

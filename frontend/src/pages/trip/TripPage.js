@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getTripFull, DEFAULT_TRIP_ID } from '../../api/trip-api';
-import { normalizeTripData, computeStats } from '../../selectors/tripSelectors';
+import { normalizeTripData, computeStats, isDisplayAttractionStop } from '../../selectors/tripSelectors';
 import { TripHeader } from './TripHeader';
 import { TripMapCanvas } from './TripMapCanvas';
 import { SpotList } from './SpotList';
@@ -48,11 +48,32 @@ export function TripPage() {
         queryFn: () => getTripFull(tripId),
         staleTime: 30_000,
     });
+    // P25: URL 参数 logistics=true 表示要显示住宿/交通节点(默认只显示景点)
+    // 用 URL 而不是 useState 让用户能 bookmark / 分享 URL 时保留状态
+    const showLogistics = params.get('logistics') === 'true';
     const normalized = useMemo(() => {
         if (!data)
             return null;
-        return normalizeTripData(data);
+        return normalizeTripData(data, { showLogistics });
+    }, [data, showLogistics]);
+    // P25: 被隐藏的 logistics 节点数 — 给 filter sheet 的 toggle 显示数字。
+    // 不依赖当前 showLogistics 状态,始终算「如果关闭开关会被排除多少个」(不含 hideFromMap=true)
+    const hiddenLogisticsCount = useMemo(() => {
+        if (!data)
+            return 0;
+        const allEntries = Array.isArray(data.spots) ? data.spots : [];
+        return allEntries.filter((s) => s.hideFromMap !== true && !isDisplayAttractionStop(s, false)).length;
     }, [data]);
+    const toggleLogistics = useCallback(() => {
+        setParams((prev) => {
+            const next = new URLSearchParams(prev);
+            if (prev.get('logistics') === 'true')
+                next.delete('logistics');
+            else
+                next.set('logistics', 'true');
+            return next;
+        });
+    }, [setParams]);
     const stats = useMemo(() => {
         if (!normalized)
             return { days: 0, cities: 0, spots: 0 };
@@ -190,5 +211,5 @@ export function TripPage() {
                 } })) : null, activeTool === 'summary' && isMobile && (_jsxs(_Fragment, { children: [_jsx("div", { className: "sheet-backdrop", onClick: closeAllPopups }), _jsxs("div", { className: "mobile-summary-modal", children: [_jsx("div", { className: "modal-header", children: _jsx("h3", { children: "\u884C\u7A0B\u6982\u51B5" }) }), _jsx("div", { className: "modal-body", children: _jsx(SummaryBar, { stats: stats, isFiltered: filter.day !== null ||
                                         filter.city !== null ||
                                         filter.mustOnly ||
-                                        filter.nextOnly }) })] })] })), _jsx(MobileFilterSheet, { isOpen: isFilterSheetOpen, onClose: () => setIsFilterSheetOpen(false), dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, cityNames: normalized.cityNames, filter: filter, onChange: setFilter })] }));
+                                        filter.nextOnly }) })] })] })), _jsx(MobileFilterSheet, { isOpen: isFilterSheetOpen, onClose: () => setIsFilterSheetOpen(false), dayNumbers: normalized.dayNumbers, dayColors: data.config.dayColors, cityNames: normalized.cityNames, filter: filter, onChange: setFilter, showLogistics: showLogistics, hiddenLogisticsCount: hiddenLogisticsCount, onToggleLogistics: toggleLogistics })] }));
 }

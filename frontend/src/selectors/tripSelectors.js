@@ -1,8 +1,10 @@
 import { buildCompactDayMap, compactDayValue } from '../utils/trip-day-sequence';
-export function normalizeTripData(payload) {
+export function normalizeTripData(payload, options = {}) {
+    const { showLogistics = false } = options;
+    const passes = (spot) => isDisplayAttractionStop(spot, showLogistics);
     const allEntries = Array.isArray(payload.spots) ? payload.spots : [];
     const routeSegments = Array.isArray(payload.routeSegments) ? payload.routeSegments : [];
-    const displayDayMap = buildCompactDayMap(allEntries.filter(isDisplayAttractionStop).map((spot) => spot.day));
+    const displayDayMap = buildCompactDayMap(allEntries.filter(passes).map((spot) => spot.day));
     const remapSpotDay = (spot) => ({
         ...spot,
         day: compactDayValue(spot.day, displayDayMap),
@@ -18,7 +20,7 @@ export function normalizeTripData(payload) {
         }
     }
     const spots = allEntries
-        .filter(isDisplayAttractionStop)
+        .filter(passes)
         .map((spot) => {
         const displaySpot = remapSpotDay(spot);
         const nextStop = spot.nextStopId ? allEntriesById.get(spot.nextStopId) : null;
@@ -128,15 +130,18 @@ function isKnownAttractionName(spot) {
 /**
  * 判断一条 entry 是否作为"可点击景点"在地图 marker + 列表 + 路线端点上展示。
  * 规则按当前日本行程语义收敛:
- *   1. 显式 hideFromMap === true      → false  (数据层明确打标,最高优先)
- *   2. type === 'transport'           → false  (换乘/车站/机场)
- *   3. type === 'accommodation'       → false  (酒店/温泉旅馆)
- *   4. 名称像入住/出发/收尾/机场等物流点 → false
- *   5. 商圈/街区/景点类 spot             → true
+ *   1. 显式 hideFromMap === true      → false  (数据层明确打标,最高优先,任何模式都遵守)
+ *   2. P25 showLogistics=true:除上述外全部显示(用户主动要求看住宿/交通)
+ *   3. type === 'transport'           → false  (换乘/车站/机场)
+ *   4. type === 'accommodation'       → false  (酒店/温泉旅馆)
+ *   5. 名称像入住/出发/收尾/机场等物流点 → false
+ *   6. 商圈/街区/景点类 spot             → true
  */
-export function isDisplayAttractionStop(spot) {
+export function isDisplayAttractionStop(spot, showLogistics = false) {
     if (spot.hideFromMap === true)
         return false;
+    if (showLogistics)
+        return true;
     if (spot.type === 'transport')
         return false;
     if (spot.type === 'accommodation')

@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getTripFull, DEFAULT_TRIP_ID } from '../../api/trip-api';
-import { normalizeTripData, computeStats } from '../../selectors/tripSelectors';
+import { normalizeTripData, computeStats, isDisplayAttractionStop } from '../../selectors/tripSelectors';
 import { type FilterState } from '../../selectors/filterState';
 import { TripHeader } from './TripHeader';
 import { TripMapCanvas } from './TripMapCanvas';
@@ -65,10 +65,33 @@ export function TripPage() {
     staleTime: 30_000,
   });
 
+  // P25: URL 参数 logistics=true 表示要显示住宿/交通节点(默认只显示景点)
+  // 用 URL 而不是 useState 让用户能 bookmark / 分享 URL 时保留状态
+  const showLogistics = params.get('logistics') === 'true';
+
   const normalized = useMemo(() => {
     if (!data) return null;
-    return normalizeTripData(data);
+    return normalizeTripData(data, { showLogistics });
+  }, [data, showLogistics]);
+
+  // P25: 被隐藏的 logistics 节点数 — 给 filter sheet 的 toggle 显示数字。
+  // 不依赖当前 showLogistics 状态,始终算「如果关闭开关会被排除多少个」(不含 hideFromMap=true)
+  const hiddenLogisticsCount = useMemo(() => {
+    if (!data) return 0;
+    const allEntries = Array.isArray(data.spots) ? data.spots : [];
+    return allEntries.filter(
+      (s) => s.hideFromMap !== true && !isDisplayAttractionStop(s, false),
+    ).length;
   }, [data]);
+
+  const toggleLogistics = useCallback(() => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (prev.get('logistics') === 'true') next.delete('logistics');
+      else next.set('logistics', 'true');
+      return next;
+    });
+  }, [setParams]);
 
   const stats = useMemo(() => {
     if (!normalized) return { days: 0, cities: 0, spots: 0 };
@@ -377,6 +400,9 @@ export function TripPage() {
         cityNames={normalized.cityNames}
         filter={filter}
         onChange={setFilter}
+        showLogistics={showLogistics}
+        hiddenLogisticsCount={hiddenLogisticsCount}
+        onToggleLogistics={toggleLogistics}
       />
     </div>
   );

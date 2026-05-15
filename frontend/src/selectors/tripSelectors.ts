@@ -24,11 +24,26 @@ export interface NormalizedTrip {
   routeSegments: RouteSegment[];
 }
 
-export function normalizeTripData(payload: TripFullPayload): NormalizedTrip {
+export interface NormalizeOptions {
+  /**
+   * P25: 是否在 trip 页显示「住宿/交通」节点(酒店、机场、车站、入住/出发/收尾等)
+   *  - false(默认):过滤掉 type=transport/accommodation + 名字含 logistics 关键词的 entry
+   *  - true:除了 hideFromMap=true 的 entry 外全部显示(用户在 MobileFilterSheet 打开开关)
+   */
+  showLogistics?: boolean;
+}
+
+export function normalizeTripData(
+  payload: TripFullPayload,
+  options: NormalizeOptions = {},
+): NormalizedTrip {
+  const { showLogistics = false } = options;
+  const passes = (spot: SpotItem) => isDisplayAttractionStop(spot, showLogistics);
+
   const allEntries = Array.isArray(payload.spots) ? payload.spots : [];
   const routeSegments = Array.isArray(payload.routeSegments) ? payload.routeSegments : [];
   const displayDayMap = buildCompactDayMap(
-    allEntries.filter(isDisplayAttractionStop).map((spot) => spot.day),
+    allEntries.filter(passes).map((spot) => spot.day),
   );
   const remapSpotDay = (spot: SpotItem): SpotItem => ({
     ...spot,
@@ -46,7 +61,7 @@ export function normalizeTripData(payload: TripFullPayload): NormalizedTrip {
   }
 
   const spots = allEntries
-    .filter(isDisplayAttractionStop)
+    .filter(passes)
     .map((spot) => {
       const displaySpot = remapSpotDay(spot);
       const nextStop = spot.nextStopId ? allEntriesById.get(spot.nextStopId) : null;
@@ -169,14 +184,16 @@ function isKnownAttractionName(spot: SpotItem): boolean {
 /**
  * 判断一条 entry 是否作为"可点击景点"在地图 marker + 列表 + 路线端点上展示。
  * 规则按当前日本行程语义收敛:
- *   1. 显式 hideFromMap === true      → false  (数据层明确打标,最高优先)
- *   2. type === 'transport'           → false  (换乘/车站/机场)
- *   3. type === 'accommodation'       → false  (酒店/温泉旅馆)
- *   4. 名称像入住/出发/收尾/机场等物流点 → false
- *   5. 商圈/街区/景点类 spot             → true
+ *   1. 显式 hideFromMap === true      → false  (数据层明确打标,最高优先,任何模式都遵守)
+ *   2. P25 showLogistics=true:除上述外全部显示(用户主动要求看住宿/交通)
+ *   3. type === 'transport'           → false  (换乘/车站/机场)
+ *   4. type === 'accommodation'       → false  (酒店/温泉旅馆)
+ *   5. 名称像入住/出发/收尾/机场等物流点 → false
+ *   6. 商圈/街区/景点类 spot             → true
  */
-export function isDisplayAttractionStop(spot: SpotItem): boolean {
+export function isDisplayAttractionStop(spot: SpotItem, showLogistics = false): boolean {
   if (spot.hideFromMap === true) return false;
+  if (showLogistics) return true;
   if (spot.type === 'transport') return false;
   if (spot.type === 'accommodation') return false;
   if (hasLogisticsName(spot)) return false;
