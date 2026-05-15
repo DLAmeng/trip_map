@@ -1723,6 +1723,63 @@ a.btn {
   flex-wrap: wrap;
 }
 
+/* P21: 内嵌到 AdminSettingsSheet 的 panel 压扁(去 panel 外壳 + 隐藏重复标题) */
+.admin-sheet-embed .panel {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  border-radius: 0;
+}
+.admin-sheet-embed .panel-head {
+  /* sheet 的 h3.admin-sheet-section-title 已承担标题职责,内层 h2 隐藏 */
+  display: none;
+}
+.admin-sheet-embed .field-grid {
+  margin-top: 0;
+}
+
+/* P21: section 标题旁的"推荐"徽章(主入口,ocean 配色) */
+.admin-sheet-section-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(15, 61, 92, 0.12);
+  color: #0f3d5c;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  vertical-align: middle;
+}
+
+/* P21: section 标题旁的"GPX / KML / URL"小标签(次要 section) */
+.admin-sheet-section-tag {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: rgba(28, 18, 7, 0.08);
+  color: var(--ink-soft, #4a3928);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  vertical-align: middle;
+}
+
+/* P21: section 描述里 <small> 提示信息(JSON 走上方) */
+.admin-sheet-section-desc small {
+  display: block;
+  margin-top: 4px;
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+}
+
 /* AdminSettingsSheet — 移动底部 / 桌面右抽屉 */
 .admin-settings-sheet {
   position: fixed;

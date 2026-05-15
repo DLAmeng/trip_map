@@ -173,29 +173,25 @@ export function AdminSettingsSheet({
         </header>
 
         <div className="admin-sheet-body">
-          {/* 1. 行程基础信息 */}
+          {/* 1. 行程基础信息 — 高频 */}
           <section className="admin-sheet-section">
             <h3 className="admin-sheet-section-title">基础信息</h3>
-            <TripMetaForm meta={meta} onChange={onUpdateMeta} />
+            <div className="admin-sheet-embed">
+              <TripMetaForm meta={meta} onChange={onUpdateMeta} />
+            </div>
           </section>
 
-          {/* 2. 批量导入 */}
+          {/* P21: 2. 从文件导入行程 — JSON 主入口,提到第 2 位 + 加"推荐"徽章 */}
           <section className="admin-sheet-section">
-            <h3 className="admin-sheet-section-title">批量导入</h3>
+            <h3 className="admin-sheet-section-title">
+              从文件导入行程
+              <span className="admin-sheet-section-pill">推荐</span>
+            </h3>
             <p className="admin-sheet-section-desc">
-              从 CSV / JSON / Google Maps URL 一次添加多个景点。
-            </p>
-            <BatchImportPanel spots={spots} onAddSpots={onAddImportedSpots} />
-          </section>
-
-          {/* P19: 上传 JSON 文件覆盖当前行程 — 任何 trip 都可用 */}
-          <section className="admin-sheet-section">
-            <h3 className="admin-sheet-section-title">从文件导入行程</h3>
-            <p className="admin-sheet-section-desc">
-              选择电脑上的 itinerary.json 文件,覆盖当前行程。<br/>
+              选择电脑上的 <code>itinerary.json</code> 文件,<strong>整体覆盖</strong>当前行程
+              (包括 spots / 路线 / meta)。<br/>
               <strong>地图识别要求</strong>:每个 spot 需要 <code>lat / lng / day</code>
-              {' '}三个数字字段才能在地图上显示 marker。<br/>
-              缺字段的 spot 仍会在列表显示,但地图不会画它。
+              {' '}三个数字字段才能在地图上显示 marker;缺字段的 spot 仍在列表显示,但地图不会画它。
             </p>
             <input
               ref={fileInputRef}
@@ -217,7 +213,7 @@ export function AdminSettingsSheet({
             </div>
           </section>
 
-          {/* P20: 批量自动定位缺位置景点 */}
+          {/* P20: 3. 批量自动定位缺位置景点 */}
           <section className="admin-sheet-section">
             <h3 className="admin-sheet-section-title">
               修复缺位置景点
@@ -236,7 +232,7 @@ export function AdminSettingsSheet({
             </h3>
             <p className="admin-sheet-section-desc">
               如果导入的 JSON 里景点名字写对了但缺 <code>lat/lng</code>,
-              这里可以**自动用 Google Places 反查**(根据 name + 城市)填回。<br/>
+              这里可以<strong>自动用 Google Places 反查</strong>(根据 name + 城市)填回。<br/>
               <strong>注意</strong>:同名地点多个时,可能定位到错的(比如"中央公园"
               在多个城市都有)。修复后请去 SpotInspector 复核,失败的可手动搜索。
             </p>
@@ -261,7 +257,22 @@ export function AdminSettingsSheet({
             </div>
           </section>
 
-          {/* 3. 本地 itinerary.json 工具 — 仅默认行程显示(开发期/迁移使用) */}
+          {/* P21: 4. 批量导入 (GPX/KML/URL) — 文案纠正:不再误标"JSON",且小字指引整 trip JSON 走上方 */}
+          <section className="admin-sheet-section">
+            <h3 className="admin-sheet-section-title">
+              批量导入
+              <span className="admin-sheet-section-tag">GPX / KML / URL</span>
+            </h3>
+            <p className="admin-sheet-section-desc">
+              从 GPX / KML 文件 或 Google Maps 链接一次<strong>追加</strong>多个景点。
+              <small>整个行程的 JSON 导入请用上方"从文件导入行程"。</small>
+            </p>
+            <div className="admin-sheet-embed">
+              <BatchImportPanel spots={spots} onAddSpots={onAddImportedSpots} />
+            </div>
+          </section>
+
+          {/* 5. 本地 itinerary.json 工具 — 仅默认行程显示(开发期/迁移使用) */}
           {isDefaultTrip ? (
             <section className="admin-sheet-section">
               <h3 className="admin-sheet-section-title">本地数据 · 高级</h3>

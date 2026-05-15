@@ -74,6 +74,10 @@ export function AdminPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trip', 'full', tripId] });
+      // P22-2: 同时 invalidate trip 页 + dashboard 用的 key,确保跨页面立即看到最新数据
+      // (trip 页 staleTime=30s,不显式 invalidate 用户切过去 30s 内拿的还是 cache)
+      queryClient.invalidateQueries({ queryKey: ['trip', tripId] });
+      queryClient.invalidateQueries({ queryKey: ['trips'] });
     },
   });
 
@@ -81,6 +85,9 @@ export function AdminPage() {
     mutationFn: importLocalToCurrent,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trip', 'full', tripId] });
+      // P22-2: 同上 — 本地 itinerary.json 导入后,trip / dashboard 也要刷
+      queryClient.invalidateQueries({ queryKey: ['trip', tripId] });
+      queryClient.invalidateQueries({ queryKey: ['trips'] });
     },
   });
 
@@ -662,13 +669,24 @@ function AdminEditor({
     );
   }, [payload.spots, payload.config?.googleMaps?.apiKey, updateSpot, addToast]);
 
-  const handleImportFromFile = (parsed: TripFullPayload) => {
+  const handleImportFromFile = async (parsed: TripFullPayload) => {
     try {
-      resetFromPayload(parsed);
+      // P22-1: 直接调 mutation POST 到后端,而不是 resetFromPayload(parsed)。
+      // resetFromPayload 会把 baseline 也设成 parsed → isDirty=false → SaveBar
+      // 「保存」按钮不亮,用户无法保存,数据永远停留在前端 React state,
+      // 切到 trip 页 / dashboard 看到的还是后端旧数据。
+      // 改成 onSave(parsed) 后,数据直接 PUT /api/trips/:id 写入数据库,
+      // mutation.onSuccess 会 invalidate trip / dashboard 的 query key(见 P22-2)。
+      const result = await onSave(parsed);
+      setSavedPayload(result.payload);
+      acknowledgeSavedPayload(result.payload); // baseline 对齐到已保存版本
       setSelectedSpotIds([]);
       setSelectedSpotId(null);
       setSelectedSegmentId(null);
-      // P19-2: 统计能被地图识别的 spot 数(lat/lng/day 全有效),让用户知道地图上有多少 marker
+
+      // P19-2: 统计能被地图识别的 spot 数(lat/lng/day 全有效)
+      // 注意:用 parsed 而不是 result.payload,因为后端 normalize 可能改字段;
+      // 这里只是给用户看导入文件本身的质量
       const spots = Array.isArray(parsed.spots) ? parsed.spots : [];
       const mappable = spots.filter(
         (s) =>
@@ -678,18 +696,22 @@ function AdminEditor({
       ).length;
       const missing = spots.length - mappable;
       setInlineMessage(
-        `已导入 ${spots.length} 景点 / ${parsed.routeSegments?.length ?? 0} 路线`
-        + (missing > 0 ? `,其中 ${missing} 个缺位置无法在地图显示` : '')
-        + `,记得保存`,
+        `已导入并保存 ${spots.length} 景点 / ${parsed.routeSegments?.length ?? 0} 路线`
+        + (missing > 0 ? `,其中 ${missing} 个缺位置无法在地图显示` : ''),
       );
       addToast(
         missing === 0 ? 'success' : 'warning',
-        '导入成功',
+        '导入并保存成功',
         missing === 0
-          ? `${mappable} 个景点全部可识别 → 保存后切 trip 页可见 marker`
-          : `${mappable} 个景点可在地图显示,${missing} 个缺字段(列表可见,无 marker)`,
+          ? `${mappable} 个景点已写入数据库 → trip 页 / dashboard 立即可见`
+          : `${mappable} 个景点已写入数据库,${missing} 个缺字段(列表可见,无 marker)`,
       );
       setSettingsOpen(false);
+      // P21-3: sheet 关闭后给一帧 commit,scroll PlannerBoard 到顶部让用户立刻看到新数据
+      requestAnimationFrame(() => {
+        const board = document.querySelector('.planner-layout');
+        board?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     } catch (error) {
       addToast('error', '导入失败', (error as Error).message);
     }
