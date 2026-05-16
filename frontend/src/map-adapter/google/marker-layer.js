@@ -259,7 +259,10 @@ export function createGoogleMarkerLayer(config) {
                     });
                 }
             }
-            // 按 day 分桶,基于 spot.order 计算每个 spot 在当天的 1-based 序号
+            // P35: 只有 type='spot' 的景点参与 day 内编号
+            // 其他类型(住宿 / 餐厅 / 咖啡 / 购物 / 交通)用 emoji 标识,不占编号
+            // 例如 Day 1: NRT(transport)→ Vessel Inn(accommodation)→ 雷门(spot)
+            //   原来三者编号 1/2/3 → 现在 -/-/1(只景点拿 1)
             const dayCounters = new Map();
             const dayIndexById = new Map();
             const sortedForIndex = [...spots].sort((a, b) => {
@@ -268,6 +271,9 @@ export function createGoogleMarkerLayer(config) {
                 return (a.order ?? 0) - (b.order ?? 0);
             });
             for (const spot of sortedForIndex) {
+                // 非景点类型不参与编号(留空字符串,buildPinElement 用 emoji 替代)
+                if (coerceSpotType(spot.type) !== 'spot')
+                    continue;
                 const next = (dayCounters.get(spot.day) ?? 0) + 1;
                 dayCounters.set(spot.day, next);
                 dayIndexById.set(spot.id, next);

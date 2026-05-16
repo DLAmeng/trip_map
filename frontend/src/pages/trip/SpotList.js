@@ -1,5 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { SPOT_TYPE_META, coerceSpotType } from '../../constants/spot-types';
 /**
  * 按 day 分 section 的景点列表,对应原生 .day-list-panel。
  *
@@ -79,13 +80,27 @@ export function SpotList({ spotsByDay, dayNumbers, dayColors, filter, selectedSp
     const fallbackColor = '#888';
     return (_jsx("aside", { className: "day-list-panel", "aria-label": "\u666F\u70B9\u5217\u8868", ref: containerRef, children: dayNumbers.length === 0 ? (_jsx("div", { className: "day-empty", children: "\u8FD9\u4E2A\u884C\u7A0B\u8FD8\u6CA1\u6709\u4EFB\u4F55\u666F\u70B9\u3002\u53BB\u7F16\u8F91\u9875\u6DFB\u52A0\u7B2C\u4E00\u4E2A\u5427\u3002" })) : (dayNumbers.map((day) => {
             const visible = visibleByDay.get(day) ?? [];
+            // P35: 只 type='spot' 的算"景点数",其他类型(住宿/餐厅/咖啡/购物/交通)
+            // 在列表中显示但不算"景点",索引也只对景点累加
+            const spotOnlyCount = visible.filter((s) => coerceSpotType(s.type) === 'spot').length;
+            let spotCounter = 0; // 在当天 visible 数组里递增 spot index
             const defaultExpanded = expandedDay === null || expandedDay === day;
             const isExpanded = userCollapsed.has(day) ? false : defaultExpanded;
             const dayColor = dayColors[day - 1] ?? fallbackColor;
-            return (_jsxs("section", { className: `day-panel${isExpanded ? '' : ' collapsed'}`, "aria-expanded": isExpanded, children: [_jsxs("div", { className: `day-header${expandedDay === day ? ' is-current' : ''}`, role: "button", "aria-level": 3, style: { ['--day-color']: dayColor }, onClick: () => handleHeaderClick(day), children: [_jsxs("div", { className: "day-header-copy", children: [_jsxs("span", { className: "day-chip", children: ["D", day] }), _jsxs("span", { className: "day-title", children: ["\u7B2C ", day, " \u5929"] })] }), _jsx("div", { className: "day-header-meta", children: _jsxs("span", { children: [visible.length, " \u4E2A\u666F\u70B9"] }) })] }), isExpanded ? (_jsx("div", { className: "day-spots", children: visible.length === 0 ? (_jsx("div", { className: "day-empty", children: "\u5F53\u524D\u8FC7\u6EE4\u6761\u4EF6\u4E0B,\u8FD9\u4E00\u5929\u6CA1\u6709\u666F\u70B9\u3002" })) : (visible.map((spot, index) => {
+            return (_jsxs("section", { className: `day-panel${isExpanded ? '' : ' collapsed'}`, "aria-expanded": isExpanded, children: [_jsxs("div", { className: `day-header${expandedDay === day ? ' is-current' : ''}`, role: "button", "aria-level": 3, style: { ['--day-color']: dayColor }, onClick: () => handleHeaderClick(day), children: [_jsxs("div", { className: "day-header-copy", children: [_jsxs("span", { className: "day-chip", children: ["D", day] }), _jsxs("span", { className: "day-title", children: ["\u7B2C ", day, " \u5929"] })] }), _jsx("div", { className: "day-header-meta", children: _jsxs("span", { children: [spotOnlyCount, " \u4E2A\u666F\u70B9"] }) })] }), isExpanded ? (_jsx("div", { className: "day-spots", children: visible.length === 0 ? (_jsx("div", { className: "day-empty", children: "\u5F53\u524D\u8FC7\u6EE4\u6761\u4EF6\u4E0B,\u8FD9\u4E00\u5929\u6CA1\u6709\u666F\u70B9\u3002" })) : (visible.map((spot) => {
                             const spotColor = dayColors[spot.day - 1] ?? fallbackColor;
                             const isActive = spot.id === selectedSpotId;
-                            return (_jsxs("button", { type: "button", "data-spot-id": spot.id, className: `spot-item${isActive ? ' is-active' : ''}`, style: { ['--spot-color']: spotColor }, onClick: () => onSelect(spot.id), children: [_jsx("span", { className: "spot-index", children: index + 1 }), _jsxs("div", { className: "spot-copy", children: [_jsxs("div", { className: "spot-name", children: [_jsx("span", { children: spot.name }), spot.mustVisit ? (_jsx("span", { className: "must-badge", children: "\u5FC5\u53BB" })) : null, spot.nextStopId ? (_jsx("span", { className: "next-badge", children: "\u4E0B\u4E00\u6BB5" })) : null] }), spot.nameEn ? (_jsx("div", { className: "spot-name-en", children: spot.nameEn })) : null, _jsx("div", { className: "spot-meta", children: [spot.city, spot.area, spot.timeSlot]
+                            // P35: spot 显示数字编号(只对景点累加),其他类型显示对应 emoji
+                            const spotType = coerceSpotType(spot.type);
+                            let indexLabel;
+                            if (spotType === 'spot') {
+                                spotCounter += 1;
+                                indexLabel = String(spotCounter);
+                            }
+                            else {
+                                indexLabel = SPOT_TYPE_META[spotType].emoji;
+                            }
+                            return (_jsxs("button", { type: "button", "data-spot-id": spot.id, className: `spot-item${isActive ? ' is-active' : ''} spot-item-type-${spotType}`, style: { ['--spot-color']: spotColor }, onClick: () => onSelect(spot.id), children: [_jsx("span", { className: "spot-index", children: indexLabel }), _jsxs("div", { className: "spot-copy", children: [_jsxs("div", { className: "spot-name", children: [_jsx("span", { children: spot.name }), spot.mustVisit ? (_jsx("span", { className: "must-badge", children: "\u5FC5\u53BB" })) : null, spot.nextStopId ? (_jsx("span", { className: "next-badge", children: "\u4E0B\u4E00\u6BB5" })) : null] }), spot.nameEn ? (_jsx("div", { className: "spot-name-en", children: spot.nameEn })) : null, _jsx("div", { className: "spot-meta", children: [spot.city, spot.area, spot.timeSlot]
                                                     .filter(Boolean)
                                                     .join(' · ') }), spot.transportNote ? (_jsx("div", { className: "spot-note", children: _jsx("span", { className: "transport-badge", children: spot.transportNote }) })) : null] })] }, spot.id));
                         })) })) : null] }, day));

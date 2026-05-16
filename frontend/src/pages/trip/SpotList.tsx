@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SpotItem } from '../../types/trip';
 import type { FilterState } from '../../selectors/filterState';
+import { SPOT_TYPE_META, coerceSpotType } from '../../constants/spot-types';
 
 interface SpotListProps {
   spotsByDay: Map<number, SpotItem[]>;
@@ -105,6 +106,10 @@ export function SpotList({
       ) : (
         dayNumbers.map((day) => {
           const visible = visibleByDay.get(day) ?? [];
+          // P35: 只 type='spot' 的算"景点数",其他类型(住宿/餐厅/咖啡/购物/交通)
+          // 在列表中显示但不算"景点",索引也只对景点累加
+          const spotOnlyCount = visible.filter((s) => coerceSpotType(s.type) === 'spot').length;
+          let spotCounter = 0; // 在当天 visible 数组里递增 spot index
           const defaultExpanded = expandedDay === null || expandedDay === day;
           const isExpanded = userCollapsed.has(day) ? false : defaultExpanded;
           const dayColor = dayColors[day - 1] ?? fallbackColor;
@@ -126,7 +131,7 @@ export function SpotList({
                   <span className="day-title">第 {day} 天</span>
                 </div>
                 <div className="day-header-meta">
-                  <span>{visible.length} 个景点</span>
+                  <span>{spotOnlyCount} 个景点</span>
                 </div>
               </div>
               {isExpanded ? (
@@ -134,19 +139,28 @@ export function SpotList({
                   {visible.length === 0 ? (
                     <div className="day-empty">当前过滤条件下,这一天没有景点。</div>
                   ) : (
-                    visible.map((spot, index) => {
+                    visible.map((spot) => {
                       const spotColor = dayColors[spot.day - 1] ?? fallbackColor;
                       const isActive = spot.id === selectedSpotId;
+                      // P35: spot 显示数字编号(只对景点累加),其他类型显示对应 emoji
+                      const spotType = coerceSpotType(spot.type);
+                      let indexLabel: string;
+                      if (spotType === 'spot') {
+                        spotCounter += 1;
+                        indexLabel = String(spotCounter);
+                      } else {
+                        indexLabel = SPOT_TYPE_META[spotType].emoji;
+                      }
                       return (
                         <button
                           key={spot.id}
                           type="button"
                           data-spot-id={spot.id}
-                          className={`spot-item${isActive ? ' is-active' : ''}`}
+                          className={`spot-item${isActive ? ' is-active' : ''} spot-item-type-${spotType}`}
                           style={{ ['--spot-color' as string]: spotColor }}
                           onClick={() => onSelect(spot.id)}
                         >
-                          <span className="spot-index">{index + 1}</span>
+                          <span className="spot-index">{indexLabel}</span>
                           <div className="spot-copy">
                             <div className="spot-name">
                               <span>{spot.name}</span>

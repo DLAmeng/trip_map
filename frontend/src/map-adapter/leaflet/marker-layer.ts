@@ -3,6 +3,7 @@ import 'leaflet.markercluster';
 import type { SpotItem } from '../../types/trip';
 import type { MarkerLayer } from '../types';
 import { buildSpotPopupElement } from '../shared/popup-builder';
+import { coerceSpotType } from '../../constants/spot-types';
 
 interface MarkerEntry {
   spot: SpotItem;
@@ -141,6 +142,8 @@ export function createLeafletMarkerLayer({
       return (a.order ?? 0) - (b.order ?? 0);
     });
     for (const spot of sortedForIndex) {
+      // P35: 只景点参与 day 内编号,其他类型用 emoji 标识
+      if (coerceSpotType(spot.type) !== 'spot') continue;
       const next = (dayCounters.get(spot.day) ?? 0) + 1;
       dayCounters.set(spot.day, next);
       dayIndexById.set(spot.id, next);

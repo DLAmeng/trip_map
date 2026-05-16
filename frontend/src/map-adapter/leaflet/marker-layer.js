@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { buildSpotPopupElement } from '../shared/popup-builder';
+import { coerceSpotType } from '../../constants/spot-types';
 const CLUSTER_EXPAND_ZOOM = 9;
 const SPIDERFY_CLUSTER_LIMIT = 6;
 const TINY_CLUSTER_DEGREES = 0.0003;
@@ -95,6 +96,9 @@ export function createLeafletMarkerLayer({ map, dayColors, onSpotClick, onSpotPo
             return (a.order ?? 0) - (b.order ?? 0);
         });
         for (const spot of sortedForIndex) {
+            // P35: 只景点参与 day 内编号,其他类型用 emoji 标识
+            if (coerceSpotType(spot.type) !== 'spot')
+                continue;
             const next = (dayCounters.get(spot.day) ?? 0) + 1;
             dayCounters.set(spot.day, next);
             dayIndexById.set(spot.id, next);
