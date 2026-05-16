@@ -1,4 +1,4 @@
-import { MarkerClusterer } from '@googlemaps/markerclusterer';
+import { MarkerClusterer, type Cluster, type Renderer } from '@googlemaps/markerclusterer';
 import type { SpotItem } from '../../types/trip';
 import type { MarkerLayer } from '../types';
 import { buildSpotPopupElement } from '../shared/popup-builder';
@@ -135,9 +135,56 @@ export function createGoogleMarkerLayer(config: {
     return Math.max(0, Math.floor(maxBottom / 2));
   }
 
+  /**
+   * P33: 自定义 cluster renderer 解决「缩小后 cluster 位置上移」的 bug。
+   *
+   * 根因:@googlemaps/markerclusterer 的默认 renderer 用老 API
+   * `google.maps.Marker`(anchor = SVG image center),而我们 spot marker 用新 API
+   * `AdvancedMarkerElement + PinElement`(anchor = 底部尖端)。两套 API 的
+   * anchor 算法不同,缩小到出现 cluster 时,cluster 的视觉位置比 spot 高半个图标,
+   * 看起来「cluster 漂到 spot 上方」。
+   *
+   * 修复:cluster 也用 AdvancedMarkerElement + PinElement,anchor 跟 spot 一致。
+   * 顺带 cluster background 用 cluster 内出现最多的 day color,告诉用户「这一堆
+   * markers 主要属于哪天」。
+   */
+  const clusterRenderer: Renderer = {
+    render(cluster: Cluster) {
+      const { count, position, markers } = cluster;
+      // 找 cluster 内出现次数最多的 day,用它的 color 作为 cluster background
+      const dayCount = new Map<number, number>();
+      let dominantDay = 1;
+      let maxCnt = 0;
+      for (const m of markers ?? []) {
+        const ref = markerRefs.find((r) => r.marker === m);
+        const d = ref?.spot.day ?? 1;
+        const c = (dayCount.get(d) ?? 0) + 1;
+        dayCount.set(d, c);
+        if (c > maxCnt) {
+          maxCnt = c;
+          dominantDay = d;
+        }
+      }
+      const background = config.dayColors[dominantDay - 1] || '#0f3d5c';
+      const pin = new google.maps.marker.PinElement({
+        glyphText: String(count),
+        glyphColor: '#fff',
+        background,
+        borderColor: '#fff',
+        scale: 1.45,
+      });
+      return new google.maps.marker.AdvancedMarkerElement({
+        position,
+        content: pin.element,
+        zIndex: 2000 + count,
+      });
+    },
+  };
+
   function createClusterer() {
     return new MarkerClusterer({
       map,
+      renderer: clusterRenderer,
       onClusterClick: (event, cluster, clusterMap) => {
         const domEvent = event.domEvent as Event | undefined;
         domEvent?.stopPropagation?.();
