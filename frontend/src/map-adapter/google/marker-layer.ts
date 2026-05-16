@@ -187,8 +187,10 @@ export function createGoogleMarkerLayer(config: {
       // circle:绝对定位让圆心对准 wrapper origin(也就是地理位置)
       const circle = document.createElement('div');
       circle.className = 'trip-cluster-icon';
-      // size 随 count 适度变大:48 ~ 64
-      const size = Math.min(64, 44 + Math.floor(Math.log2(count + 1) * 6));
+      // P34→精修:size 缩到 32-40,跟 Google Maps 原生 cluster 风格对齐
+      //   2-9 个 → 32px;10-49 → 36px;50+ → 40px
+      const size = count >= 50 ? 40 : count >= 10 ? 36 : 32;
+      const fontSize = count >= 100 ? 0.7 : count >= 10 ? 0.78 : 0.82;
       circle.style.cssText = `
         position: absolute;
         left: ${-size / 2}px;
@@ -197,19 +199,17 @@ export function createGoogleMarkerLayer(config: {
         height: ${size}px;
         border-radius: 50%;
         background: ${background};
-        border: 3px solid #fff;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+        border: 2px solid #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
         display: flex;
         align-items: center;
         justify-content: center;
         color: #fff;
-        font-weight: 800;
-        font-size: ${size >= 56 ? 1.05 : 0.95}rem;
-        letter-spacing: 0.02em;
+        font-weight: 700;
+        font-size: ${fontSize}rem;
         font-family: inherit;
         cursor: pointer;
         user-select: none;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
       `;
       circle.textContent = String(count);
       wrapper.appendChild(circle);
