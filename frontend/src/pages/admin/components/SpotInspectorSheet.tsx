@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { SpotItem } from '../../../types/trip';
 import { PhotoUploader } from './PhotoUploader';
 import { PlaceSearchAutocomplete } from './PlaceSearchAutocomplete';
+import { SPOT_TYPE_VALUES, SPOT_TYPE_META } from '../../../constants/spot-types';
 
 interface SpotInspectorSheetProps {
   spot: SpotItem | null;
@@ -174,14 +175,19 @@ export function SpotInspectorSheet({
             </label>
             <div className="field">
               <label>类型</label>
+              {/* P28(补 P26): 扩展到 6 类(景点/餐厅/咖啡/购物/住宿/交通)
+                  之前只有 2 选项,跟 PlannerInspector 不一致 */}
               <select
                 value={spot.type ?? 'spot'}
                 onChange={(e) =>
                   onUpdateSpot(spot.id, { type: e.target.value as SpotItem['type'] })
                 }
               >
-                <option value="spot">景点 / 停留点</option>
-                <option value="transport">交通节点</option>
+                {SPOT_TYPE_VALUES.map((t) => (
+                  <option key={t} value={t}>
+                    {SPOT_TYPE_META[t].emoji} {SPOT_TYPE_META[t].label}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="field field-wide">
