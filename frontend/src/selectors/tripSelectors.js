@@ -27,15 +27,38 @@ export function normalizeTripData(payload, options = {}) {
             incomingSegmentBySpotId.set(segment.toSpotId, segment);
         }
     }
+    // P37: 全行程按 day+order 排序的完整列表,用来给 nextStopId 空的 spot 自动推「下一站」。
+    // 旧数据 / 显式标了 nextStopId 的优先用显式;否则 fallback 到「同 day 下一个 / 跨 day 第一个」
+    const sortedAllEntries = [...allEntries]
+        .map((s) => remapSpotDay(s))
+        .sort((a, b) => a.day - b.day || (a.order ?? 0) - (b.order ?? 0));
+    const orderedIndexById = new Map();
+    sortedAllEntries.forEach((s, i) => orderedIndexById.set(s.id, i));
+    function effectiveNextStop(spot) {
+        // 1. 显式标了 nextStopId → 用它(允许用户跨 day 跳转或人为打破默认顺序)
+        if (spot.nextStopId) {
+            const explicit = allEntriesById.get(spot.nextStopId);
+            if (explicit)
+                return explicit;
+        }
+        // 2. 自动推:行程完整顺序的下一个 entry(无论 type — 行程动线包括住宿/交通点)
+        const idx = orderedIndexById.get(spot.id);
+        if (idx === undefined || idx + 1 >= sortedAllEntries.length)
+            return null;
+        return sortedAllEntries[idx + 1];
+    }
     const spots = allEntries
         .filter(passes)
         .map((spot) => {
         const displaySpot = remapSpotDay(spot);
-        const nextStop = spot.nextStopId ? allEntriesById.get(spot.nextStopId) : null;
+        const nextStop = effectiveNextStop(spot);
         const incomingSegment = incomingSegmentBySpotId.get(spot.id) || null;
         const prevStop = incomingSegment ? allEntriesById.get(incomingSegment.fromSpotId) : null;
         return {
             ...displaySpot,
+            // P37: 把推断出的 nextStopId 注入回 spot(原本可能是 null),让 popup-builder
+            // / RouteDetailContent 等所有下游消费方都能拿到「下一站」
+            nextStopId: nextStop?.id ?? null,
             nextStopName: nextStop?.name,
             nextStopLat: nextStop?.lat,
             nextStopLng: nextStop?.lng,
