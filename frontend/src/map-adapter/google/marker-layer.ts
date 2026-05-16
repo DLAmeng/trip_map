@@ -104,6 +104,37 @@ export function createGoogleMarkerLayer(config: {
     markerRefs = [];
   }
 
+  /**
+   * P31: 动态测量真实顶部遮挡高度,返回让 marker / cluster 视觉位置落在
+   *      「可用区域中央」所需的 panY。
+   *
+   * 之前 P11-1 / P15 都硬编码 panY=120,但只在桌面无顶部 fixed 遮挡时合理。
+   * 手机端有 mobile-trip-context-card (53px) + map-search (50px) = 顶部 108 遮挡,
+   * 硬编码 120 会让 marker 偏到 viewportH 64% 位置(过分偏下,看起来"位置不对")。
+   *
+   * 正确公式:panY = 顶部遮挡高度 / 2 — 让 cluster 视觉位置落在 (top+viewportH)/2
+   * 即「可用区域几何中央」。桌面无遮挡 → panY=0(直接居中)。
+   */
+  function calcTopPanOffset(): number {
+    if (typeof document === 'undefined' || typeof window === 'undefined') return 0;
+    let maxBottom = 0;
+    const candidates = [
+      '.mobile-trip-context-card',  // 移动端 trip header 卡
+      '.map-search',                // 搜索栏
+      '.trip-context',              // 桌面端 trip context(如果有 fixed)
+    ];
+    for (const sel of candidates) {
+      const el = document.querySelector<HTMLElement>(sel);
+      if (!el) continue;
+      const cs = window.getComputedStyle(el);
+      // 只有 fixed / sticky 才会持续遮挡 map
+      if (cs.position !== 'fixed' && cs.position !== 'sticky') continue;
+      const bottom = el.getBoundingClientRect().bottom;
+      if (bottom > maxBottom) maxBottom = bottom;
+    }
+    return Math.max(0, Math.floor(maxBottom / 2));
+  }
+
   function createClusterer() {
     return new MarkerClusterer({
       map,
@@ -111,22 +142,21 @@ export function createGoogleMarkerLayer(config: {
         const domEvent = event.domEvent as Event | undefined;
         domEvent?.stopPropagation?.();
         domEvent?.preventDefault?.();
-        // P15: cluster 视觉位置偏下 — 避开顶部合并卡(trip-context + map-search 共 ~120px)
-        // 与单 marker click(P11-1)同样比例(viewportH * 0.15,上限 120px)
-        const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
-        const panY = Math.min(120, Math.floor(viewportH * 0.15));
+        // P31: 动态算 panY(顶部遮挡 / 2),让 cluster 视觉位置落在可用区域中央
+        const panY = calcTopPanOffset();
         const bounds = cluster.bounds;
         if (bounds && !bounds.isEmpty()) {
           clusterMap.fitBounds(bounds, 64);
-          // fitBounds 同步设完 zoom/center,setTimeout 0 让 panBy 在它之后,
-          // 视图上移 → cluster 中心视觉下移
-          window.setTimeout(() => clusterMap.panBy(0, -panY), 0);
+          // fitBounds 异步完成 zoom/center,setTimeout 0 让 panBy 跑在之后
+          window.setTimeout(() => {
+            if (panY > 0) clusterMap.panBy(0, -panY);
+          }, 0);
           return;
         }
         const zoom = clusterMap.getZoom() ?? 8;
         clusterMap.setCenter(cluster.position);
         clusterMap.setZoom(Math.min(zoom + 2, 15));
-        clusterMap.panBy(0, -panY);
+        if (panY > 0) clusterMap.panBy(0, -panY);
       },
     });
   }
@@ -308,20 +338,18 @@ export function createGoogleMarkerLayer(config: {
         if (ref.marker.position) {
           ref.infoWindow.setPosition(ref.marker.position);
         }
-        // P6 修正:打开 popup 前让 marker 移到屏幕中央**偏下**位置,
-        // 这样 popup(在 marker 上方)的视觉中心会更接近屏幕几何中央。
-        // panTo 让 marker 居中 → panBy(0, -120) 视图上移 120px ⇒ marker 屏幕位置下移 120px
+        // P6 修正:打开 popup 前让 marker 移到屏幕「可用区域」中央(避开顶部 fixed 遮挡)。
+        // panTo 让 marker 居中 → 然后再 panBy 调整到可用区域中央。
         // 之后用户拖动地图,popup 因锚定到 marker 会跟着地图一起移动 —
         // 这是 Google InfoWindow 标准行为,符合用户对地图 popup 的直觉。
         const markerPos = ref.marker.position as google.maps.LatLngLiteral | null;
         if (markerPos) {
           map.panTo(markerPos);
-          // P11-1: 动态计算 panY — viewport 18% 上限 120px。
-          // iPhone Pro (812h) → -120;iPhone SE (568h) → -102;窄屏 → 更小,
-          // 避免 popup 顶端撞合并的 trip-card+search 区域。
-          const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
-          const panY = -Math.min(120, Math.floor(viewportH * 0.18));
-          map.panBy(0, panY);
+          // P31: 动态测顶部遮挡(trip-context-card + map-search),panY = 遮挡 / 2。
+          // 桌面无遮挡 panY=0,marker 直接居中;手机遮挡 108 → panY=54,marker 在可用区域中央
+          // (取代之前硬编码 120 — 那个在手机上让 marker 偏到屏幕下方 64% 位置)。
+          const panY = calcTopPanOffset();
+          if (panY > 0) map.panBy(0, -panY);
         }
         ref.infoWindow.open({
           map,
