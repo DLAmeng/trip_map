@@ -31,34 +31,116 @@ export function createGoogleMarkerLayer(config: {
   let selectedId: string | null = null;
   let nextHighlightedIds = new Set<string>();
 
-  function buildPinElement(spot: SpotItem, isActive: boolean, isNext: boolean, dayIndex: number) {
-    const scale = isActive
-      ? (spot.mustVisit ? 1.45 : 1.3)
-      : isNext
-        ? (spot.mustVisit ? 1.28 : 1.12)
-        : (spot.mustVisit ? 1.15 : 1);
-
-    // P26: 默认 type=spot 的 marker 仍显示 day number(保持向后兼容,用户已习惯);
-    // 其他 5 类用 emoji icon 区分(🍽 🏨 🚆 ☕ 🛍),background 仍由 day color 表达「第几天」
+  /**
+   * P36: 自定义 marker — 替代 Google 内置 PinElement(那是默认丑设计)。
+   *
+   * 设计:
+   * - 景点(type=spot):圆形 day color 底 + 白色大数字编号,2px 白边 + 阴影
+   * - 其他类型:同样圆形 day color 底 + 大 emoji 居中(住宿/餐厅/咖啡/购物/交通)
+   * - mustVisit:加金色 ★ 角标(右上角)
+   * - isActive:scale 1.25 + 颜色更深 + 大 halo ring(box-shadow 多层)
+   * - isNext:cyan ring outline(吸引视觉跳到下一站)
+   * - 普通态:scale 1
+   * - 通过 wrapper 0x0 + 子元素 absolute 实现圆心 anchor(跟 P34 cluster 一致)
+   *
+   * 视觉差异化:
+   * - 景点 marker(圆形+数字): 跟 cluster(圆形+数字)很像,但单 marker scale 32px,
+   *   cluster scale 32-40px,且 cluster 有 P34 zIndex 2000+ 浮在上层
+   * - 非景点 marker(圆形+emoji): emoji 字符让用户一眼区分类型
+   */
+  function buildMarkerContent(spot: SpotItem, isActive: boolean, isNext: boolean, dayIndex: number): HTMLDivElement {
     const type = coerceSpotType(spot.type);
-    const glyphText = type === 'spot'
+    const dayColor = config.dayColors[spot.day - 1] || '#ea4335';
+    const isSpot = type === 'spot';
+
+    // Wrapper:0x0 占位,让 AdvancedMarker 默认 anchor (bottom-center) 落在 (0,0)
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position: relative; width: 0; height: 0;';
+
+    // 主 marker:圆形,绝对定位让圆心对准地理位置
+    const baseSize = 30;
+    const size = isActive ? baseSize * 1.25 : isNext ? baseSize * 1.1 : baseSize;
+    const main = document.createElement('div');
+    main.className = `trip-marker-pin${isSpot ? ' is-spot' : ' is-emoji'}${isActive ? ' is-active' : ''}${isNext ? ' is-next' : ''}${spot.mustVisit ? ' is-must' : ''}`;
+    // 颜色:active 时混入暗色让对比度更强;否则原 day color
+    const bg = isActive ? mixWithBlack(dayColor, 0.15) : dayColor;
+    // 阴影/halo:active 用 ocean glow ring,普通用柔阴
+    const shadow = isActive
+      ? `0 0 0 4px rgba(255,255,255,0.6), 0 0 0 8px ${dayColor}88, 0 4px 14px rgba(0,0,0,0.32)`
+      : isNext
+        ? `0 0 0 3px rgba(35,111,122,0.45), 0 2px 8px rgba(0,0,0,0.22)`
+        : `0 2px 6px rgba(0,0,0,0.22)`;
+    main.style.cssText = `
+      position: absolute;
+      left: ${-size / 2}px;
+      top: ${-size / 2}px;
+      width: ${size}px;
+      height: ${size}px;
+      border-radius: 50%;
+      background: ${bg};
+      border: 2px solid #fff;
+      box-shadow: ${shadow};
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-family: inherit;
+      font-size: ${isSpot ? (size >= 36 ? 0.9 : 0.82) : (size >= 36 ? 1.1 : 1.0)}rem;
+      line-height: 1;
+      user-select: none;
+      cursor: pointer;
+      transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    `;
+    main.textContent = isSpot
       ? String(dayIndex || spot.order)
       : SPOT_TYPE_META[type].emoji;
+    wrapper.appendChild(main);
 
-    return new google.maps.marker.PinElement({
-      glyphText,
-      glyphColor: '#fff',
-      background: config.dayColors[spot.day - 1] || '#ea4335',
-      borderColor: isActive ? '#183847' : isNext ? '#236f7a' : '#fff',
-      scale,
-    });
+    // mustVisit:右上角金色 ★
+    if (spot.mustVisit) {
+      const star = document.createElement('div');
+      star.style.cssText = `
+        position: absolute;
+        left: ${size / 2 - 6}px;
+        top: ${-size / 2 - 6}px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fbbf24;
+        border: 1.5px solid #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        color: #fff;
+        font-size: 0.55rem;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      `;
+      star.textContent = '★';
+      wrapper.appendChild(star);
+    }
+
+    return wrapper;
+  }
+
+  /**
+   * 把 hex color 混入黑色(percentage 0-1),让 active 状态颜色加深。
+   */
+  function mixWithBlack(hex: string, ratio: number): string {
+    const m = hex.replace('#', '').match(/.{2}/g);
+    if (!m || m.length < 3) return hex;
+    const [r, g, b] = m.slice(0, 3).map((h) => parseInt(h, 16));
+    const mix = (c: number) => Math.max(0, Math.round(c * (1 - ratio)));
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
   }
 
   function updateMarkerAppearance(ref: GoogleMarkerRef) {
     const isActive = selectedId === ref.spotId;
     const isNext = nextHighlightedIds.has(ref.spotId) && !isActive;
-    const pin = buildPinElement(ref.spot, isActive, isNext, ref.dayIndex);
-    ref.marker.content = pin.element;
+    ref.marker.content = buildMarkerContent(ref.spot, isActive, isNext, ref.dayIndex);
     ref.marker.zIndex = isActive ? 1200 + ref.spot.day : isNext ? 900 + ref.spot.day : 100 + ref.spot.day;
   }
 
