@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 
 /**
  * 迁移期的顶层外壳,仅提供最小导航条用于在三条路由之间切换。
@@ -27,6 +28,8 @@ export function App() {
       <main className="app-main">
         <Outlet />
       </main>
+      {/* P27: SW 检测到新版本时,屏幕底部弹「立即刷新」banner */}
+      <PWAUpdateBanner />
     </div>
   );
 }

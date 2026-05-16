@@ -168,3 +168,90 @@ code {
   color: #64748b;
   font-size: 0.8rem;
 }
+
+/* P27: PWA 更新提示 banner — 固定在视口顶部居中,ocean 风格 glass 卡片
+   z-index 2000 > AdminSettingsSheet backdrop (1300) 让用户始终能看到 */
+.pwa-update-banner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 24px);
+  padding: 12px 16px;
+  background: rgba(15, 61, 92, 0.96);
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(15, 61, 92, 0.32);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 0.92rem;
+  font-weight: 600;
+  animation: pwa-update-banner-slide-in 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pwa-update-banner-slide-in {
+  from { transform: translate(-50%, -20px); opacity: 0; }
+  to   { transform: translate(-50%, 0);     opacity: 1; }
+}
+
+.pwa-update-banner-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.pwa-update-banner-text {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.pwa-update-banner-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pwa-update-banner-btn {
+  appearance: none;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 160ms ease, transform 160ms ease;
+  white-space: nowrap;
+}
+
+.pwa-update-banner-btn-primary {
+  background: #fff;
+  color: #0f3d5c;
+}
+.pwa-update-banner-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.92);
+  transform: translateY(-1px);
+}
+
+.pwa-update-banner-btn-ghost {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.pwa-update-banner-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+/* 移动端:文字 + 按钮可能太宽,允许换行 */
+@media (max-width: 480px) {
+  .pwa-update-banner {
+    flex-wrap: wrap;
+    padding: 10px 14px;
+  }
+  .pwa-update-banner-text {
+    white-space: normal;
+    min-width: 100%;
+  }
+}

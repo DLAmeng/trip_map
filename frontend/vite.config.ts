@@ -16,7 +16,10 @@ export default defineConfig({
     // - 行程数据 /api/trips/:id/full:staleWhileRevalidate
     // - /admin、/api/admin、Google/Nominatim 都走网络,不缓存
     VitePWA({
-      registerType: 'autoUpdate',
+      // P27: 'autoUpdate' → 'prompt' — 之前 autoUpdate 模式下 SW 装好但 React app
+      // 不知道,用户一直用旧 cache 看 P21-P26 时代的 UI。prompt 模式让 app 知道
+      // 有新版本,弹 toast「立即刷新 / 稍后」,用户主动控制刷新时机。
+      registerType: 'prompt',
       // dev 模式明确关闭 SW 注册,避免开发时旧 build 注册的 SW 拦截 Vite 的
       // hot-served 模块(造成 "代码改了但浏览器看到旧版" 的假象)。
       devOptions: { enabled: false },
