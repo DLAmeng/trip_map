@@ -13,9 +13,11 @@ interface GoogleRouteRef {
 
 interface CreateGoogleRouteLayerParams {
   onRouteClick?: (segmentId: string, anchor: RouteClickAnchor) => void;
+  /** P30: 按 day 着色用 — 与 marker / SpotList 共享同一份 dayColors */
+  dayColors?: string[];
 }
 
-export function createGoogleRouteLayer({ onRouteClick }: CreateGoogleRouteLayerParams = {}) {
+export function createGoogleRouteLayer({ onRouteClick, dayColors = [] }: CreateGoogleRouteLayerParams = {}) {
   let map: google.maps.Map | null = null;
   let routeRefs: GoogleRouteRef[] = [];
   let currentFilter: RouteFilter = { day: null, city: null };
@@ -24,17 +26,18 @@ export function createGoogleRouteLayer({ onRouteClick }: CreateGoogleRouteLayerP
   let pendingSegments: RouteSegment[] | null = null;
   let pendingSpotById: Map<string, SpotItem> | null = null;
 
-  const TRANSPORT_COLORS: Record<string, string> = {
-    walk: '#38bdf8',
-    metro: '#f97316',
-    subway: '#f97316',
-    bus: '#10b981',
-    shinkansen: '#dc2626',
-    train: '#7c3aed',
-    jrrapid: '#7c3aed',
-    nankai: '#0f766e',
-    drive: '#475569',
-  };
+  // P30: 之前按 transportType 着色(步行蓝 / 地铁橙 / 新干线红),
+  // 用户反馈「同一天路线颜色应该一致 + 跟景点颜色对应」,改为完全按 day 着色。
+  // 14 个内置 fallback 颜色覆盖最长行程,不够时用 hash hue 兜底。
+  const DAY_COLOR_FALLBACK = [
+    '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c',
+    '#3498db', '#9b59b6', '#8e44ad', '#c0392b', '#d35400',
+    '#27ae60', '#2980b9', '#16a085', '#7f8c8d',
+  ];
+  function getDayColor(day: number): string {
+    const idx = Math.max(0, (day || 1) - 1);
+    return dayColors[idx] || DAY_COLOR_FALLBACK[idx % DAY_COLOR_FALLBACK.length];
+  }
 
   function destroy() {
     routeRefs.forEach((ref) => {
@@ -91,8 +94,8 @@ export function createGoogleRouteLayer({ onRouteClick }: CreateGoogleRouteLayerP
           ];
         }
 
-        const transportType = seg.transportType?.toLowerCase() || '';
-        const bodyColor = TRANSPORT_COLORS[transportType] || '#888';
+        // P30: 路线颜色 = 该 day 的颜色(与 marker / SpotList 同步),不再按 transportType
+        const bodyColor = getDayColor(seg.day);
         // 先建 casing(底层描边),zIndex 更低,clickable:false 不拦截事件
         const casingLine = new google.maps.Polyline({
           path,

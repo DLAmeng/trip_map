@@ -59,6 +59,7 @@ export const createGoogleController = (container, config) => {
     });
     routes = createGoogleRouteLayer({
         onRouteClick: config.onRouteClick,
+        dayColors: config.dayColors, // P30: 让 route 按 day 着色,跟 marker 同步
     });
     const controller = {
         markers,

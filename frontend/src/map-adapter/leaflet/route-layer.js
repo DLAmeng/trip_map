@@ -6,23 +6,14 @@ import { buildRouteTooltipHtml } from '../shared/popup-builder';
  * 数据来源:RouteSegment.path(lat,lng 对数组);path 缺失或太短时用
  * fromSpot/toSpot 两端坐标兜底;第一版不走 hydrateRealRouteGeometries。
  *
- * 样式:参考原生 setRouteActiveState L2325-2343 的 opacity/weight,
- * 按 transportType 大致给个颜色,第一版不做图例里那些复杂花样。
+ * P30: 改为按 day 着色(用户要求同一天路线必须同色,且与景点对应),
+ * 之前按 transportType 着色(步行蓝 / 地铁橙)已废弃。
  */
-const TRANSPORT_COLOR = {
-    walk: '#38bdf8',
-    subway: '#f97316',
-    metro: '#f97316',
-    train: '#7c3aed',
-    jrrapid: '#7c3aed',
-    shinkansen: '#dc2626',
-    nankai: '#0f766e',
-    bus: '#10b981',
-    drive: '#475569',
-};
-function getRouteColor(transportType) {
-    return TRANSPORT_COLOR[transportType?.toLowerCase?.()] ?? '#64748b';
-}
+const DAY_COLOR_FALLBACK = [
+    '#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#1abc9c',
+    '#3498db', '#9b59b6', '#8e44ad', '#c0392b', '#d35400',
+    '#27ae60', '#2980b9', '#16a085', '#7f8c8d',
+];
 function pointsFromSegment(segment, spotById) {
     if (Array.isArray(segment.path) && segment.path.length >= 2) {
         return segment.path.map(([lat, lng]) => [lat, lng]);
@@ -37,8 +28,12 @@ function pointsFromSegment(segment, spotById) {
     }
     return [];
 }
-export function createLeafletRouteLayer({ map, onRouteClick, }) {
+export function createLeafletRouteLayer({ map, onRouteClick, dayColors = [], }) {
     const entries = new Map();
+    function getDayColor(day) {
+        const idx = Math.max(0, (day || 1) - 1);
+        return dayColors[idx] || DAY_COLOR_FALLBACK[idx % DAY_COLOR_FALLBACK.length];
+    }
     function removeAll() {
         entries.forEach((entry) => {
             entry.detachDomListener?.();
@@ -50,7 +45,8 @@ export function createLeafletRouteLayer({ map, onRouteClick, }) {
     function styleFor(segment, active) {
         const isIntercity = segment.scope === 'intercity';
         return {
-            color: getRouteColor(segment.transportType),
+            // P30: 按 day 着色,跟 marker / SpotList 同步
+            color: getDayColor(segment.day),
             opacity: active ? (isIntercity ? 0.88 : 0.72) : (isIntercity ? 0.2 : 0.12),
             weight: active ? (isIntercity ? 3.8 : 3.4) : (isIntercity ? 2.8 : 2.2),
             lineJoin: 'round',

@@ -36,6 +36,7 @@ export const createLeafletController = (container, config) => {
     const routes = createLeafletRouteLayer({
         map,
         onRouteClick: config.onRouteClick,
+        dayColors: config.dayColors, // P30: route 按 day 着色,跟 marker 同步
     });
     function fitBounds(points, padding = 48) {
         if (!points.length)
