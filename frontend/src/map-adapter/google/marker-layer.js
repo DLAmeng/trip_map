@@ -124,10 +124,23 @@ export function createGoogleMarkerLayer(config) {
      * 顺带 cluster background 用 cluster 内出现最多的 day color,告诉用户「这一堆
      * markers 主要属于哪天」。
      */
+    /**
+     * P34: cluster icon 改成自定义圆形 div,跟 spot marker 的 PinElement 滴水形
+     *      视觉彻底区分。
+     *
+     * 设计:
+     * - 形状:圆形(spot 是滴水形 / 水珠)— 一眼区分
+     * - 颜色:cluster 内出现次数最多的 day 的 color(承接 P30 day color 体系)
+     * - 尺寸:48px(单 marker ~30px,cluster 明显更大)
+     * - Anchor:wrapper width:0/height:0 让 AdvancedMarker 默认 bottom-center anchor
+     *           落在 (0,0),circle 通过 absolute left:-24/top:-24 让圆心对齐 anchor,
+     *           cluster 圆心精确对准 cluster.position(地理位置)— 这也修复了 P33
+     *           的 anchor 一致性诉求,圆心 anchor 比尖端 anchor 更适合"代表多个 spots"
+     */
     const clusterRenderer = {
         render(cluster) {
             const { count, position, markers } = cluster;
-            // 找 cluster 内出现次数最多的 day,用它的 color 作为 cluster background
+            // 找 cluster 内出现次数最多的 day,作为 cluster 颜色
             const dayCount = new Map();
             let dominantDay = 1;
             let maxCnt = 0;
@@ -142,16 +155,41 @@ export function createGoogleMarkerLayer(config) {
                 }
             }
             const background = config.dayColors[dominantDay - 1] || '#0f3d5c';
-            const pin = new google.maps.marker.PinElement({
-                glyphText: String(count),
-                glyphColor: '#fff',
-                background,
-                borderColor: '#fff',
-                scale: 1.45,
-            });
+            // wrapper:0x0 占位,让 AdvancedMarker 默认 anchor(bottom-center)落在 (0,0)
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = 'position: relative; width: 0; height: 0;';
+            // circle:绝对定位让圆心对准 wrapper origin(也就是地理位置)
+            const circle = document.createElement('div');
+            circle.className = 'trip-cluster-icon';
+            // size 随 count 适度变大:48 ~ 64
+            const size = Math.min(64, 44 + Math.floor(Math.log2(count + 1) * 6));
+            circle.style.cssText = `
+        position: absolute;
+        left: ${-size / 2}px;
+        top: ${-size / 2}px;
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        background: ${background};
+        border: 3px solid #fff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 800;
+        font-size: ${size >= 56 ? 1.05 : 0.95}rem;
+        letter-spacing: 0.02em;
+        font-family: inherit;
+        cursor: pointer;
+        user-select: none;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      `;
+            circle.textContent = String(count);
+            wrapper.appendChild(circle);
             return new google.maps.marker.AdvancedMarkerElement({
                 position,
-                content: pin.element,
+                content: wrapper,
                 zIndex: 2000 + count,
             });
         },
