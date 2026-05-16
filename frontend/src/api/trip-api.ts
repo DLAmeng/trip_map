@@ -90,6 +90,32 @@ export function updateTripFull(id: string, payload: TripFullPayload): Promise<Up
   });
 }
 
+/**
+ * P32: 持久化前端 hydrate 出来的 route path / 距离 / 时长 / 运行时来源。
+ * 后端只接受 path.length >= 2 的非空路径,直线 fallback 不会被存。幂等。
+ */
+export interface PersistSegmentPathUpdate {
+  segmentId: string;
+  path: Array<[number, number]>;
+  distanceMeters?: number | null;
+  durationSec?: number | null;
+  runtimeSource?: string | null;
+}
+
+export function persistSegmentPaths(
+  id: string,
+  updates: PersistSegmentPathUpdate[],
+): Promise<{ ok: boolean; updated: number }> {
+  return request<{ ok: boolean; updated: number }>(
+    `/api/trips/${encodeURIComponent(id)}/persist-paths`,
+    {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify({ updates }),
+    },
+  );
+}
+
 export function deleteTrip(id: string): Promise<{ ok: boolean }> {
   return request<{ ok: boolean }>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'DELETE',

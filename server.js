@@ -174,6 +174,31 @@ function createServer() {
     }
   });
 
+  /**
+   * P32: 持久化前端 hydrate 出来的 route path / 距离 / 时长 / 运行时来源。
+   *
+   * Body: { updates: Array<{ segmentId, path: [[lat,lng],...], distanceMeters?, durationSec?, runtimeSource? }> }
+   *
+   * 设计:
+   *  - 只接受非空 path(length >= 2),小 path 跳过(过滤直线 fallback)
+   *  - 幂等:同样 path 多次写不变化
+   *  - 静默成功:即使 0 个 segment 改动也返回 200(避免前端无意义重试)
+   *  - 不修改 spot / meta / config,只更新指定 segment 的 path 相关字段
+   */
+  app.post('/api/trips/:id/persist-paths', (request, response) => {
+    try {
+      const updates = Array.isArray(request.body?.updates) ? request.body.updates : [];
+      const result = tripService.persistSegmentPaths(request.params.id, updates);
+      if (!result) {
+        response.status(404).json({ ok: false, error: '未找到该行程。' });
+        return;
+      }
+      response.json(result);
+    } catch (error) {
+      response.status(400).json({ ok: false, error: error.message });
+    }
+  });
+
   app.post('/api/trips/:id/duplicate', (request, response) => {
     try {
       const created = tripService.duplicateTrip(request.params.id);

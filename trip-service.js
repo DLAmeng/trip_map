@@ -241,6 +241,69 @@ function updateTripFull(id, payload) {
   });
 }
 
+/**
+ * P32: 持久化前端 hydrate 出来的 route path / distance / duration / runtimeSource。
+ *
+ * 调用场景:前端 trip 页 hydrateRealRouteGeometries 完成后,把 Google Routes /
+ * RapidAPI 拿到的真实轨迹批量写回 DB,以后任何客户端访问都直接拿 path,
+ * 不再每次重 hydrate(省 API 配额、加速、路径稳定)。
+ *
+ * updates: Array<{ segmentId, path, distanceMeters?, durationSec?, runtimeSource? }>
+ *  - path 是 [[lat, lng], ...] 数组,长度 >= 2 才被接受(否则跳过)
+ *  - 只更新指定字段,其他 segment / spot / meta 保持原样
+ *  - 幂等:同样 path 多次写不会出错
+ *
+ * 返回 { ok: true, updated: <number> },updated=0 表示没有有效改动
+ */
+function persistSegmentPaths(id, updates) {
+  if (!Array.isArray(updates) || updates.length === 0) {
+    return { ok: true, updated: 0 };
+  }
+  const existing = repository.findTripById(id);
+  if (!existing) return null;
+  const payload = existing.payload;
+  const segments = Array.isArray(payload?.routeSegments) ? [...payload.routeSegments] : [];
+  if (segments.length === 0) return { ok: true, updated: 0 };
+
+  const indexById = new Map();
+  segments.forEach((seg, idx) => indexById.set(seg.id, idx));
+
+  let changed = 0;
+  for (const update of updates) {
+    if (!update || typeof update.segmentId !== 'string') continue;
+    const idx = indexById.get(update.segmentId);
+    if (idx === undefined) continue;
+    const path = Array.isArray(update.path) ? update.path : null;
+    // path 至少 2 点才算「真实路径」,否则不写(避免覆盖现有 cache)
+    if (!path || path.length < 2) continue;
+    // 不写超过 DB 容量(防滥用)— 单 segment path 5000 点上限
+    if (path.length > 5000) continue;
+    const seg = { ...segments[idx], path };
+    if (Number.isFinite(update.distanceMeters)) {
+      seg.realDistanceMeters = update.distanceMeters;
+    }
+    if (Number.isFinite(update.durationSec)) {
+      seg.realDurationSec = update.durationSec;
+    }
+    if (typeof update.runtimeSource === 'string' && update.runtimeSource) {
+      seg.runtimeSource = update.runtimeSource;
+    }
+    segments[idx] = seg;
+    changed += 1;
+  }
+
+  if (changed === 0) return { ok: true, updated: 0 };
+
+  const nextPayload = { ...payload, routeSegments: segments };
+  persistTrip({
+    id,
+    slug: existing.slug,
+    name: existing.name,
+    payload: nextPayload,
+  });
+  return { ok: true, updated: changed };
+}
+
 function seedDatabaseIfEmpty() {
   const current = repository.findTripById(DEFAULT_TRIP_ID);
   if (current) return current;
@@ -285,5 +348,6 @@ module.exports = {
   summarizePayload,
   syncCurrentFromLocal,
   updateTripFull,
+  persistSegmentPaths,
   writeLocalItineraryFile,
 };

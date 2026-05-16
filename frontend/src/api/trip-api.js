@@ -72,6 +72,13 @@ export function updateTripFull(id, payload) {
         body: JSON.stringify(payload),
     });
 }
+export function persistSegmentPaths(id, updates) {
+    return request(`/api/trips/${encodeURIComponent(id)}/persist-paths`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ updates }),
+    });
+}
 export function deleteTrip(id) {
     return request(`/api/trips/${encodeURIComponent(id)}`, {
         method: 'DELETE',

@@ -327,6 +327,7 @@ export function TripPage() {
 
       <div className={`main-content ${!isListVisible ? 'list-hidden' : ''}`}>
         <TripMapCanvas
+          tripId={tripId}
           config={data.config}
           spots={normalized.spots}
           segments={normalized.routeSegments}

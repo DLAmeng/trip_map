@@ -5,6 +5,7 @@ import { createLeafletController } from '../../map-adapter/leaflet';
 import { createGoogleController } from '../../map-adapter/google';
 import { useTripMap } from '../../hooks/useTripMap';
 import { hydrateRealRouteGeometries, shouldAwaitInitialRailHydration, } from '../../api/routing-api';
+import { persistSegmentPaths } from '../../api/trip-api';
 import { MapLegend } from './components/MapLegend';
 import { SummaryBar } from './components/SummaryBar';
 import { FiltersCard } from './components/FiltersCard';
@@ -26,7 +27,7 @@ import { ExternalPoiCard } from './components/ExternalPoiCard';
  * StrictMode gotcha:cleanup 必须调 controller.destroy() + 置 null,
  * 否则第二次 effect 再 create 会被 Leaflet 抛 "Map container is already initialized"。
  */
-export function TripMapCanvas({ config, spots, segments, spotById, cityNames, filter, onFilterChange, selectedSpotId, onSelectSpot, onMapClick, stats, onToggleList, isListVisible, activeTool, setActiveTool, isOnline = true, isMobile = false, onAddPoiToTrip, }) {
+export function TripMapCanvas({ tripId, config, spots, segments, spotById, cityNames, filter, onFilterChange, selectedSpotId, onSelectSpot, onMapClick, stats, onToggleList, isListVisible, activeTool, setActiveTool, isOnline = true, isMobile = false, onAddPoiToTrip, }) {
     const stageRef = useRef(null);
     const toolOverlayRef = useRef(null);
     const containerRef = useRef(null);
@@ -199,6 +200,11 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
     useEffect(() => {
         const abortController = new AbortController();
         const pendingRailIds = new Set(initialRailHydrationIds);
+        // P32: 收集本次 hydrate 新解析的真实 path,完成后批量持久化到后端 SQLite
+        // (避免每次刷新页面重算 Google Routes,且让路径稳定不再"贴图变化")
+        // — 只收集后端原本 path 是空的 segment(避免重复写已有 path)
+        const segmentsMissingPath = new Set(segments.filter((s) => !Array.isArray(s.path) || s.path.length < 2).map((s) => s.id));
+        const persistBuffer = [];
         hydrateRealRouteGeometries({
             segments,
             spotById,
@@ -214,16 +220,34 @@ export function TripMapCanvas({ config, spots, segments, spotById, cityNames, fi
                 if (pendingRailIds.size === 0) {
                     setIsInitialRailHydrationPending(false);
                 }
+                // P32: 缓冲 — 后端没 path 的 segment,本次拿到真实 path 就准备 persist
+                if (segmentsMissingPath.has(segmentId) &&
+                    Array.isArray(geometry?.path) &&
+                    geometry.path.length >= 2) {
+                    persistBuffer.push({
+                        segmentId,
+                        path: geometry.path,
+                        distanceMeters: geometry.distanceMeters,
+                        durationSec: geometry.durationSec,
+                        runtimeSource: geometry.source ?? null,
+                    });
+                }
             },
         }).finally(() => {
             if (!abortController.signal.aborted) {
                 setIsInitialRailHydrationPending(false);
             }
+            // P32: hydrate 完成后批量 POST,silent failure(不影响 UI)
+            if (!abortController.signal.aborted && persistBuffer.length > 0) {
+                persistSegmentPaths(tripId, persistBuffer).catch((err) => {
+                    console.warn('[TripMapCanvas] persistSegmentPaths failed:', err);
+                });
+            }
         });
         return () => {
             abortController.abort();
         };
-    }, [config, initialRailHydrationIds, routingEngine, segments, spotById]);
+    }, [config, initialRailHydrationIds, routingEngine, segments, spotById, tripId]);
     // 当天 spots(给"适配当天"用)
     const currentDaySpots = useMemo(() => {
         return getVisibleSpots(spots, filter);
