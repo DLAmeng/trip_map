@@ -747,6 +747,17 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+/* P29: 分类 chip 当前 type 为 0 — 视觉淡化但仍可点击(过滤偏好,以后有也按这个过滤) */
+.filter-btn.is-empty {
+  opacity: 0.55;
+}
+.filter-btn.is-empty:hover {
+  opacity: 0.85;
+}
+.filter-btn.is-empty.active {
+  opacity: 1;       /* 用户主动选中过的,保持完整不透明 */
+}
+
 /* ============ Itinerary Panel (Sidebar) ============ */
 
 .spot-list-wrapper {
